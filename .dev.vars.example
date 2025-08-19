@@ -1,0 +1,47 @@
+# Variáveis de Ambiente - Sistema RV Armazém
+# Copie este arquivo para .dev.vars e configure os valores
+
+# Banco de Dados
+# Para desenvolvimento local com Cloudflare D1
+DATABASE_URL=your_database_url_here
+
+# Para deploy em produção (Vercel/Netlify)
+# Recomendado: Supabase, PlanetScale ou Neon
+# DATABASE_URL=postgresql://user:password@host:port/database
+# DATABASE_URL=mysql://user:password@host:port/database
+
+# Autenticação (opcional)
+JWT_SECRET=your_jwt_secret_here_minimum_32_characters
+
+# Configurações da Aplicação
+NODE_ENV=development
+APP_NAME=Sistema RV Armazém
+APP_VERSION=1.0.0
+
+# Configurações de CORS (para produção)
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,https://yourdomain.com
+
+# Configurações de Email (opcional - para notificações)
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your-email@gmail.com
+# SMTP_PASS=your-app-password
+
+# Configurações de Upload (opcional)
+# MAX_FILE_SIZE=5242880  # 5MB em bytes
+# UPLOAD_PATH=uploads/
+
+# Configurações de Cache (opcional)
+# REDIS_URL=redis://localhost:6379
+
+# Configurações de Monitoramento (opcional)
+# SENTRY_DSN=your_sentry_dsn_here
+# LOG_LEVEL=info
+
+# Configurações específicas do Cloudflare Workers
+# CLOUDFLARE_ACCOUNT_ID=your_account_id
+# CLOUDFLARE_API_TOKEN=your_api_token
+
+# Configurações para deploy
+# VERCEL_TOKEN=your_vercel_token
+# NETLIFY_AUTH_TOKEN=your_netlify_token
