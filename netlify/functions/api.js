@@ -2,6 +2,23 @@
 const workerModule = require('../../src/worker/index');
 const app = workerModule.default || workerModule;
 
+// Mock D1 Database for Netlify (temporary solution)
+const mockDB = {
+  prepare: (query) => ({
+    bind: (...values) => ({
+      first: async () => null,
+      all: async () => ({ results: [] }),
+      run: async () => ({ success: true, meta: {} })
+    }),
+    first: async () => null,
+    all: async () => ({ results: [] }),
+    run: async () => ({ success: true, meta: {} })
+  }),
+  exec: async () => ({ count: 0, duration: 0 }),
+  batch: async () => [],
+  dump: async () => new ArrayBuffer(0)
+};
+
 // Create Netlify function handler manually
 const handler = async (event, context) => {
   try {
@@ -24,8 +41,11 @@ const handler = async (event, context) => {
       body: event.body ? event.body : undefined,
     });
     
-    // Call Hono app
-    const response = await app.fetch(request);
+    // Create context with mock environment
+    const env = { DB: mockDB };
+    
+    // Call Hono app with environment
+    const response = await app.fetch(request, env);
     
     // Convert Response to Netlify format
     const responseBody = await response.text();
