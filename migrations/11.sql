@@ -1,0 +1,2 @@
+INSERT OR IGNORE INTO usuarios (cpf, data_nascimento, nome, role, is_active, created_at, updated_at)
+VALUES ('08749530496', '1990-11-01', 'Ronier Cassio', 'admin', true, datetime('now'), datetime('now'));

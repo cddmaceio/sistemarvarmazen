@@ -1,0 +1,23 @@
+
+INSERT OR REPLACE INTO activities (nome_atividade, nivel_atividade, valor_atividade, produtividade_minima, unidade_medida, created_at, updated_at) VALUES
+  ('Repack', 'N1', 0.25, 10.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Repack', 'N2', 0.30, 12.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Repack', 'N3', 0.35, 14.2, 'cxs/h', datetime('now'), datetime('now')),
+  ('Amarração', 'N1', 0.20, 8.0, 'plt/h', datetime('now'), datetime('now')),
+  ('Amarração', 'N2', 0.25, 10.0, 'plt/h', datetime('now'), datetime('now')),
+  ('Amarração', 'N3', 0.30, 12.0, 'plt/h', datetime('now'), datetime('now')),
+  ('Devolução', 'N1', 0.18, 5.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Devolução', 'N2', 0.22, 7.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Devolução', 'N3', 0.26, 9.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Refugo', 'N1', 0.15, 15.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Refugo', 'N2', 0.18, 18.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Refugo', 'N3', 0.21, 21.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Retorno', 'N1', 0.22, 12.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Retorno', 'N2', 0.26, 15.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Retorno', 'N3', 0.30, 18.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Retrabalho', 'N1', 0.28, 8.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Retrabalho', 'N2', 0.32, 10.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Retrabalho', 'N3', 0.36, 12.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Blocagem', 'N1', 0.24, 6.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Blocagem', 'N2', 0.28, 8.0, 'cxs/h', datetime('now'), datetime('now')),
+  ('Blocagem', 'N3', 0.32, 10.0, 'cxs/h', datetime('now'), datetime('now'));

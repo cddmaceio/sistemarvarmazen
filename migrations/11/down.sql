@@ -1,0 +1,1 @@
+DELETE FROM usuarios WHERE cpf = '08749530496'

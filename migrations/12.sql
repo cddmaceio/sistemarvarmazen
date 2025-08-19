@@ -1,0 +1,1 @@
+ALTER TABLE usuarios ADD COLUMN funcao TEXT DEFAULT 'Ajudante de Armazém';
