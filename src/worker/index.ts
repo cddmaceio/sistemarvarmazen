@@ -3,6 +3,11 @@ import { zValidator } from "@hono/zod-validator";
 import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema, AdminValidationSchema, ExportFilterSchema, KPILimitCheckSchema } from "@/shared/types";
 import { cors } from 'hono/cors';
 
+// Import Env type from worker configuration
+type Env = {
+  DB: D1Database;
+};
+
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors());
