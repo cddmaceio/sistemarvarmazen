@@ -3,6 +3,40 @@ import { zValidator } from "@hono/zod-validator";
 import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema, AdminValidationSchema, ExportFilterSchema, KPILimitCheckSchema } from "@/shared/types";
 import { cors } from 'hono/cors';
 
+// Define D1Database interface for Cloudflare Workers
+interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+  dump(): Promise<ArrayBuffer>;
+  batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]>;
+  exec(query: string): Promise<D1ExecResult>;
+}
+
+interface D1PreparedStatement {
+  bind(...values: any[]): D1PreparedStatement;
+  first<T = unknown>(colName?: string): Promise<T | null>;
+  run<T = unknown>(): Promise<D1Result<T>>;
+  all<T = unknown>(): Promise<D1Result<T[]>>;
+  raw<T = unknown>(): Promise<T[]>;
+}
+
+interface D1Result<T = unknown> {
+  results?: T;
+  success: boolean;
+  meta: {
+    duration: number;
+    size_after: number;
+    rows_read: number;
+    rows_written: number;
+    last_row_id?: number;
+    changes?: number;
+  };
+}
+
+interface D1ExecResult {
+  count: number;
+  duration: number;
+}
+
 // Import Env type from worker configuration
 type Env = {
   DB: D1Database;
@@ -20,7 +54,7 @@ app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
   const user = await db.prepare(`
     SELECT * FROM usuarios 
     WHERE cpf = ? AND data_nascimento = ? AND is_active = true
-  `).bind(cpf, data_nascimento).first();
+  `).bind(cpf, data_nascimento).first() as any;
   
   if (!user) {
     return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
@@ -52,7 +86,7 @@ app.post('/api/usuarios', zValidator('json', UserSchema), async (c) => {
   `).bind(data.cpf, data.data_nascimento, data.nome, data.role, data.is_active).run();
   
   if (result.success) {
-    const user = await db.prepare('SELECT * FROM usuarios WHERE id = ?').bind(result.meta.last_row_id).first();
+    const user = await db.prepare('SELECT * FROM usuarios WHERE id = ?').bind(result.meta.last_row_id).first() as any;
     return c.json(user);
   }
   
@@ -103,8 +137,8 @@ app.put('/api/usuarios/:id', zValidator('json', UserSchema.partial()), async (c)
   const query = `UPDATE usuarios SET ${updates.join(', ')} WHERE id = ?`;
   const result = await db.prepare(query).bind(...values).run();
   
-  if (result.success && result.meta.changes > 0) {
-    const user = await db.prepare('SELECT * FROM usuarios WHERE id = ?').bind(id).first();
+  if (result.success && result.meta.changes && result.meta.changes > 0) {
+    const user = await db.prepare('SELECT * FROM usuarios WHERE id = ?').bind(id).first() as any;
     return c.json(user);
   }
   
@@ -141,7 +175,7 @@ app.post('/api/activities', zValidator('json', ActivitySchema), async (c) => {
   `).bind(data.nome_atividade, data.nivel_atividade, data.valor_atividade).run();
   
   if (result.success) {
-    const activity = await db.prepare('SELECT * FROM activities WHERE id = ?').bind(result.meta.last_row_id).first();
+    const activity = await db.prepare('SELECT * FROM activities WHERE id = ?').bind(result.meta.last_row_id).first() as any;
     return c.json(activity);
   }
   
@@ -160,7 +194,7 @@ app.put('/api/activities/:id', zValidator('json', ActivitySchema), async (c) => 
   `).bind(data.nome_atividade, data.nivel_atividade, data.valor_atividade, id).run();
   
   if (result.success) {
-    const activity = await db.prepare('SELECT * FROM activities WHERE id = ?').bind(id).first();
+    const activity = await db.prepare('SELECT * FROM activities WHERE id = ?').bind(id).first() as any;
     return c.json(activity);
   }
   
@@ -197,7 +231,7 @@ app.post('/api/kpis', zValidator('json', KPISchema), async (c) => {
   `).bind(data.nome_kpi, data.descricao || null, data.valor_meta_kpi, data.peso_kpi, data.turno_kpi, data.funcao_kpi, data.status_ativo).run();
   
   if (result.success) {
-    const kpi = await db.prepare('SELECT * FROM kpis WHERE id = ?').bind(result.meta.last_row_id).first();
+    const kpi = await db.prepare('SELECT * FROM kpis WHERE id = ?').bind(result.meta.last_row_id).first() as any;
     return c.json(kpi);
   }
   
@@ -256,7 +290,7 @@ app.put('/api/kpis/:id', zValidator('json', KPISchema.partial()), async (c) => {
   `).bind(...values).run();
   
   if (result.success) {
-    const kpi = await db.prepare('SELECT * FROM kpis WHERE id = ?').bind(id).first();
+    const kpi = await db.prepare('SELECT * FROM kpis WHERE id = ?').bind(id).first() as any;
     return c.json(kpi);
   }
   
@@ -559,7 +593,7 @@ app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (
   ).run();
   
   if (result.success) {
-    const lancamento = await db.prepare('SELECT * FROM lancamentos_produtividade WHERE id = ?').bind(result.meta.last_row_id).first();
+    const lancamento = await db.prepare('SELECT * FROM lancamentos_produtividade WHERE id = ?').bind(result.meta.last_row_id).first() as any;
     return c.json(lancamento);
   }
   
@@ -827,7 +861,7 @@ app.post('/api/lancamentos/:id/validar', zValidator('json', AdminValidationSchem
     }
   }
   
-  const updatedLancamento = await db.prepare('SELECT * FROM lancamentos_produtividade WHERE id = ?').bind(id).first();
+  const updatedLancamento = await db.prepare('SELECT * FROM lancamentos_produtividade WHERE id = ?').bind(id).first() as any;
   return c.json(updatedLancamento);
   
   } catch (error) {
