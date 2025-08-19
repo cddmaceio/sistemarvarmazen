@@ -4,16 +4,23 @@ const app = workerModule.default || workerModule;
 
 // Mock D1 Database for Netlify (temporary solution)
 const mockDB = {
-  prepare: (query) => ({
-    bind: (...values) => ({
+  prepare: (query) => {
+    // Check if this is a query that should return direct results (not wrapped in .results)
+    const isDirectResultQuery = query.includes('DISTINCT funcao_kpi') || 
+                               query.includes('DISTINCT nome_atividade') ||
+                               query.includes('SELECT * FROM activities');
+    
+    return {
+      bind: (...values) => ({
+        first: async () => null,
+        all: async () => isDirectResultQuery ? [] : { results: [] },
+        run: async () => ({ success: true, meta: { last_row_id: 1, changes: 1 } })
+      }),
       first: async () => null,
-      all: async () => ({ results: [] }),
-      run: async () => ({ success: true, meta: {} })
-    }),
-    first: async () => null,
-    all: async () => ({ results: [] }),
-    run: async () => ({ success: true, meta: {} })
-  }),
+      all: async () => isDirectResultQuery ? [] : { results: [] },
+      run: async () => ({ success: true, meta: { last_row_id: 1, changes: 1 } })
+    };
+  },
   exec: async () => ({ count: 0, duration: 0 }),
   batch: async () => [],
   dump: async () => new ArrayBuffer(0)
