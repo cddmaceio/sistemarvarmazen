@@ -18,7 +18,7 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
   const { user, userFunction } = useAuth();
   const { kpis: availableKPIs, loading: kpisLoading, fetchAvailableKPIs } = useAvailableKPIs();
   const { checkLimit } = useKPILimit();
-  const { calculate, loading: calculating, error: calcError } = useCalculator();
+  const { calculate, loading: calculating, error: calcError, reset, lastCalculationSuccess } = useCalculator();
   
   const [formData, setFormData] = useState<CalculatorInputType>({
     funcao: userFunction || 'Ajudante de Armazém',
@@ -69,16 +69,24 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
     }
   }, [user?.id, dataLancamento]);
 
-  // Re-check limit after successful calculation
+  // Reset form and re-check limit after successful calculation
   useEffect(() => {
-    if (user?.id && dataLancamento) {
-      // Small delay to ensure the backend has processed the previous request
+    if (lastCalculationSuccess && user?.id && dataLancamento) {
+      // Reset form data
+      setFormData(prev => ({
+        ...prev,
+        kpis_atingidos: []
+      }));
+      
+      // Re-check limit after successful calculation
       const timeoutId = setTimeout(() => {
         checkKPILimit();
-      }, 500);
+        reset(); // Reset calculator state
+      }, 1000);
+      
       return () => clearTimeout(timeoutId);
     }
-  }, [calculate]); // This will trigger whenever calculate function changes
+  }, [lastCalculationSuccess, user?.id, dataLancamento, reset]);
 
   const checkKPILimit = async () => {
     if (!user?.id) return;
@@ -127,10 +135,7 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
       await calculate(formData);
       // The result is now stored in the hook state
       onCalculate(formData, {});
-      // Re-check limit after successful calculation
-      setTimeout(() => {
-        checkKPILimit();
-      }, 1000);
+      // Form reset and limit check are now handled by useEffect
     } catch (error) {
       console.error('Error calculating KPIs:', error);
     }

@@ -191,11 +191,13 @@ export function useCalculator() {
   const [result, setResult] = useState<CalculatorResultType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastCalculationSuccess, setLastCalculationSuccess] = useState(false);
 
   const calculate = async (input: CalculatorInputType) => {
     try {
       setLoading(true);
       setError(null);
+      setLastCalculationSuccess(false);
       const response = await fetch(`${API_BASE}/calculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -204,15 +206,23 @@ export function useCalculator() {
       if (!response.ok) throw new Error('Failed to calculate');
       const data = await response.json();
       setResult(data);
+      setLastCalculationSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setResult(null);
+      setLastCalculationSuccess(false);
     } finally {
       setLoading(false);
     }
   };
 
-  return { result, loading, error, calculate };
+  const reset = () => {
+    setResult(null);
+    setError(null);
+    setLastCalculationSuccess(false);
+  };
+
+  return { result, loading, error, calculate, reset, lastCalculationSuccess };
 }
 
 export function useKPILimit() {
