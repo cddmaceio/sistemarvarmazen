@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema, AdminValidationSchema, ExportFilterSchema, KPILimitCheckSchema } from "@/shared/types";
+import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema, AdminValidationSchema, ExportFilterSchema, KPILimitCheckSchema } from "../shared/types";
 import { cors } from 'hono/cors';
 
 // Define D1Database interface for Cloudflare Workers
