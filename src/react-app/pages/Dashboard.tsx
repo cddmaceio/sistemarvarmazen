@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Target, BarChart3, DollarSign, Activity, Star, Trophy, ArrowLeft, ArrowRight, Download, Mail, Share } from 'lucide-react';
+import { TrendingUp, Target, BarChart3, DollarSign, Activity, Star, ArrowLeft, ArrowRight, Download, Mail, Share } from 'lucide-react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/react-app/components/Card';
 import { Button } from '@/react-app/components/Button';
@@ -368,7 +368,8 @@ export default function Dashboard() {
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
                   <TrendingUp className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
                     🏆 MEU DESEMPENHO
                   </h1>
                   <p className="text-sm text-gray-600">

@@ -262,7 +262,8 @@ export default function DashboardCollaborator() {
       produtividade: 0,
       eficiencia: 0,
       pontualidade: 0
-    }
+    },
+    historicoCompleto: []
   });
 
   const generateDailyChart = (dados: any[]) => {
