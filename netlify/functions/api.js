@@ -1,8 +1,8 @@
-const { Handler } = require('@netlify/functions');
 const { handle } = require('hono/netlify');
 
 // Import your existing Hono app
-const app = require('../../src/worker/index').default;
+const workerModule = require('../../src/worker/index');
+const app = workerModule.default || workerModule;
 
 // Create Netlify function handler
 const handler = handle(app);
