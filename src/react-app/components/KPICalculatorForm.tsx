@@ -94,7 +94,7 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
     try {
       const limit = await checkLimit(user.id, dataLancamento);
       setLimitInfo(limit);
-      setCanLaunchKPIs(limit?.can_launch || false);
+      setCanLaunchKPIs(limit?.canLaunch || false);
     } catch (error) {
       console.error('Error checking KPI limit:', error);
     }

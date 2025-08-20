@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUser = async (data: Partial<UserType>) => {
-    if (!user) return;
+    if (!user || !user.id) return;
 
     try {
       const updatedUser = await supabaseQueries.updateUsuario(user.id, data);

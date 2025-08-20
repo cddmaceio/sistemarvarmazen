@@ -31,8 +31,8 @@ export default function UserManagement({
     data_nascimento: '',
     nome: '',
     funcao: 'Ajudante de Armazém',
-    role: 'user' as 'admin' | 'user',
-    is_active: true
+    tipo_usuario: 'colaborador' as 'admin' | 'colaborador',
+    status_usuario: 'ativo' as 'ativo' | 'inativo'
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -56,8 +56,8 @@ export default function UserManagement({
       data_nascimento: '',
       nome: '',
       funcao: 'Ajudante de Armazém',
-      role: 'user',
-      is_active: true
+      tipo_usuario: 'colaborador' as 'admin' | 'colaborador',
+      status_usuario: 'ativo' as 'ativo' | 'inativo'
     });
     setEditingUser(null);
     setError(null);
@@ -74,8 +74,8 @@ export default function UserManagement({
       data_nascimento: user.data_nascimento,
       nome: user.nome,
       funcao: user.funcao || 'Ajudante de Armazém',
-      role: user.role,
-      is_active: user.is_active
+      tipo_usuario: user.tipo_usuario as 'admin' | 'colaborador',
+      status_usuario: user.status_usuario as 'ativo' | 'inativo'
     });
     setEditingUser(user);
     setShowDialog(true);
@@ -118,19 +118,20 @@ export default function UserManagement({
 
   const toggleUserStatus = async (user: UserType) => {
     try {
-      await onUpdateUser(user.id!, { is_active: !user.is_active });
+      const newStatus = user.status_usuario === 'ativo' ? 'inativo' : 'ativo';
+      await onUpdateUser(user.id!, { status_usuario: newStatus });
     } catch (error) {
       console.error('Error updating user status:', error);
     }
   };
 
   const toggleUserRole = async (user: UserType) => {
-    const newRole = user.role === 'admin' ? 'user' : 'admin';
-    const roleText = newRole === 'admin' ? 'Administrador' : 'Usuário';
+    const newRole = user.tipo_usuario === 'admin' ? 'colaborador' : 'admin';
+    const roleText = newRole === 'admin' ? 'Administrador' : 'Colaborador';
     
     if (confirm(`Tem certeza que deseja alterar o perfil de ${user.nome} para ${roleText}?`)) {
       try {
-        await onUpdateUser(user.id!, { role: newRole });
+        await onUpdateUser(user.id!, { tipo_usuario: newRole });
       } catch (error) {
         console.error('Error updating user role:', error);
       }
@@ -179,13 +180,13 @@ export default function UserManagement({
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center space-x-2">
-                            {user.role === 'admin' ? (
+                            {user.tipo_usuario === 'admin' ? (
                               <Shield className="h-4 w-4 text-purple-600" />
                             ) : (
                               <User className="h-4 w-4 text-gray-600" />
                             )}
-                            <span className={user.role === 'admin' ? 'text-purple-600 font-medium' : 'text-gray-600'}>
-                              {user.role === 'admin' ? 'Administrador' : 'Usuário'}
+                            <span className={user.tipo_usuario === 'admin' ? 'text-purple-600 font-medium' : 'text-gray-600'}>
+                              {user.tipo_usuario === 'admin' ? 'Administrador' : 'Colaborador'}
                             </span>
                           </div>
                           {user.funcao && (
@@ -195,11 +196,11 @@ export default function UserManagement({
                       </TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          user.is_active
+                          user.status_usuario === 'ativo'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {user.is_active ? 'Ativo' : 'Inativo'}
+                          {user.status_usuario === 'ativo' ? 'Ativo' : 'Inativo'}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -216,8 +217,8 @@ export default function UserManagement({
                             variant="outline"
                             size="sm"
                             onClick={() => toggleUserRole(user)}
-                            className={user.role === 'admin' ? 'text-purple-600' : 'text-gray-600'}
-                            title={`Alterar perfil para ${user.role === 'admin' ? 'Usuário' : 'Administrador'}`}
+                            className={user.tipo_usuario === 'admin' ? 'text-purple-600' : 'text-gray-600'}
+                            title={`Alterar perfil para ${user.tipo_usuario === 'admin' ? 'Colaborador' : 'Administrador'}`}
                           >
                             <Shield className="h-3 w-3" />
                           </Button>
@@ -225,10 +226,10 @@ export default function UserManagement({
                             variant="outline"
                             size="sm"
                             onClick={() => toggleUserStatus(user)}
-                            className={user.is_active ? 'text-red-600' : 'text-green-600'}
-                            title={user.is_active ? 'Desativar usuário' : 'Ativar usuário'}
+                            className={user.status_usuario === 'ativo' ? 'text-red-600' : 'text-green-600'}
+                            title={user.status_usuario === 'ativo' ? 'Desativar usuário' : 'Ativar usuário'}
                           >
-                            {user.is_active ? <UserX className="h-3 w-3" /> : <UserCheck className="h-3 w-3" />}
+                            {user.status_usuario === 'ativo' ? <UserX className="h-3 w-3" /> : <UserCheck className="h-3 w-3" />}
                           </Button>
                           <Button
                             variant="destructive"
@@ -313,10 +314,10 @@ export default function UserManagement({
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Tipo de Usuário</label>
               <Select
-                value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'admin' | 'user' }))}
+                value={formData.tipo_usuario}
+                onChange={(e) => setFormData(prev => ({ ...prev, tipo_usuario: e.target.value as 'admin' | 'colaborador' }))}
               >
-                <option value="user">Usuário</option>
+                <option value="colaborador">Colaborador</option>
                 <option value="admin">Administrador</option>
               </Select>
             </div>
@@ -324,12 +325,12 @@ export default function UserManagement({
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id="is_active"
-                checked={formData.is_active}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                id="status_usuario"
+                checked={formData.status_usuario === 'ativo'}
+                onChange={(e) => setFormData(prev => ({ ...prev, status_usuario: e.target.checked ? 'ativo' : 'inativo' }))}
                 className="rounded border-gray-300"
               />
-              <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+              <label htmlFor="status_usuario" className="text-sm font-medium text-gray-700">
                 Usuário ativo
               </label>
             </div>

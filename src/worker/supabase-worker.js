@@ -703,6 +703,7 @@ app.get('/api/historico-aprovacoes', async (c) => {
   const mappedData = filteredData.map(item => ({
     id: item.id,
     colaborador_nome: item.colaborador_nome,
+    colaborador_cpf: item.colaborador_cpf,
     data_lancamento: item.data_lancamento,
     data_aprovacao: item.data_aprovacao || item.updated_at,
     aprovado_por: item.aprovado_por || 'Sistema',
@@ -711,6 +712,7 @@ app.get('/api/historico-aprovacoes', async (c) => {
     funcao: item.funcao,
     turno: item.turno,
     pontuacao_total: item.pontuacao_total,
+    remuneracao_total: item.remuneracao_total || 0,
     status: item.status
   }));
   
@@ -1208,8 +1210,10 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
 
   // Handle multiple activities for Ajudantes de Armazém
   if (funcao === 'Ajudante de Armazém' && multiple_activities && multiple_activities.length > 0) {
+    console.log('🔍 Processing multiple activities for Ajudante de Armazém');
     for (const activity of multiple_activities) {
       const produtividade = activity.quantidade_produzida / activity.tempo_horas;
+      console.log(`📊 Activity: ${activity.nome_atividade}, Produtividade: ${produtividade}`);
       
       // Get activities for this activity name, ordered by produtividade_minima descending
       const { data: activities, error } = await supabase
@@ -1217,6 +1221,11 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
         .select('*')
         .eq('nome_atividade', activity.nome_atividade)
         .order('produtividade_minima', { ascending: false });
+      
+      console.log(`🔍 Found ${activities?.length || 0} activities for "${activity.nome_atividade}"`);
+      if (activities && activities.length > 0) {
+        console.log('📋 Available activities:', activities.map(a => `${a.nome_atividade} - ${a.nivel_atividade}`));
+      }
       
       if (error) {
         return c.json({ error: error.message }, 500);

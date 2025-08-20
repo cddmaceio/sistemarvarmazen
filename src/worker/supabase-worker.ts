@@ -445,14 +445,7 @@ app.post('/api/calculator', zValidator('json', CalculatorInputSchema), async (c)
     console.log('Original input:', { funcao: input.funcao, turno: input.turno });
     console.log('Normalized input:', { funcao: normalizedFuncao, turno: normalizedTurno });
     
-    // Get activities for calculation
-    const { data: activities, error: activitiesError } = await supabase
-      .from('activities')
-      .select('*');
-    
-    if (activitiesError) {
-      return c.json({ error: activitiesError.message }, 500);
-    }
+    // Activities will be fetched as needed during calculation
     
     // Get KPIs for calculation - search with original strings (database has encoding issues)
     // Map input to database values

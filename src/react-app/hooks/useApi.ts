@@ -266,14 +266,15 @@ export function useKPILimit() {
     try {
       setLoading(true);
       setError(null);
-      const { data, error: limitError } = await supabaseQueries.checkKPILimit(userId, dataLancamento);
+      const limitReached = await supabaseQueries.checkKPILimit(userId, dataLancamento);
       
-      if (limitError) {
-        throw new Error(limitError.message || 'Erro ao verificar limite de KPIs');
-      }
+      const limitData = {
+        limitReached,
+        canLaunch: !limitReached
+      };
       
-      setLimitInfo(data);
-      return data;
+      setLimitInfo(limitData);
+      return limitData;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setLimitInfo(null);

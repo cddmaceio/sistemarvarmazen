@@ -373,7 +373,7 @@ export default function Dashboard() {
                     🏆 MEU DESEMPENHO
                   </h1>
                   <p className="text-sm text-gray-600">
-                    👤 {user?.nome} | 💼 {user?.role === 'admin' ? 'Administrador' : `Colaborador - ${userFunction}`} | 📅 Período: {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                    👤 {user?.nome} | 💼 {user?.tipo_usuario === 'admin' ? 'Administrador' : `Colaborador - ${userFunction}`} | 📅 Período: {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                   </p>
                 </div>
               </div>
