@@ -61,12 +61,20 @@ export default function DashboardCollaborator() {
   }, [user, mesAtual]);
 
   const fetchDashboardData = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       
       // Buscar dados dos lançamentos aprovados para este colaborador
       const response = await fetch('/api/historico-aprovacoes');
-      if (!response.ok) throw new Error('Falha ao carregar dados');
+      
+      if (!response.ok) {
+        throw new Error(`Falha ao carregar dados: ${response.status} ${response.statusText}`);
+      }
       
       const historico = await response.json();
       
@@ -97,7 +105,6 @@ export default function DashboardCollaborator() {
         try {
           dados = JSON.parse(item.dados_finais || '{}');
         } catch (error) {
-          console.warn('Erro ao fazer parse de dados_finais:', error, 'Item:', item);
           dados = {};
         }
         const dataFormatada = new Date(item.data_lancamento).toLocaleDateString('pt-BR');
@@ -254,7 +261,6 @@ export default function DashboardCollaborator() {
       });
 
     } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
       setDashboardData(generateEmptyData());
     } finally {
       setLoading(false);
