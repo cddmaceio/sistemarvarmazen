@@ -9,6 +9,7 @@ import UserMenu from '@/react-app/components/UserMenu';
 import EditLancamentoModal from '@/react-app/components/EditLancamentoModal';
 import { useAuth } from '@/react-app/hooks/useAuth';
 import { LancamentoType, CalculatorInputType, CalculatorResultType } from '@/shared/types';
+import { supabaseQueries } from '@/lib/supabase';
 
 export default function Validacao() {
   const { isAdmin } = useAuth();
@@ -29,9 +30,7 @@ export default function Validacao() {
 
   const fetchLancamentosPendentes = async () => {
     try {
-      const response = await fetch('/api/lancamentos/pendentes');
-      if (!response.ok) throw new Error('Falha ao carregar lançamentos');
-      const data = await response.json();
+      const data = await supabaseQueries.getLancamentosPendentes();
       setLancamentos(data);
     } catch (error) {
       console.error('Erro ao carregar lançamentos:', error);
@@ -43,19 +42,7 @@ export default function Validacao() {
   const handleValidacao = async (lancamentoId: number, acao: 'aprovar' | 'reprovar') => {
     setProcessando(String(lancamentoId));
     try {
-      const response = await fetch(`/api/lancamentos/${lancamentoId}/validar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          acao,
-          observacoes: observacoes || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha na validação');
-      }
+      await supabaseQueries.validarLancamento(lancamentoId, acao, observacoes || undefined);
 
       // Refresh the list
       await fetchLancamentosPendentes();
@@ -289,7 +276,7 @@ export default function Validacao() {
                           </div>
                           <div className="text-right">
                             <div className="text-2xl font-bold text-green-600">
-                              R$ {lancamento.remuneracao_total.toFixed(2)}
+                              R$ {(lancamento.remuneracao_total || 0).toFixed(2)}
                             </div>
                             <div className="text-xs text-gray-500">
                               Lançado em {formatDate(lancamento.created_at!)}
@@ -304,14 +291,13 @@ export default function Validacao() {
                           <div className="bg-blue-50 p-3 rounded-lg">
                             <p className="text-xs text-blue-600 font-medium">Atividades</p>
                             <p className="text-sm font-semibold text-blue-900">
-                              R$ {(lancamento.subtotal_atividades * 2).toFixed(2)}
-                              <span className="text-xs text-blue-600 ml-1">(50%)</span>
+                              R$ {(lancamento.subtotal_atividades || 0).toFixed(2)}
                             </p>
                           </div>
                           <div className="bg-green-50 p-3 rounded-lg">
                             <p className="text-xs text-green-600 font-medium">KPIs</p>
                             <p className="text-sm font-semibold text-green-900">
-                              R$ {lancamento.bonus_kpis.toFixed(2)}
+                              R$ {(lancamento.bonus_kpis || 0).toFixed(2)}
                             </p>
                           </div>
                           {lancamento.tarefas_validas && (
@@ -366,7 +352,7 @@ export default function Validacao() {
                                   <div>
                                     <span className="text-gray-600">Produtividade:</span>
                                     <p className="font-medium text-blue-600">
-                                      {lancamento.produtividade_alcancada?.toFixed(2)} {lancamento.unidade_medida}
+                                      {lancamento.produtividade_alcancada ? lancamento.produtividade_alcancada.toFixed(2) : '0.00'} {lancamento.unidade_medida || ''}
                                     </p>
                                   </div>
                                 </div>

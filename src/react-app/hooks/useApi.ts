@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ActivityType, KPIType, CalculatorInputType, CalculatorResultType } from '@/shared/types';
+import { supabase, supabaseQueries } from '@/lib/supabase';
 
 const API_BASE = '/api';
 
@@ -11,10 +12,13 @@ export function useActivities() {
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/activities`);
-      if (!response.ok) throw new Error('Failed to fetch activities');
-      const data = await response.json();
-      setActivities(data);
+      const { data, error } = await supabase
+        .from('activities')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setActivities(data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -24,12 +28,11 @@ export function useActivities() {
 
   const createActivity = async (activity: Omit<ActivityType, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const response = await fetch(`${API_BASE}/activities`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(activity),
-      });
-      if (!response.ok) throw new Error('Failed to create activity');
+      const { error } = await supabase
+        .from('activities')
+        .insert(activity);
+      
+      if (error) throw error;
       await fetchActivities();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -38,12 +41,15 @@ export function useActivities() {
 
   const updateActivity = async (id: number, activity: Omit<ActivityType, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const response = await fetch(`${API_BASE}/activities/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(activity),
-      });
-      if (!response.ok) throw new Error('Failed to update activity');
+      const { error } = await supabase
+        .from('activities')
+        .update({
+          ...activity,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
       await fetchActivities();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -52,10 +58,12 @@ export function useActivities() {
 
   const deleteActivity = async (id: number) => {
     try {
-      const response = await fetch(`${API_BASE}/activities/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete activity');
+      const { error } = await supabase
+        .from('activities')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
       await fetchActivities();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -77,10 +85,13 @@ export function useKPIs() {
   const fetchKPIs = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/kpis`);
-      if (!response.ok) throw new Error('Failed to fetch KPIs');
-      const data = await response.json();
-      setKpis(data);
+      const { data, error } = await supabase
+        .from('kpis')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setKpis(data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -90,12 +101,11 @@ export function useKPIs() {
 
   const createKPI = async (kpi: Omit<KPIType, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const response = await fetch(`${API_BASE}/kpis`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(kpi),
-      });
-      if (!response.ok) throw new Error('Failed to create KPI');
+      const { error } = await supabase
+        .from('kpis')
+        .insert(kpi);
+      
+      if (error) throw error;
       await fetchKPIs();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -104,12 +114,15 @@ export function useKPIs() {
 
   const updateKPI = async (id: number, kpi: Omit<KPIType, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const response = await fetch(`${API_BASE}/kpis/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(kpi),
-      });
-      if (!response.ok) throw new Error('Failed to update KPI');
+      const { error } = await supabase
+        .from('kpis')
+        .update({
+          ...kpi,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
       await fetchKPIs();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -118,10 +131,12 @@ export function useKPIs() {
 
   const deleteKPI = async (id: number) => {
     try {
-      const response = await fetch(`${API_BASE}/kpis/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete KPI');
+      const { error } = await supabase
+        .from('kpis')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
       await fetchKPIs();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -144,10 +159,16 @@ export function useFunctions() {
     const fetchFunctions = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE}/functions`);
-        if (!response.ok) throw new Error('Failed to fetch functions');
-        const data = await response.json();
-        setFunctions(data);
+        const { data, error } = await supabase
+          .from('kpis')
+          .select('funcao_kpi')
+          .order('funcao_kpi', { ascending: true });
+        
+        if (error) throw error;
+        
+        // Remove duplicates and format as expected
+        const uniqueFunctions = [...new Set(data.map(item => item.funcao_kpi))];
+        setFunctions(uniqueFunctions.map(funcao => ({ funcao })));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -170,10 +191,16 @@ export function useActivityNames() {
     const fetchActivityNames = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE}/activity-names`);
-        if (!response.ok) throw new Error('Failed to fetch activity names');
-        const data = await response.json();
-        setActivityNames(data);
+        const { data, error } = await supabase
+          .from('activities')
+          .select('nome_atividade')
+          .order('nome_atividade', { ascending: true });
+        
+        if (error) throw error;
+        
+        // Remove duplicates and format as expected
+        const uniqueNames = [...new Set(data.map(item => item.nome_atividade))];
+        setActivityNames(uniqueNames.map(nome_atividade => ({ nome_atividade })));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -198,12 +225,17 @@ export function useCalculator() {
       setLoading(true);
       setError(null);
       setLastCalculationSuccess(false);
+      
       const response = await fetch(`${API_BASE}/calculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-      if (!response.ok) throw new Error('Failed to calculate');
+      
+      if (!response.ok) {
+        throw new Error('Failed to calculate');
+      }
+      
       const data = await response.json();
       setResult(data);
       setLastCalculationSuccess(true);
@@ -234,16 +266,12 @@ export function useKPILimit() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`${API_BASE}/kpis/check-limit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          data_lancamento: dataLancamento
-        }),
-      });
-      if (!response.ok) throw new Error('Failed to check KPI limit');
-      const data = await response.json();
+      const { data, error: limitError } = await supabaseQueries.checkKPILimit(userId, dataLancamento);
+      
+      if (limitError) {
+        throw new Error(limitError.message || 'Erro ao verificar limite de KPIs');
+      }
+      
       setLimitInfo(data);
       return data;
     } catch (err) {
@@ -267,11 +295,17 @@ export function useAvailableKPIs() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`${API_BASE}/kpis/available?funcao=${encodeURIComponent(funcao)}&turno=${encodeURIComponent(turno)}`);
-      if (!response.ok) throw new Error('Failed to fetch available KPIs');
-      const data = await response.json();
-      setKpis(data);
-      return data;
+      
+      const { data, error } = await supabase
+        .from('kpis')
+        .select('*')
+        .eq('funcao_kpi', funcao)
+        .eq('turno_kpi', turno)
+        .order('nome_kpi', { ascending: true });
+      
+      if (error) throw error;
+      setKpis(data || []);
+      return data || [];
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setKpis([]);

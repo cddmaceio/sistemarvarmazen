@@ -825,4 +825,4 @@ app.get('/api/export-logs', async (c) => {
         return c.json({ error: 'Erro ao carregar logs' }, 500);
     }
 });
-exports.default = app;
+export default app;

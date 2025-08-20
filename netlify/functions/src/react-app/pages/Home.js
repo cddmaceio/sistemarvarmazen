@@ -74,7 +74,12 @@ function Home() {
             const validActivities = multipleActivities.filter(act => act.nome_atividade && act.quantidade_produzida > 0 && act.tempo_horas > 0);
             if (validActivities.length === 0)
                 return;
-            submitData.multiple_activities = validActivities;
+            // Map to the expected schema format
+            submitData.multiple_activities = validActivities.map(act => ({
+                nome: act.nome_atividade,
+                quantidade: act.quantidade_produzida,
+                tempo: act.tempo_horas
+            }));
         }
         else if (isOperadorEmpilhadeira) {
             // For Operador de Empilhadeira, include valid tasks count

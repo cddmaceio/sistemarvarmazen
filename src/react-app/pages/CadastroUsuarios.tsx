@@ -33,6 +33,9 @@ interface ExtendedUserType extends UserType {
   data_admissao?: string;
   turno?: string;
   observacoes?: string;
+  // Legacy fields for compatibility
+  role?: 'user' | 'admin';
+  is_active?: boolean;
 }
 
 export default function CadastroUsuarios() {
@@ -54,8 +57,8 @@ export default function CadastroUsuarios() {
     cpf: '',
     data_nascimento: '',
     funcao: 'Ajudante de Armazém',
-    role: 'user' as 'user' | 'admin',
-    is_active: true,
+    tipo_usuario: 'colaborador',
+    status_usuario: 'ativo',
     email: '',
     telefone: '',
     data_admissao: '',
@@ -122,8 +125,8 @@ export default function CadastroUsuarios() {
       cpf: '',
       data_nascimento: '',
       funcao: 'Ajudante de Armazém',
-      role: 'user',
-      is_active: true,
+      tipo_usuario: 'colaborador',
+      status_usuario: 'ativo',
       email: '',
       telefone: '',
       data_admissao: '',
@@ -141,12 +144,12 @@ export default function CadastroUsuarios() {
 
   const openEditDialog = (user: ExtendedUserType) => {
     setFormData({
-      nome: user.nome,
-      cpf: user.cpf,
-      data_nascimento: user.data_nascimento,
+      nome: user.nome || '',
+      cpf: user.cpf || '',
+      data_nascimento: user.data_nascimento || '',
       funcao: user.funcao || 'Ajudante de Armazém',
-      role: user.role,
-      is_active: user.is_active,
+      tipo_usuario: user.tipo_usuario || (user.role === 'admin' ? 'administrador' : 'colaborador'),
+      status_usuario: user.status_usuario || (user.is_active ? 'ativo' : 'inativo'),
       email: user.email || '',
       telefone: user.telefone || '',
       data_admissao: user.data_admissao || '',
@@ -208,9 +211,13 @@ export default function CadastroUsuarios() {
         cpf: formData.cpf,
         data_nascimento: formData.data_nascimento,
         funcao: formData.funcao,
-        role: formData.role,
-        is_active: Boolean(formData.is_active)
-        // Note: email, telefone, etc. would need database schema updates
+        tipo_usuario: formData.tipo_usuario,
+        status_usuario: formData.status_usuario,
+        email: formData.email,
+        telefone: formData.telefone,
+        data_admissao: formData.data_admissao,
+        turno: formData.turno,
+        observacoes: formData.observacoes
       };
 
       const url = editingUser ? `/api/usuarios/${editingUser.id}` : '/api/usuarios';
@@ -259,17 +266,25 @@ export default function CadastroUsuarios() {
 
   const toggleUserStatus = async (user: ExtendedUserType) => {
     try {
+      const currentStatus = user.status_usuario || (user.is_active ? 'ativo' : 'inativo');
+      const newStatus = currentStatus === 'ativo' ? 'inativo' : 'ativo';
+      
       const response = await fetch(`/api/usuarios/${user.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: Boolean(!user.is_active) })
+        body: JSON.stringify({ status_usuario: newStatus })
       });
 
       if (response.ok) {
         await loadUsers();
+      } else {
+        const errorData = await response.json();
+        console.error('Error toggling user status:', errorData);
+        setError('Erro ao alterar status do usuário');
       }
     } catch (error) {
       console.error('Error toggling user status:', error);
+      setError('Erro ao alterar status do usuário');
     }
   };
 
@@ -277,13 +292,17 @@ export default function CadastroUsuarios() {
     const matchesSearch = user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          maskCPF(user.cpf).includes(searchTerm);
     
+    const userStatus = user.status_usuario || (user.is_active ? 'ativo' : 'inativo');
     const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && user.is_active) ||
-                         (statusFilter === 'inactive' && !user.is_active);
+                         (statusFilter === 'active' && userStatus === 'ativo') ||
+                         (statusFilter === 'inactive' && userStatus === 'inativo');
     
     const matchesFuncao = funcaoFilter === 'all' || user.funcao === funcaoFilter;
     
-    const matchesPerfil = perfilFilter === 'all' || user.role === perfilFilter;
+    const userTipo = user.tipo_usuario || (user.role === 'admin' ? 'administrador' : 'colaborador');
+    const matchesPerfil = perfilFilter === 'all' || 
+                         (perfilFilter === 'admin' && userTipo === 'administrador') ||
+                         (perfilFilter === 'user' && userTipo === 'colaborador');
     
     return matchesSearch && matchesStatus && matchesFuncao && matchesPerfil;
   });
@@ -402,7 +421,7 @@ export default function CadastroUsuarios() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
-                                {user.role === 'admin' ? (
+                                {(user.tipo_usuario === 'administrador' || user.role === 'admin') ? (
                                   <>
                                     <Shield className="h-4 w-4 text-purple-600" />
                                     <span className="text-purple-600 font-medium text-sm">Admin</span>
@@ -419,15 +438,15 @@ export default function CadastroUsuarios() {
                               <button
                                 onClick={() => toggleUserStatus(user)}
                                 className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
-                                  user.is_active
+                                  (user.status_usuario === 'ativo' || user.is_active)
                                     ? 'bg-green-100 text-green-800 hover:bg-green-200'
                                     : 'bg-red-100 text-red-800 hover:bg-red-200'
                                 }`}
                               >
                                 <span className={`w-2 h-2 rounded-full ${
-                                  user.is_active ? 'bg-green-600' : 'bg-red-600'
+                                  (user.status_usuario === 'ativo' || user.is_active) ? 'bg-green-600' : 'bg-red-600'
                                 }`}></span>
-                                <span>{user.is_active ? 'Ativo' : 'Inativo'}</span>
+                                <span>{(user.status_usuario === 'ativo' || user.is_active) ? 'Ativo' : 'Inativo'}</span>
                               </button>
                             </TableCell>
                             <TableCell>
@@ -564,10 +583,10 @@ export default function CadastroUsuarios() {
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          name="role"
-                          value="user"
-                          checked={formData.role === 'user'}
-                          onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'user' | 'admin' }))}
+                          name="tipo_usuario"
+                          value="colaborador"
+                          checked={formData.tipo_usuario === 'colaborador'}
+                          onChange={(e) => setFormData(prev => ({ ...prev, tipo_usuario: e.target.value }))}
                         />
                         <User className="h-4 w-4 text-gray-600" />
                         <span className="text-sm">User</span>
@@ -575,10 +594,10 @@ export default function CadastroUsuarios() {
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          name="role"
-                          value="admin"
-                          checked={formData.role === 'admin'}
-                          onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'user' | 'admin' }))}
+                          name="tipo_usuario"
+                          value="administrador"
+                          checked={formData.tipo_usuario === 'administrador'}
+                          onChange={(e) => setFormData(prev => ({ ...prev, tipo_usuario: e.target.value }))}
                         />
                         <Shield className="h-4 w-4 text-purple-600" />
                         <span className="text-sm">Admin</span>
@@ -592,18 +611,20 @@ export default function CadastroUsuarios() {
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          name="status"
-                          checked={formData.is_active}
-                          onChange={() => setFormData(prev => ({ ...prev, is_active: true }))}
+                          name="status_usuario"
+                          value="ativo"
+                          checked={formData.status_usuario === 'ativo'}
+                          onChange={(e) => setFormData(prev => ({ ...prev, status_usuario: e.target.value }))}
                         />
                         <span className="text-sm">🟢 Ativo</span>
                       </label>
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          name="status"
-                          checked={!formData.is_active}
-                          onChange={() => setFormData(prev => ({ ...prev, is_active: false }))}
+                          name="status_usuario"
+                          value="inativo"
+                          checked={formData.status_usuario === 'inativo'}
+                          onChange={(e) => setFormData(prev => ({ ...prev, status_usuario: e.target.value }))}
                         />
                         <span className="text-sm">🔴 Inativo</span>
                       </label>
@@ -747,7 +768,7 @@ export default function CadastroUsuarios() {
                     <div>
                       <label className="text-sm font-medium text-gray-500">Perfil</label>
                       <div className="flex items-center space-x-2">
-                        {viewingUser.role === 'admin' ? (
+                        {(viewingUser.tipo_usuario === 'administrador' || viewingUser.role === 'admin') ? (
                           <>
                             <Shield className="h-4 w-4 text-purple-600" />
                             <span className="text-purple-600 font-medium">Administrador</span>
@@ -764,14 +785,14 @@ export default function CadastroUsuarios() {
                     <div>
                       <label className="text-sm font-medium text-gray-500">Status</label>
                       <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        viewingUser.is_active
+                        (viewingUser.status_usuario === 'ativo' || viewingUser.is_active)
                           ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
                       }`}>
                         <span className={`w-2 h-2 rounded-full ${
-                          viewingUser.is_active ? 'bg-green-600' : 'bg-red-600'
+                          (viewingUser.status_usuario === 'ativo' || viewingUser.is_active) ? 'bg-green-600' : 'bg-red-600'
                         }`}></span>
-                        <span>{viewingUser.is_active ? 'Ativo' : 'Inativo'}</span>
+                        <span>{(viewingUser.status_usuario === 'ativo' || viewingUser.is_active) ? 'Ativo' : 'Inativo'}</span>
                       </span>
                     </div>
                   </div>

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema, AdminValidationSchema, ExportFilterSchema, KPILimitCheckSchema } from "../shared/types";
 import { cors } from 'hono/cors';
+import { createClient } from '@supabase/supabase-js';
 
 // Define D1Database interface for Cloudflare Workers
 interface D1Database {
@@ -40,7 +41,14 @@ interface D1ExecResult {
 // Import Env type from worker configuration
 type Env = {
   DB: D1Database;
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
 };
+
+// Supabase client helper
+function getSupabase(env: Env) {
+  return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+}
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -81,9 +89,9 @@ app.post('/api/usuarios', zValidator('json', UserSchema), async (c) => {
   const data = c.req.valid('json');
   
   const result = await db.prepare(`
-    INSERT INTO usuarios (cpf, data_nascimento, nome, role, is_active, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `).bind(data.cpf, data.data_nascimento, data.nome, data.role, data.is_active).run();
+    INSERT INTO usuarios (cpf, data_nascimento, nome, tipo_usuario, status_usuario, funcao, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+  `).bind(data.cpf, data.data_nascimento, data.nome, data.tipo_usuario, data.status_usuario, data.funcao).run();
   
   if (result.success) {
     const user = await db.prepare('SELECT * FROM usuarios WHERE id = ?').bind(result.meta.last_row_id).first() as any;
@@ -118,13 +126,17 @@ app.put('/api/usuarios/:id', zValidator('json', UserSchema.partial()), async (c)
     updates.push('data_nascimento = ?');
     values.push(data.data_nascimento);
   }
-  if (data.role !== undefined) {
-    updates.push('role = ?');
-    values.push(data.role);
+  if (data.tipo_usuario !== undefined) {
+    updates.push('tipo_usuario = ?');
+    values.push(data.tipo_usuario);
   }
-  if (data.is_active !== undefined) {
-    updates.push('is_active = ?');
-    values.push(data.is_active);
+  if (data.status_usuario !== undefined) {
+    updates.push('status_usuario = ?');
+    values.push(data.status_usuario);
+  }
+  if (data.funcao !== undefined) {
+    updates.push('funcao = ?');
+    values.push(data.funcao);
   }
   
   if (updates.length === 0) {
@@ -312,7 +324,7 @@ app.delete('/api/kpis/:id', async (c) => {
 
 // Get available KPIs for function/shift (limited to 2 active KPIs)
 app.get('/api/kpis/available', async (c) => {
-  const db = c.env.DB;
+  const supabase = getSupabase(c.env);
   const funcao = c.req.query('funcao');
   const turno = c.req.query('turno');
   
@@ -320,14 +332,44 @@ app.get('/api/kpis/available', async (c) => {
     return c.json({ error: 'Função e turno são obrigatórios' }, 400);
   }
   
-  const kpis = await db.prepare(`
-    SELECT * FROM kpis 
-    WHERE funcao_kpi = ? AND (turno_kpi = ? OR turno_kpi = 'Geral') AND status_ativo = true
-    ORDER BY created_at DESC
-    LIMIT 2
-  `).bind(funcao, turno).all();
+  // Normalize input data
+  const normalizedFuncao = funcao?.trim();
+  const normalizedTurno = turno?.trim();
   
-  return c.json(kpis.results);
+  // Map normalized values to database values (with encoding issues)
+  const dbFuncao = normalizedFuncao === 'Ajudante de Armazém' ? 'Ajudante de ArmazÃ©m' : normalizedFuncao;
+  const dbTurno = normalizedTurno === 'Manha' ? 'ManhÃ£' : normalizedTurno;
+  
+  console.log('Database search values:', { dbFuncao, dbTurno });
+  console.log('Searching for KPIs with:', { funcao_kpi: dbFuncao, turno_kpi: [dbTurno, 'Geral'] });
+  
+  // Try two separate queries and combine results
+  const { data: kpis1, error: error1 } = await supabase
+    .from('kpis')
+    .select('*')
+    .eq('funcao_kpi', dbFuncao)
+    .eq('turno_kpi', dbTurno)
+    .eq('status_ativo', true);
+  
+  const { data: kpis2, error: error2 } = await supabase
+    .from('kpis')
+    .select('*')
+    .eq('funcao_kpi', dbFuncao)
+    .eq('turno_kpi', 'Geral')
+    .eq('status_ativo', true);
+  
+  const kpis = [...(kpis1 || []), ...(kpis2 || [])];
+  const error = error1 || error2;
+  
+  console.log(`KPI query result:`, { data: kpis, error, count: kpis?.length || 0 });
+  console.log(`Query 1 (${dbTurno}):`, kpis1?.length || 0, 'results');
+  console.log(`Query 2 (Geral):`, kpis2?.length || 0, 'results');
+  
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+  
+  return c.json({ kpisAtingidos: kpis || [] });
 });
 
 // Check KPI daily limit for user
@@ -875,41 +917,82 @@ app.post('/api/lancamentos/:id/validar', zValidator('json', AdminValidationSchem
 
 // Add endpoint to get approval history
 app.get('/api/historico-aprovacoes', async (c) => {
-  const db = c.env.DB;
+  const supabase = getSupabase(c.env);
   const colaborador = c.req.query('colaborador');
   const admin = c.req.query('admin');
   const editado = c.req.query('editado');
   
-  let query = 'SELECT * FROM historico_lancamentos_aprovados';
-  const conditions = [];
-  const params: any[] = [];
-  
-  if (colaborador) {
-    conditions.push('colaborador_nome LIKE ?');
-    params.push(`%${colaborador}%`);
+  try {
+    console.log('=== HISTORICO APROVACOES DEBUG ===');
+    console.log('Filtros recebidos:', { colaborador, admin, editado });
+    
+    // Buscar todos os lançamentos aprovados primeiro
+    const { data: allApproved, error: allError } = await supabase
+      .from('lancamentos_produtividade')
+      .select('*')
+      .eq('status', 'aprovado')
+      .order('updated_at', { ascending: false });
+    
+    console.log('Lançamentos aprovados encontrados:', allApproved?.length || 0);
+    
+    if (allError) {
+      console.error('Erro na consulta inicial:', allError);
+      return c.json({ error: 'Erro ao carregar histórico' }, 500);
+    }
+    
+    if (!allApproved || allApproved.length === 0) {
+      console.log('Nenhum lançamento aprovado encontrado');
+      return c.json([]);
+    }
+    
+    // Aplicar filtros manualmente se necessário
+    let filteredHistory = allApproved;
+    
+    if (colaborador) {
+      filteredHistory = filteredHistory.filter(item => 
+        item.user_nome?.toLowerCase().includes(colaborador.toLowerCase())
+      );
+    }
+    
+    if (admin) {
+      filteredHistory = filteredHistory.filter(item => 
+        item.aprovado_por?.toLowerCase().includes(admin.toLowerCase())
+      );
+    }
+    
+    if (editado === 'true') {
+      filteredHistory = filteredHistory.filter(item => item.editado_por_admin);
+    } else if (editado === 'false') {
+      filteredHistory = filteredHistory.filter(item => !item.editado_por_admin);
+    }
+    
+    console.log('Após filtros:', filteredHistory.length);
+    
+    // Transform data to match expected format
+    const transformedHistory = filteredHistory.map(item => ({
+      id: item.id,
+      lancamento_id: item.id,
+      colaborador_id: item.user_id,
+      colaborador_nome: item.user_nome,
+      colaborador_cpf: item.user_cpf,
+      data_lancamento: item.data_lancamento,
+      data_aprovacao: item.data_aprovacao || item.updated_at,
+      aprovado_por: item.aprovado_por || 'Sistema',
+      editado: !!item.editado_por_admin,
+      editado_por: item.editado_por_admin,
+      dados_finais: JSON.stringify(item),
+      observacoes: item.observacoes,
+      remuneracao_total: item.remuneracao_total,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    }));
+    
+    console.log('Retornando:', transformedHistory.length, 'registros');
+    return c.json(transformedHistory);
+  } catch (error) {
+    console.error('Erro no endpoint historico-aprovacoes:', error);
+    return c.json({ error: 'Erro interno do servidor' }, 500);
   }
-  
-  if (admin) {
-    conditions.push('aprovado_por LIKE ?');
-    params.push(`%${admin}%`);
-  }
-  
-  if (editado === 'true') {
-    conditions.push('editado = ?');
-    params.push(true);
-  } else if (editado === 'false') {
-    conditions.push('editado = ?');
-    params.push(false);
-  }
-  
-  if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
-  }
-  
-  query += ' ORDER BY data_aprovacao DESC';
-  
-  const history = await db.prepare(query).bind(...params).all();
-  return c.json(history.results);
 });
 
 // Export endpoints

@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
 import { UserType } from '@/shared/types';
+import { supabaseQueries } from '@/lib/supabase';
 
 interface AuthContextType {
   user: UserType | null;
@@ -55,37 +56,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const formatCPF = (cpf: string) => {
-    // Remove all non-numeric characters
-    const numbers = cpf.replace(/\D/g, '');
-    // Add formatting
-    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  };
+
 
   const login = async (cpf: string, dataNascimento: string) => {
     try {
       setLoading(true);
       
-      // Format CPF for consistency
-      const formattedCPF = formatCPF(cpf);
-      
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cpf: formattedCPF,
-          data_nascimento: dataNascimento
-        })
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        localStorage.setItem('logibonus_user', JSON.stringify(userData));
-      } else {
-        const error = await response.json();
-        throw new Error(error.message || 'Erro no login');
-      }
+      const userData = await supabaseQueries.login(cpf, dataNascimento);
+      setUser(userData);
+      localStorage.setItem('logibonus_user', JSON.stringify(userData));
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -113,13 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
       });
       
-      // 5. Call server logout endpoint
-      fetch('/api/auth/logout', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      }).catch(() => {
-        // Ignore server errors during logout
-      });
+      // 5. No need to call server logout with Supabase
       
       // 6. Force redirect to prevent back navigation
       window.location.replace('/');
@@ -135,26 +108,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      const response = await fetch(`/api/usuarios/${user.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      if (response.ok) {
-        const updatedUser = await response.json();
-        setUser(updatedUser);
-        localStorage.setItem('logibonus_user', JSON.stringify(updatedUser));
-      }
+      const updatedUser = await supabaseQueries.updateUsuario(user.id, data);
+      setUser(updatedUser);
+      localStorage.setItem('logibonus_user', JSON.stringify(updatedUser));
     } catch (error) {
       console.error('Failed to update user:', error);
       throw error;
     }
   };
 
-  const isAdmin = user?.role === 'admin' && user?.is_active;
-  const isCollaborator = user?.role === 'user' && user?.is_active;
-  const userFunction = user?.funcao || 'Ajudante de Armazém';
+  const isAdmin = user?.tipo_usuario === 'administrador';
+  const isCollaborator = user?.tipo_usuario === 'colaborador';
+  const userFunction = user?.funcao || '';
 
   const authValue = {
     user,

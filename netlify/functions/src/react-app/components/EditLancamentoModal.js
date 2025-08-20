@@ -77,7 +77,11 @@ function EditLancamentoModal({ open, onClose, lancamento, onSave }) {
     const handleCalculate = async () => {
         const calculatorInput = {
             ...formData,
-            multiple_activities: formData.funcao === 'Ajudante de Armazém' ? multipleActivities : undefined,
+            multiple_activities: formData.funcao === 'Ajudante de Armazém' ? multipleActivities.map(act => ({
+                nome_atividade: act.nome_atividade,
+                quantidade_produzida: act.quantidade_produzida,
+                tempo_horas: act.tempo_horas
+            })) : undefined,
         };
         await calculate(calculatorInput);
         setHasCalculated(true);

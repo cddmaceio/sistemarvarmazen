@@ -36,9 +36,9 @@ export const UserSchema = z.object({
   cpf: z.string().min(1, "CPF é obrigatório"),
   data_nascimento: z.string().min(1, "Data de nascimento é obrigatória"),
   nome: z.string().min(1, "Nome é obrigatório"),
-  role: z.enum(["admin", "user"]).default("user"),
+  tipo_usuario: z.string().default("colaborador"),
+  status_usuario: z.string().default("ativo"),
   funcao: z.string().optional(),
-  is_active: z.boolean().default(true),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });
@@ -76,7 +76,7 @@ export type ValidTaskType = z.infer<typeof ValidTaskSchema>;
 export const CalculatorInputSchema = z.object({
   nome_atividade: z.string().optional(),
   funcao: z.string().min(1, "Função é obrigatória"),
-  turno: z.enum(["Manhã", "Tarde", "Noite"]),
+  turno: z.enum(["Manhã", "Tarde", "Noite", "Manha"]),
   quantidade_produzida: z.number().optional(),
   tempo_horas: z.number().optional(),
   input_adicional: z.number().optional(),

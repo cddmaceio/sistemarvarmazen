@@ -9,12 +9,12 @@ export default defineConfig({
   server: {
     allowedHosts: true,
     proxy: {
-        '/api': {
-          target: 'http://127.0.0.1:8787',
-          changeOrigin: true,
-          secure: false,
-        },
+      '/api': {
+        target: 'http://localhost:8888',
+        changeOrigin: true,
+        secure: false,
       },
+    },
   },
   build: {
     chunkSizeWarningLimit: 5000,

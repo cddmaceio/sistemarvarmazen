@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "01987115-e7bd-783e-9f01-e0a5ed2ce55e",
-  "main": "./src/worker/index.ts",
+  "main": "./src/worker/supabase-worker.js",
   "compatibility_date": "2025-06-17",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
@@ -9,6 +9,7 @@
   },
   "upload_source_maps": true,
   "assets": {
+    "directory": "./dist",
     "not_found_handling": "single-page-application",
   },
   "d1_databases": [
@@ -18,4 +19,12 @@
       "database_id": "01987115-e7bd-783e-9f01-e0a5ed2ce55e",
     },
   ],
+  "vars": {
+    "SUPABASE_URL": "https://qcqkfipckcnydsjjdral.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjcWtmaXBja2NueWRzampkcmFsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTYyNzczNywiZXhwIjoyMDcxMjAzNzM3fQ.Y6-YwCobWRNlNnObdVRdxEBWJpIMe66N5JGwpaoiFB8",
+    "VITE_SUPABASE_URL": "https://qcqkfipckcnydsjjdral.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjcWtmaXBja2NueWRzampkcmFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2Mjc3MzcsImV4cCI6MjA3MTIwMzczN30.5Bq-1-TyOugW1-NrkDj_37lCYDvKJNiaRC6vFoWqXZk",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://qcqkfipckcnydsjjdral.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjcWtmaXBja2NueWRzampkcmFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2Mjc3MzcsImV4cCI6MjA3MTIwMzczN30.5Bq-1-TyOugW1-NrkDj_37lCYDvKJNiaRC6vFoWqXZk"
+  }
 }

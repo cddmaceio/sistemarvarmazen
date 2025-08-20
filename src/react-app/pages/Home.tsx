@@ -83,7 +83,12 @@ export default function Home() {
         act => act.nome_atividade && act.quantidade_produzida > 0 && act.tempo_horas > 0
       );
       if (validActivities.length === 0) return;
-      submitData.multiple_activities = validActivities;
+      // Map to the expected schema format
+      submitData.multiple_activities = validActivities.map(act => ({
+        nome_atividade: act.nome_atividade,
+        quantidade_produzida: act.quantidade_produzida,
+        tempo_horas: act.tempo_horas
+      }));
     } else if (isOperadorEmpilhadeira) {
       // For Operador de Empilhadeira, include valid tasks count
       submitData.valid_tasks_count = validTasksCount;
@@ -687,11 +692,11 @@ export default function Home() {
                     <div className="space-y-3">
                       
                       {/* Multiple activities details */}
-                      {result.atividades_detalhes && result.atividades_detalhes.length > 0 && (
+                      {result?.atividades_detalhes && result.atividades_detalhes.length > 0 && (
                         <div className="mb-4">
                           <h4 className="font-medium text-gray-800 mb-2">Detalhes das Atividades:</h4>
                           <div className="space-y-2">
-                            {result.atividades_detalhes.map((atividade, index) => (
+                            {result?.atividades_detalhes?.map((atividade, index) => (
                               <div key={index} className="bg-white/70 p-3 rounded-lg border">
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                                   <div>
@@ -718,29 +723,29 @@ export default function Home() {
                       )}
 
                       {/* Single activity details */}
-                      {result.produtividade_alcancada && result.nivel_atingido && (
+                      {result?.produtividade_alcancada && result?.nivel_atingido && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                           <div className="bg-white/70 p-3 rounded-lg">
                             <p className="text-sm text-gray-600">Produtividade Alcançada</p>
                             <p className="text-lg font-semibold text-purple-600">
-                              {result.produtividade_alcancada.toFixed(2)} {result.unidade_medida}
+                              {result?.produtividade_alcancada?.toFixed(2)} {result?.unidade_medida}
                             </p>
                           </div>
                           <div className="bg-white/70 p-3 rounded-lg">
                             <p className="text-sm text-gray-600">Nível Atingido</p>
                             <p className="text-lg font-semibold text-blue-600">
-                              {result.nivel_atingido}
+                              {result?.nivel_atingido}
                             </p>
                           </div>
                         </div>
                       )}
 
                       {/* Valid tasks details */}
-                      {result.tarefas_validas !== undefined && (
+                      {result?.tarefas_validas !== undefined && (
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-700">Tarefas Válidas ({result.tarefas_validas}):</span>
+                          <span className="text-gray-700">Tarefas Válidas ({result?.tarefas_validas}):</span>
                           <span className="font-semibold text-purple-600">
-                            R$ {result.valor_tarefas?.toFixed(2) || '0.00'}
+                            R$ {result?.valor_tarefas?.toFixed(2) || '0.00'}
                           </span>
                         </div>
                       )}
@@ -748,19 +753,19 @@ export default function Home() {
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Valor Bruto Atividades:</span>
                         <span className="font-semibold text-purple-600">
-                          R$ {(result.subtotal_atividades * 2).toFixed(2)}
+                          R$ {((result?.subtotal_atividades || 0) * 2).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Atividades (50%):</span>
                         <span className="font-semibold text-green-600">
-                          R$ {result.subtotal_atividades.toFixed(2)}
+                          R$ {(result?.subtotal_atividades || 0).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">KPIs Atingidos:</span>
                         <span className="font-semibold text-blue-600">
-                          R$ {result.bonus_kpis.toFixed(2)}
+                          R$ {(result?.bonus_kpis || 0).toFixed(2)}
                         </span>
                       </div>
                       {formData.input_adicional && formData.input_adicional > 0 && (
@@ -775,15 +780,15 @@ export default function Home() {
                         <div className="flex justify-between items-center">
                           <span className="text-lg font-semibold text-gray-900">Total Estimado do Dia:</span>
                           <span className="text-2xl font-bold text-gray-900">
-                            R$ {result.remuneracao_total.toFixed(2)}
+                            R$ {(result?.remuneracao_total || 0).toFixed(2)}
                           </span>
                         </div>
                       </div>
-                      {result.kpis_atingidos.length > 0 && (
+                      {result?.kpis_atingidos && result.kpis_atingidos.length > 0 && (
                         <div className="mt-4">
                           <p className="text-sm text-gray-600 mb-2">KPIs Atingidos:</p>
                           <div className="flex flex-wrap gap-2 mb-3">
-                            {result.kpis_atingidos.map((kpi, index) => (
+                            {result?.kpis_atingidos?.map((kpi, index) => (
                               <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                                 {kpi}
                               </span>
@@ -826,7 +831,7 @@ export default function Home() {
                     <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Lançar Produtividade</h3>
                       <p className="text-sm text-gray-600 mb-4">
-                        Selecione a data para lançar sua produtividade calculada de <strong>R$ {result.remuneracao_total.toFixed(2)}</strong>
+                        Selecione a data para lançar sua produtividade calculada de <strong>R$ {(result?.remuneracao_total || 0).toFixed(2)}</strong>
                       </p>
                       
                       <div className="space-y-4">

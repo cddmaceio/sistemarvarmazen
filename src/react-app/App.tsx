@@ -22,6 +22,7 @@ export default function App() {
           <Route path="/admin" element={<AdminRedirect />} />
           <Route path="/admin/users" element={<UserManagementStandalone />} />
           <Route path="/admin/atividades" element={<CadastroAtividades />} />
+          <Route path="/cadastro-atividades" element={<CadastroAtividades />} />
           <Route path="/admin/kpis" element={<CadastroKPIsStandalone />} />
           <Route path="/admin/cadastro-usuarios" element={<CadastroUsuarios />} />
           <Route path="/admin/validacao" element={<Validacao />} />

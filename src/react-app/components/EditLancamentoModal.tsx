@@ -96,9 +96,12 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
   const handleCalculate = async () => {
     const calculatorInput = {
       ...formData,
-      multiple_activities: formData.funcao === 'Ajudante de Armazém' ? multipleActivities : undefined,
+      multiple_activities: formData.funcao === 'Ajudante de Armazém' ? multipleActivities.map(act => ({
+        nome_atividade: act.nome_atividade,
+        quantidade_produzida: act.quantidade_produzida,
+        tempo_horas: act.tempo_horas
+      })) : undefined,
     };
-
     await calculate(calculatorInput);
     setHasCalculated(true);
   };
@@ -137,20 +140,20 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="text-amber-600">Remuneração Total:</span>
-                  <p className="font-semibold text-amber-900">R$ {lancamento.remuneracao_total.toFixed(2)}</p>
+                  <p className="font-semibold text-amber-900">R$ {(lancamento.remuneracao_total || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <span className="text-amber-600">Atividades:</span>
-                  <p className="font-semibold text-amber-900">R$ {lancamento.subtotal_atividades.toFixed(2)}</p>
+                  <p className="font-semibold text-amber-900">R$ {(lancamento.subtotal_atividades || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <span className="text-amber-600">KPIs:</span>
-                  <p className="font-semibold text-amber-900">R$ {lancamento.bonus_kpis.toFixed(2)}</p>
+                  <p className="font-semibold text-amber-900">R$ {(lancamento.bonus_kpis || 0).toFixed(2)}</p>
                 </div>
                 {lancamento.produtividade_alcancada && (
                   <div>
                     <span className="text-amber-600">Produtividade:</span>
-                    <p className="font-semibold text-amber-900">{lancamento.produtividade_alcancada.toFixed(2)}</p>
+                    <p className="font-semibold text-amber-900">{(lancamento.produtividade_alcancada || 0).toFixed(2)}</p>
                   </div>
                 )}
               </div>
@@ -392,8 +395,8 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
                 {/* Difference Indicator */}
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-blue-700 text-sm font-medium">
-                    Diferença: R$ {(result.remuneracao_total - lancamento.remuneracao_total).toFixed(2)}
-                    {result.remuneracao_total > lancamento.remuneracao_total ? ' (aumento)' : ' (redução)'}
+                    Diferença: R$ {(result.remuneracao_total - (lancamento.remuneracao_total || 0)).toFixed(2)}
+                    {result.remuneracao_total > (lancamento.remuneracao_total || 0) ? ' (aumento)' : ' (redução)'}
                   </p>
                 </div>
               </CardContent>

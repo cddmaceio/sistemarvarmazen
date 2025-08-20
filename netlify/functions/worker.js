@@ -1,5 +1,5 @@
-// Importar o worker atualizado com Supabase
-import app from '../../src/worker/supabase-worker.js';
+// Handler para a função worker com Supabase
+import app from '../../src/worker/index.js';
 
 // Verificar variáveis de ambiente do Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -13,12 +13,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Create Netlify function handler manually
 const handler = async (event, context) => {
   try {
-    console.log('Event path:', event.path);
-    console.log('Event method:', event.httpMethod);
+    console.log('Worker Event path:', event.path);
+    console.log('Worker Event method:', event.httpMethod);
     
-    // Remove the /.netlify/functions prefix from the path
-    const cleanPath = event.path.replace('/.netlify/functions', '');
-    console.log('Clean path:', cleanPath);
+    // Remove the /.netlify/functions/worker prefix from the path
+    const cleanPath = event.path.replace('/.netlify/functions/worker', '');
+    console.log('Worker Clean path:', cleanPath);
     
     // Create a proper Request object from Netlify event
     const url = new URL(cleanPath, `https://${event.headers.host || 'localhost'}`);
@@ -32,7 +32,7 @@ const handler = async (event, context) => {
       });
     }
     
-    console.log('Final URL:', url.toString());
+    console.log('Worker Final URL:', url.toString());
     
     // Create Request object
     const request = new Request(url.toString(), {
@@ -59,7 +59,7 @@ const handler = async (event, context) => {
       body: responseBody,
     };
   } catch (error) {
-    console.error('Handler error:', error);
+    console.error('Worker Handler error:', error);
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
