@@ -25,8 +25,8 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
-  external_node_modules = []
-  included_files = ["node_modules/**"]
+  external_node_modules = ["@supabase/supabase-js", "hono", "@hono/zod-validator", "zod"]
+  # Removido included_files para reduzir tamanho das funções
 
 [[headers]]
   for = "/api/*"

@@ -13,13 +13,13 @@
     "sourceMap": false
   },
   "include": [
-    "netlify/functions/**/*",
-    "src/worker/**/*",
-    "src/shared/**/*"
+    "netlify/functions/api.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "src/react-app/**/*"
+    "src/react-app/**/*",
+    "src/worker/**/*",
+    "src/shared/**/*"
   ]
 }
