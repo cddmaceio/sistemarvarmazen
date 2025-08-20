@@ -4,6 +4,13 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  # Variáveis de ambiente necessárias (configurar no dashboard do Netlify)
+  # SUPABASE_URL = "https://qcqkfipckcnydsjjdral.supabase.co"
+  # SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  # VITE_SUPABASE_URL = "https://qcqkfipckcnydsjjdral.supabase.co"
+  # VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  # NEXT_PUBLIC_SUPABASE_URL = "https://qcqkfipckcnydsjjdral.supabase.co"
+  # NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
 [[redirects]]
   from = "/api/*"

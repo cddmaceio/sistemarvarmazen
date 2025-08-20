@@ -683,13 +683,13 @@ app.get('/api/historico-aprovacoes', async (c) => {
   
   if (colaborador) {
     filteredData = filteredData.filter(item => 
-      item.colaborador_nome?.toLowerCase().includes(colaborador.toLowerCase())
+      item.user_nome?.toLowerCase().includes(colaborador.toLowerCase())
     );
   }
-  
+
   if (admin) {
     filteredData = filteredData.filter(item => 
-      item.aprovado_por?.toLowerCase().includes(admin.toLowerCase())
+      item.aprovado_por_nome?.toLowerCase().includes(admin.toLowerCase())
     );
   }
   
@@ -702,18 +702,19 @@ app.get('/api/historico-aprovacoes', async (c) => {
   // Mapear para o formato esperado pelo frontend
   const mappedData = filteredData.map(item => ({
     id: item.id,
-    colaborador_nome: item.colaborador_nome,
-    colaborador_cpf: item.colaborador_cpf,
+    colaborador_nome: item.user_nome,
+    colaborador_cpf: item.user_cpf,
     data_lancamento: item.data_lancamento,
     data_aprovacao: item.data_aprovacao || item.updated_at,
-    aprovado_por: item.aprovado_por || 'Sistema',
+    aprovado_por: item.aprovado_por_nome || 'Sistema',
     editado: !!item.editado_por_admin,
     editado_por: item.editado_por_admin,
     funcao: item.funcao,
     turno: item.turno,
     pontuacao_total: item.pontuacao_total,
     remuneracao_total: item.remuneracao_total || 0,
-    status: item.status
+    status: item.status,
+    dados_finais: item.dados_finais || '{}'
   }));
   
   // Ordenar por data de aprovação (mais recente primeiro)

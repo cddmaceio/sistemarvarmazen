@@ -84,6 +84,7 @@ npm run deploy:netlify
 ```
 
 3. **Configurações necessárias na Netlify:**
+   - ⚠️ **IMPORTANTE**: Consulte o arquivo [NETLIFY_SETUP.md](./NETLIFY_SETUP.md) para configuração completa das variáveis de ambiente
    - Adicione as variáveis de ambiente no dashboard da Netlify
    - Configure o banco de dados
 

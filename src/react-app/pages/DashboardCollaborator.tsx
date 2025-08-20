@@ -44,6 +44,8 @@ interface HistoricoAtividade {
   data: string;
   valor: number;
   atividade: string;
+  turno?: string;
+  aprovadoPor?: string;
 }
 
 export default function DashboardCollaborator() {
@@ -90,7 +92,14 @@ export default function DashboardCollaborator() {
       
       // Agrupar por atividades baseado na função do usuário
       const atividadesPorTipo = dadosUsuario.reduce((acc: any, item: any) => {
-        const dados = JSON.parse(item.dados_finais);
+        // Validar e fazer parse seguro dos dados_finais
+        let dados;
+        try {
+          dados = JSON.parse(item.dados_finais || '{}');
+        } catch (error) {
+          console.warn('Erro ao fazer parse de dados_finais:', error, 'Item:', item);
+          dados = {};
+        }
         const dataFormatada = new Date(item.data_lancamento).toLocaleDateString('pt-BR');
         
         if (userFunction === 'Operador de Empilhadeira') {
@@ -118,14 +127,18 @@ export default function DashboardCollaborator() {
           acc[nomeAtividade].historico.push({
             data: dataFormatada,
             valor: item.remuneracao_total,
-            atividade: nomeAtividade
+            atividade: nomeAtividade,
+            turno: item.turno,
+            aprovadoPor: item.aprovado_por
           });
           acc[nomeAtividade].dias = new Set([...acc[nomeAtividade].valores.map((_: any, i: number) => i)]).size;
           
           historicoCompleto.push({
             data: dataFormatada,
             valor: item.remuneracao_total,
-            atividade: nomeAtividade
+            atividade: nomeAtividade,
+            turno: item.turno,
+            aprovadoPor: item.aprovado_por
           });
         } else if (userFunction === 'Ajudante de Armazém') {
           // Para múltiplas atividades
@@ -148,14 +161,18 @@ export default function DashboardCollaborator() {
               acc[subAtividade].historico.push({
                 data: dataFormatada,
                 valor: valorProporcional,
-                atividade: subAtividade
+                atividade: subAtividade,
+                turno: item.turno,
+                aprovadoPor: item.aprovado_por
               });
               acc[subAtividade].dias = acc[subAtividade].valores.length;
               
               historicoCompleto.push({
                 data: dataFormatada,
                 valor: valorProporcional,
-                atividade: subAtividade
+                atividade: subAtividade,
+                turno: item.turno,
+                aprovadoPor: item.aprovado_por
               });
             });
           } else {
@@ -183,14 +200,18 @@ export default function DashboardCollaborator() {
             acc[nomeAtividade].historico.push({
               data: dataFormatada,
               valor: item.remuneracao_total,
-              atividade: nomeAtividade
+              atividade: nomeAtividade,
+              turno: item.turno,
+              aprovadoPor: item.aprovado_por
             });
             acc[nomeAtividade].dias = acc[nomeAtividade].valores.length;
             
             historicoCompleto.push({
               data: dataFormatada,
               valor: item.remuneracao_total,
-              atividade: nomeAtividade
+              atividade: nomeAtividade,
+              turno: item.turno,
+              aprovadoPor: item.aprovado_por
             });
           }
         }
@@ -553,41 +574,68 @@ export default function DashboardCollaborator() {
                   </CardContent>
                 </Card>
 
-                {/* Seção 2.1: Histórico Detalhado de Atividades */}
+                {/* Seção 2.1: Histórico Detalhado de Lançamentos */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Calendar className="h-6 w-6" />
-                      <span>📅 HISTÓRICO DE ATIVIDADES</span>
+                      <span>📋 HISTÓRICO DE LANÇAMENTOS APROVADOS</span>
                     </CardTitle>
                     <CardDescription>
-                      📊 Registro detalhado com datas dos seus lançamentos no mês
+                      📊 Todos os seus lançamentos aprovados no mês com detalhes de aprovação
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {dashboardData.historicoCompleto.length > 0 ? (
                         dashboardData.historicoCompleto.map((item, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                            <div className="flex items-center space-x-3">
-                              <div className="text-lg">
-                                {dashboardData.atividades.find(a => a.nome === item.atividade)?.icon || '⚡'}
+                          <div key={index} className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:shadow-md transition-all duration-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div className="text-2xl">
+                                  {dashboardData.atividades.find(a => a.nome === item.atividade)?.icon || '⚡'}
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-gray-900 text-lg">{item.atividade}</h4>
+                                  <div className="flex items-center space-x-4 mt-1">
+                                    <p className="text-sm text-gray-600 flex items-center">
+                                      <Calendar className="h-4 w-4 mr-1" />
+                                      📅 {item.data}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      🏢 {item.turno || 'N/A'}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center space-x-4 mt-2">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      ✅ Aprovado
+                                    </span>
+                                    {item.aprovadoPor && (
+                                      <span className="text-xs text-gray-500">
+                                        👤 Aprovado por: {item.aprovadoPor}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <h4 className="font-medium text-gray-900">{item.atividade}</h4>
-                                <p className="text-sm text-gray-500">📅 {item.data}</p>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-green-600">+ R$ {item.valor.toFixed(2)}</p>
+                                <p className="text-xs text-gray-500 mt-1">💰 Remuneração</p>
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-green-600">+ R$ {item.valor.toFixed(2)}</p>
-                              <p className="text-xs text-gray-400">Lançamento</p>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                          <p>Nenhum lançamento encontrado para este mês</p>
+                        <div className="text-center py-12 text-gray-500">
+                          <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum lançamento aprovado</h3>
+                          <p className="text-gray-600">Você ainda não possui lançamentos aprovados para este mês.</p>
+                          <Link to="/">
+                            <Button className="mt-4" variant="outline">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Fazer um Lançamento
+                            </Button>
+                          </Link>
                         </div>
                       )}
                     </div>
