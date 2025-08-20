@@ -4,6 +4,11 @@ const hono_1 = require("hono");
 const zod_validator_1 = require("@hono/zod-validator");
 const types_1 = require("../shared/types");
 const cors_1 = require("hono/cors");
+const supabase_js_1 = require("@supabase/supabase-js");
+// Supabase client helper
+function getSupabase(env) {
+    return (0, supabase_js_1.createClient)(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+}
 const app = new hono_1.Hono();
 app.use('*', (0, cors_1.cors)());
 // Authentication endpoints
@@ -34,9 +39,9 @@ app.post('/api/usuarios', (0, zod_validator_1.zValidator)('json', types_1.UserSc
     const db = c.env.DB;
     const data = c.req.valid('json');
     const result = await db.prepare(`
-    INSERT INTO usuarios (cpf, data_nascimento, nome, role, is_active, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `).bind(data.cpf, data.data_nascimento, data.nome, data.role, data.is_active).run();
+    INSERT INTO usuarios (cpf, data_nascimento, nome, tipo_usuario, status_usuario, funcao, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+  `).bind(data.cpf, data.data_nascimento, data.nome, data.tipo_usuario, data.status_usuario, data.funcao).run();
     if (result.success) {
         const user = await db.prepare('SELECT * FROM usuarios WHERE id = ?').bind(result.meta.last_row_id).first();
         return c.json(user);
@@ -65,13 +70,17 @@ app.put('/api/usuarios/:id', (0, zod_validator_1.zValidator)('json', types_1.Use
         updates.push('data_nascimento = ?');
         values.push(data.data_nascimento);
     }
-    if (data.role !== undefined) {
-        updates.push('role = ?');
-        values.push(data.role);
+    if (data.tipo_usuario !== undefined) {
+        updates.push('tipo_usuario = ?');
+        values.push(data.tipo_usuario);
     }
-    if (data.is_active !== undefined) {
-        updates.push('is_active = ?');
-        values.push(data.is_active);
+    if (data.status_usuario !== undefined) {
+        updates.push('status_usuario = ?');
+        values.push(data.status_usuario);
+    }
+    if (data.funcao !== undefined) {
+        updates.push('funcao = ?');
+        values.push(data.funcao);
     }
     if (updates.length === 0) {
         return c.json({ error: 'No fields to update' }, 400);
@@ -219,19 +228,42 @@ app.delete('/api/kpis/:id', async (c) => {
 });
 // Get available KPIs for function/shift (limited to 2 active KPIs)
 app.get('/api/kpis/available', async (c) => {
-    const db = c.env.DB;
+    const supabase = getSupabase(c.env);
     const funcao = c.req.query('funcao');
     const turno = c.req.query('turno');
     if (!funcao || !turno) {
         return c.json({ error: 'Função e turno são obrigatórios' }, 400);
     }
-    const kpis = await db.prepare(`
-    SELECT * FROM kpis 
-    WHERE funcao_kpi = ? AND (turno_kpi = ? OR turno_kpi = 'Geral') AND status_ativo = true
-    ORDER BY created_at DESC
-    LIMIT 2
-  `).bind(funcao, turno).all();
-    return c.json(kpis.results);
+    // Normalize input data
+    const normalizedFuncao = funcao?.trim();
+    const normalizedTurno = turno?.trim();
+    // Map normalized values to database values (with encoding issues)
+    const dbFuncao = normalizedFuncao === 'Ajudante de Armazém' ? 'Ajudante de ArmazÃ©m' : normalizedFuncao;
+    const dbTurno = normalizedTurno === 'Manha' ? 'ManhÃ£' : normalizedTurno;
+    console.log('Database search values:', { dbFuncao, dbTurno });
+    console.log('Searching for KPIs with:', { funcao_kpi: dbFuncao, turno_kpi: [dbTurno, 'Geral'] });
+    // Try two separate queries and combine results
+    const { data: kpis1, error: error1 } = await supabase
+        .from('kpis')
+        .select('*')
+        .eq('funcao_kpi', dbFuncao)
+        .eq('turno_kpi', dbTurno)
+        .eq('status_ativo', true);
+    const { data: kpis2, error: error2 } = await supabase
+        .from('kpis')
+        .select('*')
+        .eq('funcao_kpi', dbFuncao)
+        .eq('turno_kpi', 'Geral')
+        .eq('status_ativo', true);
+    const kpis = [...(kpis1 || []), ...(kpis2 || [])];
+    const error = error1 || error2;
+    console.log(`KPI query result:`, { data: kpis, error, count: kpis?.length || 0 });
+    console.log(`Query 1 (${dbTurno}):`, kpis1?.length || 0, 'results');
+    console.log(`Query 2 (Geral):`, kpis2?.length || 0, 'results');
+    if (error) {
+        return c.json({ error: error.message }, 500);
+    }
+    return c.json({ kpisAtingidos: kpis || [] });
 });
 // Check KPI daily limit for user
 app.post('/api/kpis/check-limit', (0, zod_validator_1.zValidator)('json', types_1.KPILimitCheckSchema), async (c) => {
@@ -460,18 +492,26 @@ app.get('/api/lancamentos/pendentes', async (c) => {
     return c.json(lancamentos.results);
 });
 app.post('/api/lancamentos/:id/validar', (0, zod_validator_1.zValidator)('json', types_1.AdminValidationSchema), async (c) => {
-    const db = c.env.DB;
+    const supabase = getSupabase(c.env);
     const id = c.req.param('id');
     try {
         const { acao, observacoes, dados_editados } = c.req.valid('json');
         // Get the original lancamento
-        const originalLancamento = await db.prepare('SELECT * FROM lancamentos_produtividade WHERE id = ?').bind(id).first();
-        if (!originalLancamento) {
+        const { data: originalLancamento, error: lancamentoError } = await supabase
+            .from('lancamentos_produtividade')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (lancamentoError || !originalLancamento) {
             return c.json({ error: 'Lançamento não encontrado' }, 404);
         }
         // Get current admin user
-        const adminUser = await db.prepare('SELECT * FROM usuarios WHERE role = ? LIMIT 1').bind('admin').first();
-        if (!adminUser) {
+        const { data: adminUser, error: adminError } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('tipo_usuario', 'administrador')
+            .single();
+        if (adminError || !adminUser) {
             return c.json({ error: 'Usuário admin não encontrado' }, 401);
         }
         let newStatus = 'pendente';
@@ -536,33 +576,76 @@ app.post('/api/lancamentos/:id/validar', (0, zod_validator_1.zValidator)('json',
         }) : null;
         // Update original lancamento
         try {
+            console.log('=== CHECKING UPDATE CONDITIONS ===');
+            console.log('isEdited:', isEdited);
+            console.log('recalculatedData:', !!recalculatedData);
+            console.log('dados_editados:', !!dados_editados);
+            console.log('Condition result:', isEdited && recalculatedData && dados_editados);
             if (isEdited && recalculatedData && dados_editados) {
-                const updateResult = await db.prepare(`
-        UPDATE lancamentos_produtividade 
-        SET status = ?, observacoes = ?, 
-            editado_por_admin = ?, data_edicao = datetime('now'), 
-            valores_originais = ?, status_edicao = ?, observacoes_edicao = ?,
-            nome_atividade = ?, quantidade_produzida = ?, tempo_horas = ?, input_adicional = ?,
-            multiple_activities = ?, nome_operador = ?, valid_tasks_count = ?, kpis_atingidos = ?,
-            subtotal_atividades = ?, bonus_kpis = ?, remuneracao_total = ?,
-            produtividade_alcancada = ?, nivel_atingido = ?, unidade_medida = ?,
-            atividades_detalhes = ?, tarefas_validas = ?, valor_tarefas = ?,
-            updated_at = datetime('now')
-        WHERE id = ?
-      `).bind(newStatus, observacoes || null, adminUser.nome, originalValues, 'editado_admin', observacoes || null, dados_editados.nome_atividade || null, dados_editados.quantidade_produzida || null, dados_editados.tempo_horas || null, dados_editados.input_adicional || 0, dados_editados.multiple_activities ? JSON.stringify(dados_editados.multiple_activities) : null, dados_editados.nome_operador || null, dados_editados.valid_tasks_count || null, dados_editados.kpis_atingidos ? JSON.stringify(dados_editados.kpis_atingidos) : null, recalculatedData.subtotal_atividades, recalculatedData.bonus_kpis, recalculatedData.remuneracao_total, recalculatedData.produtividade_alcancada || null, recalculatedData.nivel_atingido || null, recalculatedData.unidade_medida || null, recalculatedData.atividades_detalhes ? JSON.stringify(recalculatedData.atividades_detalhes) : null, recalculatedData.tarefas_validas || null, recalculatedData.valor_tarefas || null, id).run();
-                if (!updateResult.success) {
-                    console.error('Failed to update edited lancamento:', updateResult);
+                // Atualizar lançamento editado no Supabase
+                const editUpdateData = {
+                    status: newStatus,
+                    observacoes: observacoes || null,
+                    editado_por_admin: adminUser.nome,
+                    data_edicao: new Date().toISOString(),
+                    valores_originais: originalValues,
+                    status_edicao: 'editado_admin',
+                    observacoes_edicao: observacoes || null,
+                    nome_atividade: dados_editados.nome_atividade || null,
+                    quantidade_produzida: dados_editados.quantidade_produzida || null,
+                    tempo_horas: dados_editados.tempo_horas || null,
+                    input_adicional: dados_editados.input_adicional || 0,
+                    multiple_activities: dados_editados.multiple_activities ? JSON.stringify(dados_editados.multiple_activities) : null,
+                    nome_operador: dados_editados.nome_operador || null,
+                    valid_tasks_count: dados_editados.valid_tasks_count || null,
+                    kpis_atingidos: dados_editados.kpis_atingidos ? JSON.stringify(dados_editados.kpis_atingidos) : null,
+                    subtotal_atividades: recalculatedData.subtotal_atividades,
+                    bonus_kpis: recalculatedData.bonus_kpis,
+                    remuneracao_total: recalculatedData.remuneracao_total,
+                    produtividade_alcancada: recalculatedData.produtividade_alcancada || null,
+                    nivel_atingido: recalculatedData.nivel_atingido || null,
+                    unidade_medida: recalculatedData.unidade_medida || null,
+                    atividades_detalhes: recalculatedData.atividades_detalhes ? JSON.stringify(recalculatedData.atividades_detalhes) : null,
+                    tarefas_validas: recalculatedData.tarefas_validas || null,
+                    valor_tarefas: recalculatedData.valor_tarefas || null,
+                    aprovado_por: adminUser.id,
+                    aprovado_por_nome: adminUser.nome,
+                    data_aprovacao: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                const { error: editUpdateError } = await supabase
+                    .from('lancamentos_produtividade')
+                    .update(editUpdateData)
+                    .eq('id', id);
+                if (editUpdateError) {
+                    console.error('Failed to update edited lancamento:', editUpdateError);
                     return c.json({ error: 'Erro ao salvar lançamento editado' }, 500);
                 }
             }
             else {
-                const updateResult = await db.prepare(`
-        UPDATE lancamentos_produtividade 
-        SET status = ?, observacoes = ?, updated_at = datetime('now')
-        WHERE id = ?
-      `).bind(newStatus, observacoes || null, id).run();
-                if (!updateResult.success) {
-                    console.error('Failed to update lancamento status:', updateResult);
+                console.log('=== UPDATING LANCAMENTO ===');
+                console.log('ID:', id);
+                console.log('New Status:', newStatus);
+                console.log('Admin User ID:', adminUser.id);
+                console.log('Observacoes:', observacoes);
+                const updateData = {
+                    status: newStatus,
+                    observacoes: observacoes || null,
+                    aprovado_por: adminUser.id,
+                    aprovado_por_nome: adminUser.nome,
+                    data_aprovacao: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                console.log('Update Data:', updateData);
+                const { data: updateResult, error: updateError } = await supabase
+                    .from('lancamentos_produtividade')
+                    .update(updateData)
+                    .eq('id', id)
+                    .select();
+                console.log('Update Result:', updateResult);
+                console.log('Update Error:', updateError);
+                if (updateError) {
+                    console.error('Failed to update lancamento status:', updateError);
                     return c.json({ error: 'Erro ao atualizar status do lançamento' }, 500);
                 }
             }
@@ -573,21 +656,46 @@ app.post('/api/lancamentos/:id/validar', (0, zod_validator_1.zValidator)('json',
         }
         // Create revision record
         try {
-            const revisionResult = await db.prepare(`
-      INSERT INTO lancamentos_produtividade_revisado (
-        lancamento_original_id, admin_user_id, admin_nome,
-        user_id, user_nome, user_cpf, data_lancamento, funcao, turno,
-        nome_atividade, quantidade_produzida, tempo_horas, input_adicional,
-        multiple_activities, nome_operador, valid_tasks_count, kpis_atingidos,
-        subtotal_atividades, bonus_kpis, remuneracao_total,
-        produtividade_alcancada, nivel_atingido, unidade_medida,
-        atividades_detalhes, tarefas_validas, valor_tarefas,
-        acao_admin, observacoes_admin, alteracoes_feitas,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `).bind(originalLancamento.id, adminUser.id, adminUser.nome, originalLancamento.user_id, originalLancamento.user_nome, originalLancamento.user_cpf, originalLancamento.data_lancamento, originalLancamento.funcao, originalLancamento.turno, originalLancamento.nome_atividade, originalLancamento.quantidade_produzida, originalLancamento.tempo_horas, originalLancamento.input_adicional, originalLancamento.multiple_activities, originalLancamento.nome_operador, originalLancamento.valid_tasks_count, originalLancamento.kpis_atingidos, originalLancamento.subtotal_atividades, originalLancamento.bonus_kpis, originalLancamento.remuneracao_total, originalLancamento.produtividade_alcancada, originalLancamento.nivel_atingido, originalLancamento.unidade_medida, originalLancamento.atividades_detalhes, originalLancamento.tarefas_validas, originalLancamento.valor_tarefas, acao, observacoes || null, isEdited ? originalValues : null).run();
-            if (!revisionResult.success) {
-                console.error('Failed to create revision record:', revisionResult);
+            const revisionData = {
+                lancamento_original_id: originalLancamento.id,
+                quantidade_original: originalLancamento.quantidade ?? 0,
+                quantidade_revisada: originalLancamento.quantidade ?? 0,
+                admin_user_id: adminUser.id,
+                admin_nome: adminUser.nome,
+                user_id: originalLancamento.user_id,
+                user_nome: originalLancamento.user_nome,
+                user_cpf: originalLancamento.user_cpf,
+                data_lancamento: originalLancamento.data_lancamento,
+                funcao: originalLancamento.funcao,
+                turno: originalLancamento.turno,
+                nome_atividade: originalLancamento.nome_atividade,
+                quantidade_produzida: originalLancamento.quantidade_produzida,
+                tempo_horas: originalLancamento.tempo_horas,
+                input_adicional: originalLancamento.input_adicional,
+                multiple_activities: originalLancamento.multiple_activities,
+                nome_operador: originalLancamento.nome_operador,
+                valid_tasks_count: originalLancamento.valid_tasks_count,
+                kpis_atingidos: originalLancamento.kpis_atingidos,
+                subtotal_atividades: originalLancamento.subtotal_atividades,
+                bonus_kpis: originalLancamento.bonus_kpis,
+                remuneracao_total: originalLancamento.remuneracao_total,
+                produtividade_alcancada: originalLancamento.produtividade_alcancada,
+                nivel_atingido: originalLancamento.nivel_atingido,
+                unidade_medida: originalLancamento.unidade_medida,
+                atividades_detalhes: originalLancamento.atividades_detalhes,
+                tarefas_validas: originalLancamento.tarefas_validas,
+                valor_tarefas: originalLancamento.valor_tarefas,
+                acao_admin: acao,
+                observacoes_admin: observacoes || null,
+                alteracoes_feitas: isEdited ? originalValues : null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            const { error: revisionError } = await supabase
+                .from('lancamentos_produtividade_revisado')
+                .insert(revisionData);
+            if (revisionError) {
+                console.error('Failed to create revision record:', revisionError);
                 // Not a critical error, continue processing
             }
         }
@@ -598,18 +706,36 @@ app.post('/api/lancamentos/:id/validar', (0, zod_validator_1.zValidator)('json',
         // If approved, add to history table
         if (newStatus === 'aprovado') {
             try {
-                const finalLancamento = await db.prepare('SELECT * FROM lancamentos_produtividade WHERE id = ?').bind(id).first();
-                if (finalLancamento) {
-                    const historyResult = await db.prepare(`
-          INSERT INTO historico_lancamentos_aprovados (
-            lancamento_id, colaborador_id, colaborador_nome, colaborador_cpf,
-            data_lancamento, data_aprovacao, aprovado_por, editado, editado_por,
-            dados_finais, observacoes, remuneracao_total,
-            created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, datetime('now'), ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        `).bind(finalLancamento.id, finalLancamento.user_id, finalLancamento.user_nome, finalLancamento.user_cpf, finalLancamento.data_lancamento, adminUser.nome, isEdited, isEdited ? adminUser.nome : null, JSON.stringify(finalLancamento), observacoes || null, finalLancamento.remuneracao_total).run();
-                    if (!historyResult.success) {
-                        console.error('Failed to create history record:', historyResult);
+                const { data: finalLancamento, error: fetchError } = await supabase
+                    .from('lancamentos_produtividade')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+                if (fetchError) {
+                    console.error('Error fetching final lancamento:', fetchError);
+                }
+                else if (finalLancamento) {
+                    const historyData = {
+                        lancamento_id: finalLancamento.id,
+                        colaborador_id: finalLancamento.user_id,
+                        colaborador_nome: finalLancamento.user_nome,
+                        colaborador_cpf: finalLancamento.user_cpf,
+                        data_lancamento: finalLancamento.data_lancamento,
+                        data_aprovacao: new Date().toISOString(),
+                        aprovado_por: adminUser.nome,
+                        editado: isEdited,
+                        editado_por: isEdited ? adminUser.nome : null,
+                        dados_finais: JSON.stringify(finalLancamento),
+                        observacoes: observacoes || null,
+                        remuneracao_total: finalLancamento.remuneracao_total,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    };
+                    const { error: historyError } = await supabase
+                        .from('historico_lancamentos_aprovados')
+                        .insert(historyData);
+                    if (historyError) {
+                        console.error('Failed to create history record:', historyError);
                         // Not critical, continue
                     }
                 }
@@ -619,7 +745,15 @@ app.post('/api/lancamentos/:id/validar', (0, zod_validator_1.zValidator)('json',
                 // Not critical, continue
             }
         }
-        const updatedLancamento = await db.prepare('SELECT * FROM lancamentos_produtividade WHERE id = ?').bind(id).first();
+        const { data: updatedLancamento, error: finalFetchError } = await supabase
+            .from('lancamentos_produtividade')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (finalFetchError) {
+            console.error('Error fetching updated lancamento:', finalFetchError);
+            return c.json({ error: 'Erro ao buscar lançamento atualizado' }, 500);
+        }
         return c.json(updatedLancamento);
     }
     catch (error) {
@@ -632,35 +766,68 @@ app.post('/api/lancamentos/:id/validar', (0, zod_validator_1.zValidator)('json',
 });
 // Add endpoint to get approval history
 app.get('/api/historico-aprovacoes', async (c) => {
-    const db = c.env.DB;
+    const supabase = getSupabase(c.env);
     const colaborador = c.req.query('colaborador');
     const admin = c.req.query('admin');
     const editado = c.req.query('editado');
-    let query = 'SELECT * FROM historico_lancamentos_aprovados';
-    const conditions = [];
-    const params = [];
-    if (colaborador) {
-        conditions.push('colaborador_nome LIKE ?');
-        params.push(`%${colaborador}%`);
+    try {
+        console.log('=== HISTORICO APROVACOES DEBUG ===');
+        console.log('Filtros recebidos:', { colaborador, admin, editado });
+        // Buscar todos os lançamentos aprovados diretamente
+        const { data: allApproved, error: allError } = await supabase
+            .from('lancamentos_produtividade')
+            .select('*')
+            .eq('status', 'aprovado')
+            .order('updated_at', { ascending: false });
+        console.log('Lançamentos aprovados encontrados:', allApproved?.length || 0);
+        if (allError) {
+            console.error('Erro na consulta inicial:', allError);
+            return c.json({ error: 'Erro ao carregar histórico' }, 500);
+        }
+        if (!allApproved || allApproved.length === 0) {
+            console.log('Nenhum lançamento aprovado encontrado');
+            return c.json([]);
+        }
+        // Aplicar filtros manualmente se necessário
+        let filteredHistory = allApproved;
+        if (colaborador) {
+            filteredHistory = filteredHistory.filter(item => item.user_nome?.toLowerCase().includes(colaborador.toLowerCase()));
+        }
+        if (admin) {
+            filteredHistory = filteredHistory.filter(item => item.aprovado_por_nome?.toLowerCase().includes(admin.toLowerCase()));
+        }
+        if (editado === 'true') {
+            filteredHistory = filteredHistory.filter(item => item.editado_por_admin);
+        }
+        else if (editado === 'false') {
+            filteredHistory = filteredHistory.filter(item => !item.editado_por_admin);
+        }
+        console.log('Após filtros:', filteredHistory.length);
+        // Transform data to match expected format
+        const transformedHistory = filteredHistory.map(item => ({
+            id: item.id,
+            lancamento_id: item.id,
+            colaborador_id: item.user_id,
+            colaborador_nome: item.user_nome,
+            colaborador_cpf: item.user_cpf,
+            data_lancamento: item.data_lancamento,
+            data_aprovacao: item.data_aprovacao || item.updated_at,
+            aprovado_por: item.aprovado_por_nome || 'Sistema', // Usar aprovado_por_nome em vez de aprovado_por
+            editado: !!item.editado_por_admin,
+            editado_por: item.editado_por_admin,
+            dados_finais: JSON.stringify(item),
+            observacoes: item.observacoes,
+            remuneracao_total: item.remuneracao_total,
+            created_at: item.created_at,
+            updated_at: item.updated_at
+        }));
+        console.log('Retornando:', transformedHistory.length, 'registros');
+        return c.json(transformedHistory);
     }
-    if (admin) {
-        conditions.push('aprovado_por LIKE ?');
-        params.push(`%${admin}%`);
+    catch (error) {
+        console.error('Erro no endpoint historico-aprovacoes:', error);
+        return c.json({ error: 'Erro interno do servidor' }, 500);
     }
-    if (editado === 'true') {
-        conditions.push('editado = ?');
-        params.push(true);
-    }
-    else if (editado === 'false') {
-        conditions.push('editado = ?');
-        params.push(false);
-    }
-    if (conditions.length > 0) {
-        query += ' WHERE ' + conditions.join(' AND ');
-    }
-    query += ' ORDER BY data_aprovacao DESC';
-    const history = await db.prepare(query).bind(...params).all();
-    return c.json(history.results);
 });
 // Export endpoints
 app.post('/api/export-preview', (0, zod_validator_1.zValidator)('json', types_1.ExportFilterSchema), async (c) => {

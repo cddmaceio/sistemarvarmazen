@@ -1,6 +1,6 @@
 [build]
   publish = "dist"
-  command = "npm run build"
+  command = "npm run build:netlify"
 
 [build.environment]
   NODE_VERSION = "18"
@@ -24,6 +24,9 @@
 
 [functions]
   directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = []
+  included_files = ["node_modules/**"]
 
 [[headers]]
   for = "/api/*"
