@@ -1,15 +1,14 @@
 // Netlify Function handler for Hono app with Supabase
-import { Handler } from '@netlify/functions';
-import app from '../../src/worker/supabase-worker';
+const app = require('../../src/worker/supabase-worker').default;
 
 // Supabase Environment type
-type Env = {
+interface Env {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
-};
+}
 
 // Netlify function handler
-export const handler: Handler = async (event, context) => {
+const handler = async (event: any, context: any) => {
   try {
     console.log('Event path:', event.path);
     console.log('Event method:', event.httpMethod);
@@ -41,7 +40,7 @@ export const handler: Handler = async (event, context) => {
     // Add query parameters
     if (event.queryStringParameters) {
       Object.entries(event.queryStringParameters).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
+        if (value !== null && value !== undefined && typeof value === 'string') {
           url.searchParams.append(key, value);
         }
       });
@@ -53,7 +52,7 @@ export const handler: Handler = async (event, context) => {
     const headers: Record<string, string> = {};
     if (event.headers) {
       Object.entries(event.headers).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
+        if (value !== null && value !== undefined && typeof value === 'string') {
           headers[key] = value;
         }
       });
@@ -91,6 +90,8 @@ export const handler: Handler = async (event, context) => {
         error: 'Internal server error', 
         message: error instanceof Error ? error.message : 'Unknown error' 
       }),
-    };
+    }
   }
 };
+
+module.exports = { handler };

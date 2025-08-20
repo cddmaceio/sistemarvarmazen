@@ -1,10 +1,6 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.handler = void 0;
-const supabase_worker_1 = __importDefault(require("../../src/worker/supabase-worker"));
+// Netlify Function handler for Hono app with Supabase
+const app = require('../../src/worker/supabase-worker').default;
 // Netlify function handler
 const handler = async (event, context) => {
     try {
@@ -33,7 +29,7 @@ const handler = async (event, context) => {
         // Add query parameters
         if (event.queryStringParameters) {
             Object.entries(event.queryStringParameters).forEach(([key, value]) => {
-                if (value !== null && value !== undefined) {
+                if (value !== null && value !== undefined && typeof value === 'string') {
                     url.searchParams.append(key, value);
                 }
             });
@@ -43,7 +39,7 @@ const handler = async (event, context) => {
         const headers = {};
         if (event.headers) {
             Object.entries(event.headers).forEach(([key, value]) => {
-                if (value !== null && value !== undefined) {
+                if (value !== null && value !== undefined && typeof value === 'string') {
                     headers[key] = value;
                 }
             });
@@ -59,7 +55,7 @@ const handler = async (event, context) => {
             SUPABASE_ANON_KEY: supabaseAnonKey
         };
         // Call Hono app with environment
-        const response = await supabase_worker_1.default.fetch(request, env);
+        const response = await app.fetch(request, env);
         // Convert Response to Netlify format
         const responseBody = await response.text();
         return {
@@ -80,4 +76,4 @@ const handler = async (event, context) => {
         };
     }
 };
-exports.handler = handler;
+module.exports = { handler };
