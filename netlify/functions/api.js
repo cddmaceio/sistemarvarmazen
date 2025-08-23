@@ -1,4 +1,4 @@
-const { Handler } = require('@netlify/functions');
+// Netlify Functions handler
 
 const handler = async (event, context) => {
   console.log('Event:', JSON.stringify(event, null, 2));
