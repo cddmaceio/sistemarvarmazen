@@ -52,6 +52,12 @@ app.get('/api/usuarios', async (c) => {
     .order('created_at', { ascending: false });
   
   if (error) {
+    console.error('Error fetching lancamentos:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     return c.json({ error: error.message }, 500);
   }
   
