@@ -18,8 +18,8 @@ const handler = async (event, context) => {
   
   const { path, httpMethod, headers, body, queryStringParameters } = event;
   
-  // Remove o prefixo /.netlify/functions/api do path
-  const cleanPath = path.replace(/^\/\.netlify\/functions\/api/, '') || '/';
+  // O path já vem limpo do redirecionamento do Netlify
+  const cleanPath = path;
   
   console.log('Clean path:', cleanPath);
   console.log('HTTP Method:', httpMethod);
