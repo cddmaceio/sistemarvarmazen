@@ -24,7 +24,7 @@
 
 [functions]
   directory = "netlify/functions"
-  node_bundler = "esbuild"
+  node_bundler = "nft"
   external_node_modules = ["@supabase/supabase-js", "hono", "@hono/zod-validator", "zod"]
   # Removido included_files para reduzir tamanho das funções
 
