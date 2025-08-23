@@ -1,6 +1,6 @@
 // Função Netlify usando módulos ES6
 export const handler = async (event, context) => {
-  const { httpMethod, path, queryStringParameters, body, headers } = event;
+  const { httpMethod, path } = event;
   
   // Configurar CORS
   const corsHeaders = {
@@ -19,9 +19,17 @@ export const handler = async (event, context) => {
   }
   
   try {
-    // Extrair o caminho da API
-    const apiPath = path.replace('/api', '') || '/';
-    
+    // Normalizar caminho, removendo prefixos de função/redirect em produção
+    let apiPath = path || '/';
+    const prefixes = ['/.netlify/functions/api', '/api'];
+    for (const prefix of prefixes) {
+      if (apiPath.startsWith(prefix)) {
+        apiPath = apiPath.slice(prefix.length) || '/';
+        break;
+      }
+    }
+    if (!apiPath.startsWith('/')) apiPath = '/' + apiPath;
+
     // Roteamento simples
     if (apiPath === '/health') {
       return {
@@ -38,7 +46,7 @@ export const handler = async (event, context) => {
         })
       };
     }
-    
+
     // Rota não encontrada
     return {
       statusCode: 404,
@@ -52,10 +60,10 @@ export const handler = async (event, context) => {
         availableRoutes: ['/health']
       })
     };
-    
+
   } catch (error) {
     console.error('Error in Netlify function:', error);
-    
+
     return {
       statusCode: 500,
       headers: {
