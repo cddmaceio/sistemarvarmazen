@@ -78,7 +78,7 @@ export default function Dashboard() {
       setLoading(true);
       
       // Buscar dados dos lançamentos aprovados
-      const response = await fetch('/api/lancamentos-produtividade');
+      const response = await fetch('/api/lancamentos');
       if (!response.ok) throw new Error('Falha ao carregar dados');
       
       const historico = await response.json();

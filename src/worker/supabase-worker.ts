@@ -357,10 +357,18 @@ app.get('/api/kpis/available', async (c) => {
 // Lançamentos endpoints
 app.get('/api/lancamentos', async (c) => {
   const supabase = getSupabase(c.env);
-  const { data: lancamentos, error } = await supabase
+  const userId = c.req.query('user_id');
+  
+  let query = supabase
     .from('lancamentos_produtividade')
     .select('*')
     .order('created_at', { ascending: false });
+  
+  if (userId) {
+    query = query.eq('user_id', parseInt(userId));
+  }
+  
+  const { data: lancamentos, error } = await query;
   
   if (error) {
     return c.json({ error: error.message }, 500);

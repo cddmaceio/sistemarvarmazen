@@ -94,7 +94,7 @@ export default function DashboardCollaborator() {
       setLoading(true);
       
       // Buscar dados dos lançamentos aprovados para este colaborador
-      const response = await fetch(`/api/lancamentos-produtividade?user_id=${user?.id}`);
+      const response = await fetch(`/api/lancamentos?user_id=${user?.id}`);
       
       if (!response.ok) {
         throw new Error(`Falha ao carregar dados: ${response.status} ${response.statusText}`);
