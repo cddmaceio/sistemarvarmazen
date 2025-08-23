@@ -176,16 +176,18 @@ export default function Validacao() {
         {/* Header */}
         <header className="border-b bg-white/70 backdrop-blur-sm">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center space-x-2 min-w-0">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0">
                   <CheckCircle className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent truncate">
                   Validação de Lançamentos
                 </h1>
               </div>
-              <UserMenu />
+              <div className="flex-shrink-0">
+                <UserMenu />
+              </div>
             </div>
           </div>
         </header>
@@ -194,43 +196,43 @@ export default function Validacao() {
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto">
             {/* Stats Header */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
               <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-yellow-600">Lançamentos Pendentes</p>
-                      <p className="text-2xl font-bold text-yellow-900">{lancamentos.length}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-yellow-600 truncate">Lançamentos Pendentes</p>
+                      <p className="text-xl sm:text-2xl font-bold text-yellow-900">{lancamentos.length}</p>
                     </div>
-                    <Clock className="h-8 w-8 text-yellow-600" />
+                    <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 flex-shrink-0" />
                   </div>
                 </CardContent>
               </Card>
               
               <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-600">Total de Colaboradores</p>
-                      <p className="text-2xl font-bold text-blue-900">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-blue-600 truncate">Total de Colaboradores</p>
+                      <p className="text-xl sm:text-2xl font-bold text-blue-900">
                         {new Set(lancamentos.map(l => l.user_cpf)).size}
                       </p>
                     </div>
-                    <User className="h-8 w-8 text-blue-600" />
+                    <User className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
                   </div>
                 </CardContent>
               </Card>
               
-              <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-                <CardContent className="p-6">
+              <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200 sm:col-span-2 lg:col-span-1">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-600">Valor Total Pendente</p>
-                      <p className="text-2xl font-bold text-green-900">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-green-600 truncate">Valor Total Pendente</p>
+                      <p className="text-xl sm:text-2xl font-bold text-green-900 break-all">
                         R$ {lancamentos.reduce((sum, l) => sum + l.remuneracao_total, 0).toFixed(2)}
                       </p>
                     </div>
-                    <TrendingUp className="h-8 w-8 text-green-600" />
+                    <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 flex-shrink-0" />
                   </div>
                 </CardContent>
               </Card>

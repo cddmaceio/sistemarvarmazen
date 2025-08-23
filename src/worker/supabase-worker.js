@@ -1395,8 +1395,49 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
 });
 
 // Health check
+// Add endpoint to get lancamentos produtividade for dashboard
+app.get('/api/lancamentos-produtividade', async (c) => {
+  const supabase = getSupabase(c.env);
+  const user_id = c.req.query('user_id');
+  
+  try {
+    // Buscar lançamentos aprovados
+    let query = supabase
+      .from('lancamentos_produtividade')
+      .select('*')
+      .eq('status', 'aprovado')
+      .order('data_lancamento', { ascending: false });
+    
+    // Se user_id for fornecido, filtrar por usuário específico
+    if (user_id) {
+      query = query.eq('user_id', parseInt(user_id));
+    }
+    
+    const { data: lancamentos, error } = await query;
+    
+    console.log('Resultado da consulta:', { count: lancamentos?.length || 0, error });
+    
+    if (error) {
+      console.error('Erro na consulta:', error);
+      return c.json({ error: error.message }, 500);
+    }
+    
+    if (!lancamentos || lancamentos.length === 0) {
+      console.log('Nenhum lançamento aprovado encontrado');
+      return c.json([]);
+    }
+    
+    console.log('Retornando:', lancamentos.length, 'registros');
+    return c.json(lancamentos);
+  } catch (error) {
+    console.error('Erro no endpoint lancamentos-produtividade:', error);
+    return c.json({ error: 'Erro interno do servidor' }, 500);
+  }
+});
+
 app.get('/api/health', async (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-export default app;
+module.exports = app;
+module.exports.default = app;
