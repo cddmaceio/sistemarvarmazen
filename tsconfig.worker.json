@@ -10,7 +10,7 @@
     "moduleDetection": "force",
     "noEmit": false,
     "outDir": "./dist/worker",
-    "rootDir": "./src/worker",
+    "rootDir": "./src",
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -20,5 +20,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/worker/index.ts", "src/worker/supabase-worker.ts"]
+  "include": ["src/worker/**/*", "src/shared/**/*"]
 }
