@@ -1,51 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from './Button';
-import { Input } from './Input';
-import { Select } from './Select';
-import { FileUpload } from './FileUpload';
-import { Play, Upload, User, BarChart3, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import Papa from 'papaparse';
+import React, { useState } from 'react';
 import { useAuth } from '@/react-app/hooks/useAuth';
-
-// Função utilitária para converter data ISO para formato brasileiro
-const formatDateToBrazilian = (isoDate: string): string => {
-  if (!isoDate) return '';
-  
-  try {
-    // Se a data contém timezone (Z ou +/-), extrair apenas a parte da data
-    const dateOnly = isoDate.split('T')[0];
-    const [year, month, day] = dateOnly.split('-');
-    
-    // Criar data local sem conversão de timezone
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    return date.toLocaleDateString('pt-BR');
-  } catch {
-    return isoDate;
-  }
-};
-
-// Função utilitária para converter data brasileira para ISO (para envio ao backend)
-const formatDateToISO = (brazilianDate: string): string => {
-  if (!brazilianDate) return '';
-  
-  try {
-    // Se já está no formato YYYY-MM-DD, retorna como está
-    if (brazilianDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      return brazilianDate;
-    }
-    
-    // Se está no formato DD/MM/YYYY, converte
-    if (brazilianDate.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      const [day, month, year] = brazilianDate.split('/');
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-    
-    return brazilianDate;
-  } catch {
-    return brazilianDate;
-  }
-};
 
 interface TaskData {
   [key: string]: string;
@@ -68,15 +22,11 @@ interface WMSTaskManagerProps {
 
 const WMSTaskManager: React.FC<WMSTaskManagerProps> = ({
   selectedOperator,
-  onOperatorChange,
-  availableOperators,
   onCalculateProductivity,
   onDateChange
 }) => {
   const { user } = useAuth();
-  const [file, setFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<TaskData[]>([]);
-  const [headers, setHeaders] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [userStats, setUserStats] = useState<Record<string, UserStats>>({});
@@ -85,7 +35,7 @@ const WMSTaskManager: React.FC<WMSTaskManagerProps> = ({
   const [error, setError] = useState<string | null>(null);
   
   // Usar o usuário logado como operador fixo
-  const currentOperator = user?.email || selectedOperator || 'Usuário';
+  const currentOperator = user?.nome || selectedOperator || 'Usuário';
 
   // Função para converter data brasileira para Date
   const parseDate = (dateString: string): Date | null => {
@@ -100,7 +50,6 @@ const WMSTaskManager: React.FC<WMSTaskManagerProps> = ({
   const handleFileSelect = (selectedFile: File | null) => {
     if (!selectedFile) return;
     
-    setFile(selectedFile);
     setIsProcessing(true);
     setShowFilters(false);
     setShowResults(false);
@@ -139,7 +88,6 @@ const WMSTaskManager: React.FC<WMSTaskManagerProps> = ({
           return obj;
         });
 
-      setHeaders(csvHeaders);
       setCsvData(data);
       setShowFilters(true);
     } catch (err) {
@@ -224,9 +172,7 @@ const WMSTaskManager: React.FC<WMSTaskManagerProps> = ({
 
   // Função para resetar o formulário
   const resetForm = () => {
-    setFile(null);
     setCsvData([]);
-    setHeaders([]);
     setSelectedDate('');
     setUserStats({});
     setShowFilters(false);

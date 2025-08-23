@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Settings, Calculator, ArrowLeft, Users, CheckCircle, History, Download, Database, Activity, BarChart3 } from 'lucide-react';
-import { Link, useLocation, useSearchParams } from 'react-router';
+import { Plus, Edit, Trash2, Calculator, ArrowLeft, Users, Database, Activity } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/react-app/components/Card';
 import { Button } from '@/react-app/components/Button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/react-app/components/Table';
@@ -17,7 +17,7 @@ import { ActivityType, KPIType, UserType } from '@/shared/types';
 export default function Admin() {
   const { user, isAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'activities' | 'kpis' | 'users' | 'wms'>('dashboard');
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
   const { activities, loading: activitiesLoading, createActivity, updateActivity, deleteActivity } = useActivities();
   const { kpis, loading: kpisLoading, createKPI, updateKPI, deleteKPI } = useKPIs();
   
@@ -49,7 +49,7 @@ export default function Admin() {
   }, [searchParams]);
 
   // Update URL when activeTab changes
-  const handleTabChange = (newTab: 'dashboard' | 'activities' | 'kpis' | 'users' | 'wms') => {
+  const handleTabChange = (newTab: string) => {
     setActiveTab(newTab);
     if (newTab === 'dashboard') {
       // Para dashboard, remove o parâmetro tab da URL

@@ -1308,8 +1308,7 @@ app.get('/api/lancamentos-produtividade', async (c) => {
   const user_id = c.req.query('user_id');
   
   try {
-    console.log('=== LANCAMENTOS PRODUTIVIDADE DEBUG ===');
-    console.log('User ID recebido:', user_id);
+
     
     // Buscar lançamentos aprovados
     let query = supabase
@@ -1761,9 +1760,9 @@ app.get('/api/check-operator/:operatorName', async (c) => {
       });
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao verificar operador:', error);
-    return c.json({ success: false, error: 'Erro interno do servidor', details: error.message }, 500);
+    return c.json({ success: false, error: 'Erro interno do servidor', details: error?.message || 'Erro desconhecido' }, 500);
   }
 });
 
@@ -1813,9 +1812,9 @@ app.post('/api/register-operator', async (c) => {
       message: `Operador ${nome_operador} cadastrado com sucesso`
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao cadastrar operador:', error);
-    return c.json({ success: false, error: 'Erro interno do servidor', details: error.message }, 500);
+    return c.json({ success: false, error: 'Erro interno do servidor', details: error?.message || 'Erro desconhecido' }, 500);
   }
 });
 
@@ -1848,8 +1847,8 @@ app.get('/api/wms-operators', async (c) => {
       return c.json({ success: false, error: 'Erro ao buscar operadores', details: errorText }, 500);
     }
     
-    const tarefas = await response.json();
-    const operadores = [...new Set(tarefas.map(t => t.usuario).filter(u => u && u.trim()))];
+    const tarefas = await response.json() as any[];
+    const operadores = [...new Set(tarefas.map((t: any) => t.usuario).filter((u: any) => u && u.trim()))];
     
     console.log('Operadores únicos encontrados:', operadores.length);
     
@@ -1859,9 +1858,9 @@ app.get('/api/wms-operators', async (c) => {
       total: operadores.length
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao buscar operadores WMS:', error);
-    return c.json({ success: false, error: 'Erro interno do servidor', details: error.message }, 500);
+    return c.json({ success: false, error: 'Erro interno do servidor', details: error?.message || 'Erro desconhecido' }, 500);
   }
 });
 

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Truck, TrendingUp, CheckCircle, Plus, Trash2, Play, Send } from 'lucide-react';
-import { Link, Navigate } from 'react-router';
+import { Truck, TrendingUp, CheckCircle, Plus, Trash2, Send } from 'lucide-react';
+import { Link, Navigate, useSearchParams } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/react-app/components/Card';
 import { Button } from '@/react-app/components/Button';
 import { Input } from '@/react-app/components/Input';
 import { Select } from '@/react-app/components/Select';
 import { Alert, AlertDescription, AlertTitle } from '@/react-app/components/Alert';
-import { FileUpload } from '@/react-app/components/FileUpload';
+
 import AuthGuard from '@/react-app/components/AuthGuard';
 import UserMenu from '@/react-app/components/UserMenu';
 import WMSTaskManager from '@/react-app/components/WMSTaskManager';
@@ -14,26 +14,18 @@ import WMSTaskManager from '@/react-app/components/WMSTaskManager';
 import { useAuth } from '@/react-app/hooks/useAuth';
 import { useActivityNames, useFunctions, useCalculator } from '@/react-app/hooks/useApi';
 import { CalculatorInputType, KPIType, MultipleActivityType, CreateLancamentoType } from '@/shared/types';
-import { parseCSV, calculateValidTasks, parseDateTime, TASK_METAS, isOperatorMatch } from '@/react-app/utils/taskProcessor';
+
 
 export default function Home() {
   const { user, isAdmin } = useAuth();
   const { activityNames, loading: activityNamesLoading } = useActivityNames();
-  const { functions, loading: functionsLoading } = useFunctions();
+  const { functions } = useFunctions();
   const { result, loading: calculating, error, calculate } = useCalculator();
+  const [searchParams] = useSearchParams();
 
   const [availableKPIs, setAvailableKPIs] = useState<KPIType[]>([]);
   const [selectedKPIs, setSelectedKPIs] = useState<string[]>([]);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [validTasksCount, setValidTasksCount] = useState<number>(0);
-  const [validTasksDetails, setValidTasksDetails] = useState<any[]>([]);
-  const [processingTasks, setProcessingTasks] = useState<boolean>(false);
-  const [existingValidTasks, setExistingValidTasks] = useState<number>(0);
-  const [loadingExistingTasks, setLoadingExistingTasks] = useState<boolean>(false);
-  
-  // Task statistics state
-  const [taskStats, setTaskStats] = useState<any>(null);
-  const [loadingTaskStats, setLoadingTaskStats] = useState<boolean>(false);
   
   // WMS Task Manager states
   const [selectedOperator, setSelectedOperator] = useState<string>(user?.nome || '');
@@ -51,10 +43,22 @@ export default function Home() {
     if (user?.funcao) {
       setFormData(prev => ({
         ...prev,
-        funcao: user.funcao
+        funcao: user.funcao as string
       }));
     }
   }, [user?.funcao]);
+
+  // Capturar parâmetro de data da URL e preencher automaticamente
+  useEffect(() => {
+    const dateParam = searchParams.get('data');
+    if (dateParam) {
+      setDataLancamento(dateParam);
+      // Abrir automaticamente o modal de lançamento se houver resultado calculado
+      if (result) {
+        setShowLancamento(true);
+      }
+    }
+  }, [searchParams, result]);
   
   // Lançamento states
   const [showLancamento, setShowLancamento] = useState<boolean>(false);
@@ -93,192 +97,15 @@ export default function Home() {
     'Paulo Ursulino da Silva neto'
   ]);
 
-  // Função para buscar tarefas válidas existentes do operador
-  const fetchExistingValidTasks = async (operatorName: string, date?: string) => {
-    if (!operatorName.trim()) {
-      setExistingValidTasks(0);
-      return;
-    }
-    
-    setLoadingExistingTasks(true);
-    try {
-      // Construir URL com parâmetro de data se fornecido
-      let url = `/api/wms-tasks/operator/${encodeURIComponent(operatorName)}`;
-      if (date) {
-        url += `?date=${date}`;
-      }
-      
-      const response = await fetch(url);
-      const result = await response.json();
-      
-      if (result.success) {
-        setExistingValidTasks(result.valid_tasks_count || 0);
-        console.log(`Tarefas válidas existentes para ${operatorName}${date ? ` na data ${date}` : ''}:`, result.valid_tasks_count);
-      } else {
-        setExistingValidTasks(0);
-        console.warn('Erro ao buscar tarefas existentes:', result.error);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar tarefas válidas existentes:', error);
-      setExistingValidTasks(0);
-    } finally {
-      setLoadingExistingTasks(false);
-    }
-  };
 
-  // Função para buscar estatísticas detalhadas das tarefas WMS
-  const fetchTaskStats = async (operatorName: string) => {
-    if (!operatorName.trim()) {
-      setTaskStats(null);
-      return;
-    }
-    
-    setLoadingTaskStats(true);
-    try {
-      const response = await fetch(`/api/wms-tasks/operator/${encodeURIComponent(operatorName)}/stats`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setTaskStats(result.estatisticas);
-        console.log(`Estatísticas para ${operatorName}:`, result.estatisticas);
-      } else {
-        setTaskStats(null);
-        console.warn('Erro ao buscar estatísticas:', result.error);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar estatísticas das tarefas:', error);
-      setTaskStats(null);
-    } finally {
-      setLoadingTaskStats(false);
-    }
-  };
 
-  // Função para listar todos os operadores do banco
-  const listAllOperators = async () => {
-    try {
-      const response = await fetch('/api/wms-operators');
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log('Operadores únicos no banco:', data.operadores);
-        console.log('Total de operadores:', data.total);
-        
-        // Verificar se ALMIR existe e como está armazenado
-        const almirVariations = data.operadores.filter(op => 
-          op.toLowerCase().includes('almir')
-        );
-        console.log('Variações do nome ALMIR encontradas:', almirVariations);
-        
-        alert(`Total de operadores: ${data.total}\n\nVariações do ALMIR encontradas:\n${almirVariations.join('\n')}\n\nVerifique o console para ver todos os operadores.`);
-      } else {
-        console.error('Erro ao buscar operadores:', data.error);
-        alert('Erro ao buscar operadores: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar operadores:', error);
-      alert('Erro ao buscar operadores: ' + error.message);
-    }
-  };
 
-  const checkOperatorExists = async (operatorName: string) => {
-    try {
-      const response = await fetch(`/api/check-operator/${encodeURIComponent(operatorName)}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        if (data.exists) {
-          alert(`✅ Operador encontrado na tabela usuarios:\n\nID: ${data.operador.id}\nNome: ${data.operador.nome}\nFunção: ${data.operador.funcao}`);
-        } else {
-          const shouldRegister = confirm(`❌ Operador "${operatorName}" não encontrado na tabela usuarios.\n\nDeseja cadastrá-lo agora?`);
-          if (shouldRegister) {
-            await registerOperator(operatorName);
-          }
-        }
-      } else {
-        alert('Erro ao verificar operador: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Erro ao verificar operador:', error);
-      alert('Erro ao conectar com o servidor');
-    }
-  };
 
-  const registerOperator = async (operatorName: string) => {
-    try {
-      const response = await fetch('/api/register-operator', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ nome_operador: operatorName })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        alert(`✅ Operador cadastrado com sucesso!\n\nID: ${data.operador.id}\nNome: ${data.operador.nome}\nFunção: ${data.operador.funcao}`);
-      } else {
-        alert('Erro ao cadastrar operador: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Erro ao cadastrar operador:', error);
-      alert('Erro ao conectar com o servidor');
-    }
-  };
 
-  const testTaskImport = async () => {
-    try {
-      console.log('=== TESTE DE IMPORTAÇÃO DE TAREFAS ===');
-      
-      // Dados de teste simulando um CSV
-      const testTasks = [
-        {
-          Tarefa: 'TEST001',
-          Tipo: 'Picking',
-          Usuário: 'ALMIR VICTOR ALENCAR DA ROCHA',
-          'Concluída Task': '1',
-          'Data Última Associação': '2025-01-20 08:00:00',
-          'Data de Alteração': '2025-01-20 08:05:30',
-          'Data de Criação': '2025-01-20 07:55:00',
-          'Data de Liberação': '2025-01-20 07:58:00',
-          Origem: 'A1-01-01',
-          Destino: 'DOCK-01',
-          Palete: 'PAL001',
-          'Armazém Mapa': 'WH01',
-          'Placa Carreta': null,
-          'Placa Cavalo': null,
-          Prioridade: 'Normal',
-          Status: 'Concluída'
-        }
-      ];
-      
-      console.log('Enviando dados de teste:', {
-        nome_operador: 'ALMIR VICTOR ALENCAR DA ROCHA',
-        tarefas: testTasks
-      });
-      
-      const response = await fetch('/api/wms-tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome_operador: 'ALMIR VICTOR ALENCAR DA ROCHA',
-          tarefas: testTasks
-        })
-      });
-      
-      const result = await response.json();
-      console.log('Resultado do teste:', result);
-      
-      if (result.success) {
-        alert(`✅ Teste de importação bem-sucedido!\n\nTarefas inseridas: ${result.tarefas_inseridas}\nTarefas válidas: ${result.tarefas_validas}\n\n${result.message}`);
-      } else {
-        alert(`❌ Erro no teste de importação:\n\n${result.error}`);
-      }
-    } catch (error) {
-      console.error('Erro no teste de importação:', error);
-      alert('Erro ao conectar com o servidor durante o teste');
-    }
-  };
+
+
+
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -430,24 +257,13 @@ export default function Home() {
       setSelectedKPIs([]);
       if (field === 'funcao') {
         setMultipleActivities([{ nome_atividade: '', quantidade_produzida: 0, tempo_horas: 0 }]);
-        setUploadedFile(null);
         setValidTasksCount(0);
-        setValidTasksDetails([]);
       }
     }
     
-    // Reset valid tasks count when operator name changes and fetch existing tasks
+    // Reset valid tasks count when operator name changes
     if (field === 'nome_operador') {
       setValidTasksCount(0);
-      setValidTasksDetails([]);
-      setExistingValidTasks(0);
-      
-      // Buscar tarefas válidas existentes do operador selecionado
-      if (value && typeof value === 'string') {
-        // Se há uma data selecionada no WMS, usar ela; caso contrário, buscar todas
-        const currentDate = new Date().toISOString().split('T')[0]; // Data atual como fallback
-        fetchExistingValidTasks(value, currentDate);
-      }
     }
   };
 
@@ -468,186 +284,15 @@ export default function Home() {
     ));
   };
 
-  const handleFileUpload = async (file: File) => {
-    setUploadedFile(file);
-    setValidTasksCount(0); // Reset count when new file is uploaded
-  };
 
-  const processTaskFile = async () => {
-    if (!uploadedFile || !formData.nome_operador) return;
-    
-    setProcessingTasks(true);
-    try {
-      const text = await uploadedFile.text();
-      console.log('=== PROCESSAMENTO ARQUIVO TAREFAS ===');
-      console.log('Nome do arquivo:', uploadedFile.name);
-      console.log('Tamanho do arquivo:', text.length, 'caracteres');
-      console.log('Operador selecionado:', formData.nome_operador);
-      console.log('Conteúdo do arquivo (primeiros 2000 caracteres):', text.substring(0, 2000));
-      
-      const tasks = parseCSV(text);
-      console.log('Tarefas parseadas do CSV:', tasks.length);
-      
-      if (tasks.length === 0) {
-        alert('Nenhuma tarefa foi encontrada no arquivo. Verifique o formato do arquivo e tente novamente.');
-        return;
-      }
-      
-      // Show sample of parsed tasks
-      console.log('Exemplo das primeiras 5 tarefas parseadas:', tasks.slice(0, 5));
-      
-      // Show unique operators found in file
-      const uniqueOperators = [...new Set(tasks.map(t => t.Usuário?.trim()).filter(Boolean))];
-      console.log('Operadores únicos no arquivo:', uniqueOperators);
-      
-      const validTasksResult = calculateValidTasks(tasks, formData.nome_operador);
-      console.log('Resultado das tarefas válidas:', validTasksResult);
-      
-      setValidTasksCount(validTasksResult.total);
-      setValidTasksDetails(validTasksResult.detalhes);
-      
-      if (validTasksResult.total === 0) {
-        const operatorsInFile = uniqueOperators.join(', ');
-        alert(`Nenhuma tarefa válida encontrada para o operador "${formData.nome_operador}".\n\nOperadores encontrados no arquivo:\n${operatorsInFile}\n\nVerifique se o nome do operador está correto.`);
-        return;
-      }
-      
-      // Salvar tarefas processadas no banco de dados
-      if (validTasksResult.total > 0) {
-        try {
-          // Preparar dados das tarefas para salvar
-          const tarefasParaSalvar = tasks
-            .filter(task => {
-              // Usar a mesma função de comparação que calculateValidTasks
-              return task.Usuário && isOperatorMatch(task.Usuário, formData.nome_operador);
-            })
-            .filter(task => task['Concluída Task'] === '1') // Apenas tarefas concluídas
-            .map(task => {
-              const dataAssociacao = task['Data Última Associação'];
-              const dataAlteracao = task['Data de Alteração'];
-              
-              // Calcular tempo de execução
-              let tempoExecucao = 0;
-              if (dataAssociacao && dataAlteracao) {
-                const dateAssoc = parseDateTime(dataAssociacao);
-                const dateAlt = parseDateTime(dataAlteracao);
-                if (dateAssoc && dateAlt) {
-                  tempoExecucao = Math.abs(dateAlt.getTime() - dateAssoc.getTime()) / 1000;
-                }
-              }
-              
-              // Verificar se tarefa é válida: >10s = válida, ≤10s = inválida
-               // E também deve estar dentro da meta específica do tipo de tarefa
-               const meta = TASK_METAS.find(m => m.tipo === task.Tipo);
-               const tarefaValida = meta ? (tempoExecucao > 10 && tempoExecucao <= meta.meta_segundos) : false;
-              
-              return {
-                // Campos obrigatórios
-                tarefa: task.Tipo || '', // Usar o tipo como identificador da tarefa
-                tipo: task.Tipo || '',
-                usuario: formData.nome_operador,
-                tempo_execucao: tempoExecucao,
-                // tarefa_valida é calculada automaticamente pelo banco
-                concluida_task: task['Concluída Task'] === '1',
-                
-                // Campos de data/hora (apenas os disponíveis na interface TaskRow)
-                data_ultima_associacao: dataAssociacao,
-                data_alteracao: dataAlteracao,
-                
-                // Campos opcionais (definir como null já que não estão na interface TaskRow)
-                data_criacao: null,
-                data_liberacao: null,
-                origem: null,
-                destino: null,
-                palete: null,
-                armazem_mapa: null,
-                placa_carreta: null,
-                placa_cavalo: null,
-                prioridade: null,
-                status: null
-              };
-            });
-          
-          console.log('Dados que serão enviados para a API:');
-          console.log('Nome operador:', formData.nome_operador);
-          console.log('Quantidade de tarefas para salvar:', tarefasParaSalvar.length);
-          console.log('Primeiras 3 tarefas:', tarefasParaSalvar.slice(0, 3));
-          
-          const response = await fetch('/api/wms-tasks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              nome_operador: formData.nome_operador,
-              tarefas: tarefasParaSalvar
-            })
-          });
-          
-          const result = await response.json();
-          if (result.success) {
-            console.log('Tarefas salvas no banco:', result);
-            
-            // Atualizar contagem de tarefas válidas
-            const mensagemSucesso = [
-              `✅ Processamento concluído com sucesso!`,
-              ``,
-              `📊 Resumo:`,
-              `• Tarefas processadas: ${result.tarefas_inseridas || tarefasParaSalvar.length}`,
-              `• Tarefas válidas: ${result.tarefas_validas || validTasksResult.total}`,
-              `• Operador: ${formData.nome_operador}`,
-              ``,
-              `${result.message}`
-            ].join('\n');
-            
-            alert(mensagemSucesso);
-            
-            // Buscar contagem atualizada de tarefas válidas do operador
-            try {
-              const countResponse = await fetch(`/api/wms-tasks/${encodeURIComponent(formData.nome_operador)}`);
-              if (countResponse.ok) {
-                const countResult = await countResponse.json();
-                if (countResult.success) {
-                  setValidTasksCount(countResult.valid_tasks_count);
-                  console.log('Contagem atualizada de tarefas válidas:', countResult.valid_tasks_count);
-                }
-              }
-            } catch (countError) {
-              console.warn('Erro ao buscar contagem atualizada:', countError);
-            }
-            
-            // Buscar estatísticas detalhadas das tarefas
-            await fetchTaskStats(formData.nome_operador);
-            
-          } else {
-            console.warn('Erro ao salvar tarefas:', result);
-            const mensagemErro = [
-              `❌ Erro ao processar tarefas:`,
-              ``,
-              `${result.error}`,
-              result.details ? `\nDetalhes: ${result.details}` : ''
-            ].join('\n');
-            alert(mensagemErro);
-          }
-        } catch (saveError) {
-          console.error('Erro ao salvar tarefas no banco:', saveError);
-          alert(`❌ Erro ao salvar tarefas no banco:\n\n${saveError instanceof Error ? saveError.message : 'Erro desconhecido'}`);
-        }
-      }
-      
-    } catch (error) {
-      console.error('Erro ao processar arquivo:', error);
-      alert('Erro ao processar arquivo: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
-      setValidTasksCount(0);
-      setValidTasksDetails([]);
-    } finally {
-      setProcessingTasks(false);
-    }
-  };
 
-  const handleRemoveFile = () => {
-    setUploadedFile(null);
-    setValidTasksCount(0);
-    setValidTasksDetails([]);
-  };
+
+
+
+
+
+
+
 
   const fetchAvailableKPIs = async (funcao: string, turno: string) => {
     if (!funcao || !turno) return;
@@ -677,18 +322,7 @@ export default function Home() {
     }
   }, [formData.funcao, formData.turno]);
 
-  // Buscar tarefas válidas existentes e estatísticas quando operador for selecionado
-  useEffect(() => {
-    if (isOperadorEmpilhadeira && formData.nome_operador) {
-      // Usar data atual como padrão para buscar tarefas do dia
-      const currentDate = new Date().toISOString().split('T')[0];
-      fetchExistingValidTasks(formData.nome_operador, currentDate);
-      fetchTaskStats(formData.nome_operador);
-    } else {
-      setExistingValidTasks(0);
-      setTaskStats(null);
-    }
-  }, [isOperadorEmpilhadeira, formData.nome_operador]);
+
 
   // Redirect admins to admin panel - admins don't use calculator
   if (isAdmin) {

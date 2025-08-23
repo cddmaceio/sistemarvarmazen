@@ -288,7 +288,7 @@ function parseCSVBySeparator(lines: string[]): TaskRow[] {
   console.log('Header:', header);
   
   // Detectar separador
-  let separator = ';';
+  let separator: string | RegExp = ';';
   if (header.includes(';')) {
     separator = ';';
   } else if (header.includes('\t')) {

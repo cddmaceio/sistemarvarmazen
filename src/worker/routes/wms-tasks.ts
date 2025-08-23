@@ -16,6 +16,7 @@ const WMSTaskSchema = z.object({
   status: z.string().optional(),
   tipo: z.string().min(1, 'Tipo é obrigatório'),
   usuario: z.string().min(1, 'Usuário é obrigatório'),
+  user_id: z.string().optional(),
   data_criacao: z.string().optional(),
   data_ultima_associacao: z.string().optional(),
   data_alteracao: z.string().optional(),
@@ -35,6 +36,24 @@ type Env = {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
 };
+
+// Interface para estatísticas de tarefas por tipo
+interface TarefasPorTipo {
+  [tipo: string]: {
+    total: number;
+    validas: number;
+    invalidas: number;
+  };
+}
+
+// Interface para tarefa WMS
+interface WMSTask {
+  tipo?: string;
+  tarefa_valida?: boolean;
+  tempo_execucao?: number;
+  usuario?: string;
+  [key: string]: any;
+}
 
 // Helper para criar cliente Supabase
 function getSupabase(env: Env) {
@@ -231,12 +250,12 @@ wmsTasksRouter.post('/bulk', async (c) => {
     console.log('Chamando processBulkTasksAll...');
     return await processBulkTasksAll(c, tasks);
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao processar arquivo:', error);
     return c.json({ 
       success: false, 
       error: 'Erro ao processar arquivo',
-      details: error.message
+      details: error?.message || 'Erro desconhecido'
     }, 500);
   }
 });
@@ -350,12 +369,12 @@ wmsTasksRouter.post('/bulk-json', zValidator('json', WMSTaskBulkSchema), async (
       user_id: userId
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao salvar tarefas WMS:', error);
     return c.json({ 
       success: false, 
       error: 'Erro interno do servidor',
-      details: error.message
+      details: error?.message || 'Erro desconhecido'
     }, 500);
   }
 });
@@ -570,7 +589,7 @@ wmsTasksRouter.get('/operator/:operatorName/stats/date/:date', async (c) => {
     const tarefasInvalidas = totalTarefas - tarefasValidas;
     
     // Agrupar por tipo de tarefa
-    const tarefasPorTipo = (tarefas || []).reduce((acc, tarefa) => {
+    const tarefasPorTipo = (tarefas || []).reduce((acc: TarefasPorTipo, tarefa: WMSTask) => {
       const tipo = tarefa.tipo || 'Não especificado';
       if (!acc[tipo]) {
         acc[tipo] = { total: 0, validas: 0, invalidas: 0 };
@@ -582,7 +601,7 @@ wmsTasksRouter.get('/operator/:operatorName/stats/date/:date', async (c) => {
         acc[tipo].invalidas++;
       }
       return acc;
-    }, {});
+    }, {} as TarefasPorTipo);
     
     // Calcular tempo médio de execução
     const temposExecucao = (tarefas || []).filter(t => t.tempo_execucao > 0).map(t => t.tempo_execucao);
@@ -637,7 +656,7 @@ wmsTasksRouter.get('/operator/:operatorName/stats', async (c) => {
     const tarefasInvalidas = totalTarefas - tarefasValidas;
     
     // Agrupar por tipo de tarefa
-    const tarefasPorTipo = (tarefas || []).reduce((acc, tarefa) => {
+    const tarefasPorTipo = (tarefas || []).reduce((acc: TarefasPorTipo, tarefa: WMSTask) => {
       const tipo = tarefa.tipo || 'Não especificado';
       if (!acc[tipo]) {
         acc[tipo] = { total: 0, validas: 0, invalidas: 0 };
@@ -649,7 +668,7 @@ wmsTasksRouter.get('/operator/:operatorName/stats', async (c) => {
         acc[tipo].invalidas++;
       }
       return acc;
-    }, {});
+    }, {} as TarefasPorTipo);
     
     // Calcular tempo médio de execução
     const temposExecucao = (tarefas || []).filter(t => t.tempo_execucao > 0).map(t => t.tempo_execucao);
@@ -723,8 +742,8 @@ wmsTasksRouter.get('/operators', async (c) => {
     
     // Extrair operadores únicos
     const operadoresUnicos = [...new Set((operadores || []).map(o => o.usuario))];
-    
-    return c.json({ success: true, data: tipos });
+
+    return c.json({ success: true, data: operadoresUnicos });
     
   } catch (error) {
     console.error('Erro ao buscar tipos de tarefa WMS:', error);
@@ -1071,12 +1090,12 @@ async function processBulkTasks(c: any, nome_operador: string, rawTasks: any[]) 
       user_id: userId
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao processar tarefas em lote:', error);
     return c.json({ 
       success: false, 
       error: 'Erro interno do servidor',
-      details: error.message
+      details: error?.message || 'Erro desconhecido'
     }, 500);
   }
 }
@@ -1309,12 +1328,12 @@ async function processBulkTasksAll(c: any, rawTasks: any[]) {
       operadores_processados: Array.from(operadoresProcessados)
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao processar todas as tarefas:', error);
     return c.json({ 
       success: false, 
       error: 'Erro interno do servidor',
-      details: error.message
+      details: error?.message || 'Erro desconhecido'
     }, 500);
   }
 }

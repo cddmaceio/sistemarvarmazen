@@ -5,7 +5,6 @@ import {
   Activity,
   BarChart3,
   Settings,
-  Menu,
   Home,
   Database
 } from 'lucide-react';
@@ -24,7 +23,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from '@/react-app/components/ui/sidebar';
-import { Button } from '@/react-app/components/Button';
+
 import UserMenu from '@/react-app/components/UserMenu';
 
 interface AdminLayoutProps {
@@ -97,9 +96,10 @@ export default function AdminLayout({ children, activeTab, onTabChange }: AdminL
               <SidebarGroupContent>
                 <SidebarMenu>
                   {menuItems.map((item) => {
-                    const isActive = 
+                    const isActive = Boolean(
                       currentPath === item.url || 
-                      (activeTab && item.id === activeTab);
+                      (activeTab && item.id === activeTab)
+                    );
                     
                     return (
                       <SidebarMenuItem key={item.id}>
