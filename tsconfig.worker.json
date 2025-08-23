@@ -2,15 +2,15 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2023"],
-    "module": "ESNext",
+    "module": "CommonJS",
     "skipLibCheck": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "allowImportingTsExtensions": false,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": false,
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "outDir": "./dist/worker",
+    "rootDir": "./src/worker",
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -20,5 +20,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/worker/index.ts"]
+  "include": ["src/worker/index.ts", "src/worker/supabase-worker.ts"]
 }

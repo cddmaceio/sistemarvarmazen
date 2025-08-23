@@ -73,7 +73,7 @@ const handler = async (event: any, context: any) => {
     // Importa o app Hono já compilado em JS ESM
     const dynamicImport = new Function('p', 'return import(p)');
     const appModule = await (dynamicImport as (p: string) => Promise<any>)(
-      '../../src/worker/supabase-worker.js'
+      '../../dist/worker/supabase-worker.js'
     );
     const app = appModule.default as { fetch: (req: Request, env: Env) => Promise<Response> };
     

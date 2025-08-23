@@ -26,7 +26,7 @@
   directory = "netlify/functions-build"
   node_bundler = "nft"
   external_node_modules = ["@supabase/supabase-js", "hono", "@hono/zod-validator", "zod"]
-  included_files = ["src/worker/**", "src/shared/**"]
+  included_files = ["dist/worker/**", "src/shared/**"]
 
 [[headers]]
   for = "/api/*"
