@@ -1,5 +1,6 @@
 // Netlify Function handler for Hono app with Supabase
-const app = require('../../src/worker/supabase-worker').default;
+import app from '../../src/worker/supabase-worker.js';
+import { Handler } from '@netlify/functions';
 
 // Supabase Environment type
 interface Env {
