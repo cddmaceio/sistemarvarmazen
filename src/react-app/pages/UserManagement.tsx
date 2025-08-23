@@ -9,6 +9,18 @@ import { Alert, AlertDescription } from '@/react-app/components/Alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/react-app/components/Table';
 import { UserType } from '@/shared/types';
 
+const formatDateSafe = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  // Se a data contém timezone (Z ou +/-), extrair apenas a parte da data
+  const dateOnly = dateString.split('T')[0];
+  const [year, month, day] = dateOnly.split('-');
+  
+  // Criar data local sem conversão de timezone
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  return date.toLocaleDateString('pt-BR');
+};
+
 interface UserManagementProps {
   users: UserType[];
   onAddUser: (user: Omit<UserType, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -176,7 +188,7 @@ export default function UserManagement({
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.nome}</TableCell>
                       <TableCell>{user.cpf}</TableCell>
-                      <TableCell>{new Date(user.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{formatDateSafe(user.data_nascimento)}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center space-x-2">

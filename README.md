@@ -100,14 +100,13 @@ npx wrangler deploy
 
 ## 🗄️ Banco de Dados
 
-### Migrações
+### Banco de Dados
+
+O sistema utiliza **Supabase (PostgreSQL)** como banco de dados principal.
 
 ```bash
-# Aplicar migrações
-npx wrangler d1 migrations apply <database-name>
-
-# Executar migrações localmente
-npx wrangler d1 migrations apply <database-name> --local
+# Para aplicar o schema inicial, execute o arquivo:
+# supabase-migration-completa.sql no dashboard do Supabase
 ```
 
 ### Estrutura Principal

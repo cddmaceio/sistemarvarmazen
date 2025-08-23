@@ -1,11 +1,24 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Target, BarChart3, DollarSign, Activity, Star, ArrowLeft, ArrowRight, Download, Mail, Share } from 'lucide-react';
+import { TrendingUp, Target, BarChart3, DollarSign, Activity, Star, ArrowLeft, ArrowRight, Download, Mail, Share, Clock } from 'lucide-react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/react-app/components/Card';
 import { Button } from '@/react-app/components/Button';
 import AuthGuard from '@/react-app/components/AuthGuard';
 import UserMenu from '@/react-app/components/UserMenu';
 import { useAuth } from '@/react-app/hooks/useAuth';
+
+// Função para formatar data corretamente, evitando problemas de timezone
+const formatDateSafe = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  // Se a data contém timezone (Z ou +/-), extrair apenas a parte da data
+  const dateOnly = dateString.split('T')[0];
+  const [year, month, day] = dateOnly.split('-');
+  
+  // Criar data local sem conversão de timezone
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  return date.toLocaleDateString('pt-BR');
+};
 
 interface DashboardData {
   ganhoTotal: number;
@@ -26,6 +39,7 @@ interface DashboardData {
     eficiencia: number;
     pontualidade: number;
   };
+  historicoCompleto: HistoricoAtividade[];
 }
 
 interface ActivityPerformance {
@@ -36,6 +50,14 @@ interface ActivityPerformance {
   mediaDia: number;
   performance: 'excelente' | 'bom' | 'regular';
   cor: string;
+}
+
+interface HistoricoAtividade {
+  data: string;
+  valor: number;
+  atividade: string;
+  turno?: string;
+  aprovadoPor?: string;
 }
 
 export default function Dashboard() {
@@ -56,14 +78,14 @@ export default function Dashboard() {
       setLoading(true);
       
       // Buscar dados dos lançamentos aprovados
-      const response = await fetch('/api/historico-aprovacoes');
+      const response = await fetch('/api/lancamentos-produtividade');
       if (!response.ok) throw new Error('Falha ao carregar dados');
       
       const historico = await response.json();
       
       // Filtrar por usuário e mês atual - apenas para colaboradores
       const dadosUsuario = isCollaborator ? historico.filter((item: any) => 
-        item.colaborador_cpf === user?.cpf &&
+        item.user_cpf === user?.cpf &&
         new Date(item.data_lancamento).getMonth() === mesAtual.getMonth() &&
         new Date(item.data_lancamento).getFullYear() === mesAtual.getFullYear()
       ) : historico.filter((item: any) => 
@@ -81,9 +103,18 @@ export default function Dashboard() {
       const diasTrabalhados = new Set(dadosUsuario.map((item: any) => item.data_lancamento)).size;
       const mediaDiaria = diasTrabalhados > 0 ? ganhoTotal / diasTrabalhados : 0;
 
+      // Criar histórico completo de atividades
+      const historicoCompleto: HistoricoAtividade[] = [];
+
       // Agrupar por atividades
       const atividadesPorTipo = dadosUsuario.reduce((acc: any, item: any) => {
-        const dados = JSON.parse(item.dados_finais);
+        // Usar dados diretamente do lançamento
+        const dados = {
+          nome_atividade: item.nome_atividade,
+          multiple_activities: item.multiple_activities ? JSON.parse(item.multiple_activities) : null,
+          funcao: item.funcao,
+          nome_operador: item.nome_operador
+        };
         let nomeAtividade = dados.nome_atividade || 'Outras atividades';
         
         // Para operadores de empilhadeira, verificar se tem atividade específica ou apenas KPIs
@@ -115,6 +146,15 @@ export default function Dashboard() {
             acc[subAtividade].totalGanho += valorProporcional;
             acc[subAtividade].valores.push(valorProporcional);
             acc[subAtividade].dias = acc[subAtividade].valores.length;
+            
+            // Adicionar ao histórico
+            historicoCompleto.push({
+              data: formatDateSafe(item.data_lancamento),
+              valor: valorProporcional,
+              atividade: subAtividade,
+              turno: item.turno || 'N/A',
+              aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema'
+            });
           });
           return acc;
         }
@@ -132,6 +172,15 @@ export default function Dashboard() {
         acc[nomeAtividade].totalGanho += item.remuneracao_total;
         acc[nomeAtividade].valores.push(item.remuneracao_total);
         acc[nomeAtividade].dias = acc[nomeAtividade].valores.length;
+        
+        // Adicionar ao histórico
+        historicoCompleto.push({
+          data: formatDateSafe(item.data_lancamento),
+          valor: item.remuneracao_total,
+          atividade: nomeAtividade,
+          turno: item.turno || 'N/A',
+          aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema'
+        });
         
         return acc;
       }, {});
@@ -155,7 +204,7 @@ export default function Dashboard() {
         percentualMeta: (ganhoTotal / 300) * 100,
         atividades,
         melhorDia: melhorDia ? {
-          data: new Date(melhorDia.data_lancamento).toLocaleDateString('pt-BR'),
+          data: formatDateSafe(melhorDia.data_lancamento),
           valor: melhorDia.remuneracao_total,
           tempo: '8h 30min'
         } : { data: '', valor: 0, tempo: '' },
@@ -166,12 +215,16 @@ export default function Dashboard() {
           produtividade: 94,
           eficiencia: 87,
           pontualidade: 100
-        }
+        },
+        historicoCompleto: historicoCompleto.sort((a, b) => new Date(b.data.split('/').reverse().join('-')).getTime() - new Date(a.data.split('/').reverse().join('-')).getTime())
       });
 
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
-      setDashboardData(generateMockData());
+      setDashboardData({
+        ...generateMockData(),
+        historicoCompleto: []
+      });
     } finally {
       setLoading(false);
     }
@@ -226,7 +279,30 @@ export default function Dashboard() {
       produtividade: 94,
       eficiencia: 87,
       pontualidade: 100
-    }
+    },
+    historicoCompleto: [
+      {
+        data: '15/01/2024',
+        valor: 156.30,
+        atividade: 'Prod Repack',
+        turno: 'Manhã',
+        aprovadoPor: 'Sistema'
+      },
+      {
+        data: '14/01/2024',
+        valor: 89.50,
+        atividade: 'Prod Amarração',
+        turno: 'Tarde',
+        aprovadoPor: 'Admin'
+      },
+      {
+        data: '13/01/2024',
+        valor: 67.20,
+        atividade: 'Prod Devolução',
+        turno: 'Manhã',
+        aprovadoPor: 'Admin'
+      }
+    ]
   });
 
   const generateDailyChart = (dados: any[]) => {
@@ -700,6 +776,72 @@ export default function Dashboard() {
                       Continue assim! Você está superando as expectativas.
                     </p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Histórico de Lançamentos */}
+            <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-blue-800">
+                  <Clock className="h-6 w-6" />
+                  <span>📋 HISTÓRICO DE LANÇAMENTOS</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {dashboardData.historicoCompleto.length > 0 ? (
+                    <>
+                      {/* Versão Desktop */}
+                      <div className="hidden md:block">
+                        <div className="grid grid-cols-4 gap-4 text-sm font-semibold text-gray-700 border-b pb-2 mb-3">
+                          <span>Data</span>
+                          <span>Atividade</span>
+                          <span>Valor</span>
+                          <span>Turno</span>
+                        </div>
+                        {dashboardData.historicoCompleto.slice(0, 10).map((item, index) => (
+                          <div key={index} className="grid grid-cols-4 gap-4 text-sm py-2 border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                            <span className="text-gray-600">{item.data}</span>
+                            <span className="font-medium text-blue-700">{item.atividade}</span>
+                            <span className="font-bold text-green-600">R$ {item.valor.toFixed(2)}</span>
+                            <span className="text-gray-500">{item.turno}</span>
+                          </div>
+                        ))}
+                        {dashboardData.historicoCompleto.length > 10 && (
+                          <div className="text-center py-3 text-sm text-gray-500">
+                            ... e mais {dashboardData.historicoCompleto.length - 10} lançamentos
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Versão Mobile */}
+                      <div className="md:hidden space-y-3">
+                        {dashboardData.historicoCompleto.slice(0, 5).map((item, index) => (
+                          <div key={index} className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-medium text-blue-700">{item.atividade}</span>
+                              <span className="font-bold text-green-600">R$ {item.valor.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm text-gray-500">
+                              <span>{item.data}</span>
+                              <span>{item.turno}</span>
+                            </div>
+                          </div>
+                        ))}
+                        {dashboardData.historicoCompleto.length > 5 && (
+                          <div className="text-center py-2 text-sm text-gray-500">
+                            ... e mais {dashboardData.historicoCompleto.length - 5} lançamentos
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Clock className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                      <p>Nenhum lançamento encontrado para este período</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

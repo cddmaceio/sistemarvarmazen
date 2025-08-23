@@ -7,6 +7,7 @@ import Validacao from "@/react-app/pages/Validacao";
 import HistoricoAprovacoes from "@/react-app/pages/HistoricoAprovacoes";
 import DashboardCollaborator from "@/react-app/pages/DashboardCollaborator";
 import AdminRedirect from "@/react-app/pages/AdminRedirect";
+import Admin from "@/react-app/pages/Admin";
 import CadastroAtividades from "@/react-app/pages/CadastroAtividades";
 import CadastroUsuarios from "@/react-app/pages/CadastroUsuarios";
 import CadastroKPIsStandalone from "@/react-app/pages/CadastroKPIsStandalone";
@@ -19,7 +20,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/dashboard" element={<DashboardCollaborator />} />
-          <Route path="/admin" element={<AdminRedirect />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin-redirect" element={<AdminRedirect />} />
           <Route path="/admin/users" element={<UserManagementStandalone />} />
           <Route path="/admin/atividades" element={<CadastroAtividades />} />
           <Route path="/cadastro-atividades" element={<CadastroAtividades />} />

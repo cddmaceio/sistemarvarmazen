@@ -12,7 +12,7 @@ import { LancamentoType, CalculatorInputType, CalculatorResultType } from '@/sha
 import { supabaseQueries } from '@/lib/supabase';
 
 export default function Validacao() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [lancamentos, setLancamentos] = useState<LancamentoType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processando, setProcessando] = useState<string | null>(null);
@@ -42,7 +42,21 @@ export default function Validacao() {
   const handleValidacao = async (lancamentoId: number, acao: 'aprovar' | 'reprovar') => {
     setProcessando(String(lancamentoId));
     try {
-      await supabaseQueries.validarLancamento(lancamentoId, acao, observacoes || undefined);
+      // Use fetch direto para incluir o admin_user_id
+      const response = await fetch(`/api/lancamentos/${lancamentoId}/validar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          acao,
+          observacoes: observacoes || undefined,
+          admin_user_id: user?.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Falha na validação');
+      }
 
       // Refresh the list
       await fetchLancamentosPendentes();
@@ -74,6 +88,7 @@ export default function Validacao() {
           acao: 'editar',
           observacoes: observacoes || undefined,
           dados_editados: editedData,
+          admin_user_id: user?.id,
         }),
       });
 
@@ -97,7 +112,15 @@ export default function Validacao() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    if (!dateString) return '';
+    
+    // Se a data contém timezone (Z ou +/-), extrair apenas a parte da data
+    const dateOnly = dateString.split('T')[0];
+    const [year, month, day] = dateOnly.split('-');
+    
+    // Criar data local sem conversão de timezone
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return date.toLocaleDateString('pt-BR');
   };
 
   const parseJsonSafely = (jsonString: string | null | undefined) => {

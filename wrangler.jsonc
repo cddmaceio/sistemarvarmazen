@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "01987115-e7bd-783e-9f01-e0a5ed2ce55e",
-  "main": "./src/worker/supabase-worker.js",
+  "main": "./src/worker/index.ts",
   "compatibility_date": "2025-06-17",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
@@ -12,13 +12,7 @@
     "directory": "./dist",
     "not_found_handling": "single-page-application",
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "01987115-e7bd-783e-9f01-e0a5ed2ce55e",
-      "database_id": "01987115-e7bd-783e-9f01-e0a5ed2ce55e",
-    },
-  ],
+  // D1 Database removido - migrado para Supabase
   "vars": {
     "SUPABASE_URL": "https://qcqkfipckcnydsjjdral.supabase.co",
     "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjcWtmaXBja2NueWRzampkcmFsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTYyNzczNywiZXhwIjoyMDcxMjAzNzM3fQ.Y6-YwCobWRNlNnObdVRdxEBWJpIMe66N5JGwpaoiFB8",

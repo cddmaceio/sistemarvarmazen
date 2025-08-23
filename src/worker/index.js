@@ -493,7 +493,8 @@ app.post('/api/lancamentos/:id/validar', zValidator('json', AdminValidationSchem
     const supabase = getSupabase(c.env);
     const id = c.req.param('id');
     try {
-        const { acao, observacoes, dados_editados } = c.req.valid('json');
+        const validatedData = c.req.valid('json');
+        const { acao, observacoes, dados_editados, admin_user_id } = validatedData;
         // Get the original lancamento
         const { data: originalLancamento, error: lancamentoError } = await supabase
             .from('lancamentos_produtividade')
@@ -503,14 +504,33 @@ app.post('/api/lancamentos/:id/validar', zValidator('json', AdminValidationSchem
         if (lancamentoError || !originalLancamento) {
             return c.json({ error: 'Lançamento não encontrado' }, 404);
         }
-        // Get current admin user
-        const { data: adminUser, error: adminError } = await supabase
-            .from('usuarios')
-            .select('*')
-            .eq('tipo_usuario', 'administrador')
-            .single();
-        if (adminError || !adminUser) {
-            return c.json({ error: 'Usuário admin não encontrado' }, 401);
+        // Get current admin user - use specific admin if provided
+        let adminUser;
+        if (admin_user_id) {
+            const { data: specificAdmin, error: specificAdminError } = await supabase
+                .from('usuarios')
+                .select('*')
+                .eq('id', admin_user_id)
+                .eq('tipo_usuario', 'administrador')
+                .single();
+            
+            if (specificAdminError || !specificAdmin) {
+                console.error('Erro ao buscar administrador específico:', specificAdminError);
+                return c.json({ error: 'Administrador específico não encontrado' }, 500);
+            }
+            adminUser = specificAdmin;
+        } else {
+            // Fallback para buscar qualquer administrador
+            const { data: anyAdmin, error: anyAdminError } = await supabase
+                .from('usuarios')
+                .select('*')
+                .eq('tipo_usuario', 'administrador')
+                .single();
+            
+            if (anyAdminError || !anyAdmin) {
+                return c.json({ error: 'Usuário admin não encontrado' }, 401);
+            }
+            adminUser = anyAdmin;
         }
         let newStatus = 'pendente';
         let isEdited = false;

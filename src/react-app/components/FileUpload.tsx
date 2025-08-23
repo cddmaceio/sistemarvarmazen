@@ -4,16 +4,18 @@ import { Button } from '@/react-app/components/Button';
 import { cn } from '@/react-app/lib/utils';
 
 interface FileUploadProps {
-  onFileUpload: (file: File) => void;
+  onFileSelect: (file: File) => void;
   accept?: string;
+  maxSize?: number;
   className?: string;
   uploadedFileName?: string;
   onRemoveFile?: () => void;
 }
 
 export function FileUpload({ 
-  onFileUpload, 
-  accept = '.csv,.xlsx,.xls', 
+  onFileSelect, 
+  accept = '.csv,.xlsx,.xls',
+  maxSize = 10 * 1024 * 1024, // 10MB default
   className,
   uploadedFileName,
   onRemoveFile 
@@ -23,7 +25,12 @@ export function FileUpload({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      onFileUpload(file);
+      // Verificar tamanho do arquivo
+      if (file.size > maxSize) {
+        alert(`Arquivo muito grande. Tamanho máximo: ${(maxSize / 1024 / 1024).toFixed(1)}MB`);
+        return;
+      }
+      onFileSelect(file);
     }
   };
 

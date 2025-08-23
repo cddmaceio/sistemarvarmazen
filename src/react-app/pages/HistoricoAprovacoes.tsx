@@ -60,11 +60,26 @@ export default function HistoricoAprovacoes() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    if (!dateString) return '';
+    
+    // Se a data contém timezone (Z ou +/-), extrair apenas a parte da data
+    const dateOnly = dateString.split('T')[0];
+    const [year, month, day] = dateOnly.split('-');
+    
+    // Criar data local sem conversão de timezone
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return date.toLocaleDateString('pt-BR');
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('pt-BR');
+    if (!dateString) return '';
+    
+    // Para datetime, manter o comportamento original mas com tratamento de erro
+    try {
+      return new Date(dateString).toLocaleString('pt-BR');
+    } catch {
+      return dateString;
+    }
   };
 
   const parseJsonSafely = (jsonString: string) => {

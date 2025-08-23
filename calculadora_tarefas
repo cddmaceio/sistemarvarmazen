@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador de Tarefas Válidas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para a barra de rolagem */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+
+            <!-- Cabeçalho -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Analisador de Tarefas</h1>
+                <p class="text-gray-600 mt-2">Faça o upload do seu relatório CSV para calcular as tarefas válidas.</p>
+            </div>
+
+            <!-- Seção de Upload -->
+            <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 text-center mb-6">
+                <label for="csvFileInput" class="cursor-pointer">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <p id="file-upload-text" class="mt-2 text-sm text-gray-600">
+                        <span class="font-semibold text-indigo-600">Clique para fazer o upload</span> ou arraste e solte o arquivo.
+                    </p>
+                    <p class="text-xs text-gray-500">Apenas arquivos .CSV</p>
+                </label>
+                <input type="file" id="csvFileInput" class="hidden" accept=".csv">
+            </div>
+            
+            <div id="loading-spinner" class="hidden flex justify-center items-center my-4">
+                <div class="loader"></div>
+                <p class="ml-4 text-gray-600">Processando arquivo...</p>
+            </div>
+
+            <!-- Seção de Filtros (inicialmente oculta) -->
+            <div id="filters" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-6 bg-gray-50 rounded-xl">
+                <div>
+                    <label for="userFilter" class="block text-sm font-medium text-gray-700 mb-1">Usuário</label>
+                    <select id="userFilter" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="all">Todos os Usuários</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="dateFilter" class="block text-sm font-medium text-gray-700 mb-1">Data da Criação</label>
+                    <input type="date" id="dateFilter" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div class="md:self-end">
+                    <button id="analyzeButton" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                        Analisar Tarefas
+                    </button>
+                </div>
+            </div>
+
+            <!-- Seção de Resultados (inicialmente oculta) -->
+            <div id="results" class="hidden">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Resultados da Análise</h2>
+                <div id="summary" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 text-center">
+                    <div class="bg-blue-100 text-blue-800 p-4 rounded-lg"><h3 class="font-bold text-2xl" id="total-tasks">0</h3><p class="text-sm">Total de Tarefas</p></div>
+                    <div class="bg-red-100 text-red-800 p-4 rounded-lg"><h3 class="font-bold text-2xl" id="invalid-tasks">0</h3><p class="text-sm">Tarefas Inválidas</p></div>
+                    <div class="bg-green-100 text-green-800 p-4 rounded-lg"><h3 class="font-bold text-2xl" id="valid-tasks">0</h3><p class="text-sm">Tarefas Válidas</p></div>
+                </div>
+                
+                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Tarefas</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarefas Inválidas</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarefas Válidas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Linhas da tabela de resumo serão inseridas aqui -->
+                        </tbody>
+                    </table>
+                </div>
+                 <div id="no-results" class="hidden text-center py-10 px-4">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhuma tarefa encontrada</h3>
+                    <p class="mt-1 text-sm text-gray-500">Tente ajustar os filtros ou verifique o arquivo de origem.</p>
+                  </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Variável global para armazenar os dados do CSV
+        let csvData = [];
+        let headers = [];
+
+        // Elementos do DOM
+        const fileInput = document.getElementById('csvFileInput');
+        const fileUploadText = document.getElementById('file-upload-text');
+        const filtersDiv = document.getElementById('filters');
+        const userFilter = document.getElementById('userFilter');
+        const dateFilter = document.getElementById('dateFilter');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const resultsDiv = document.getElementById('results');
+        const summaryTableBody = document.getElementById('summaryTableBody');
+        const noResultsDiv = document.getElementById('no-results');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const totalTasksEl = document.getElementById('total-tasks');
+        const invalidTasksEl = document.getElementById('invalid-tasks');
+        const validTasksEl = document.getElementById('valid-tasks');
+
+
+        // Event listener para o input de arquivo
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // Função para lidar com a seleção de arquivo
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'text/csv') {
+                fileUploadText.textContent = `Arquivo selecionado: ${file.name}`;
+                loadingSpinner.classList.remove('hidden');
+                filtersDiv.classList.add('hidden');
+                resultsDiv.classList.add('hidden');
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    setTimeout(() => {
+                        processData(e.target.result);
+                        loadingSpinner.classList.add('hidden');
+                    }, 500);
+                };
+                reader.readAsText(file, 'UTF-8');
+            } else {
+                alert('Por favor, selecione um arquivo .CSV válido.');
+            }
+        }
+
+        /**
+         * Processa o conteúdo do arquivo CSV.
+         */
+        function processData(csvContent) {
+            const lines = csvContent.split(/\r\n|\n/);
+            headers = lines[0].split(';').map(h => h.trim());
+            
+            const requiredHeaders = ['Usuário', 'Data de Alteração', 'Data Última Associação', 'Data de Criação'];
+            if (!requiredHeaders.every(h => headers.includes(h))) {
+                alert(`O arquivo CSV não contém as colunas necessárias: ${requiredHeaders.join(', ')}.`);
+                return;
+            }
+
+            csvData = lines.slice(1)
+                .map(line => line.split(';'))
+                .filter(row => row.length === headers.length)
+                .map(row => {
+                    let obj = {};
+                    headers.forEach((header, i) => {
+                        obj[header] = row[i] ? row[i].trim() : '';
+                    });
+                    return obj;
+                });
+
+            populateUserFilter();
+            filtersDiv.classList.remove('hidden');
+        }
+
+        /**
+         * Popula o filtro de usuários.
+         */
+        function populateUserFilter() {
+            const users = [...new Set(csvData.map(row => row['Usuário']))].sort();
+            userFilter.innerHTML = '<option value="all">Todos os Usuários</option>';
+            users.forEach(user => {
+                if (user) {
+                    const option = document.createElement('option');
+                    option.value = user;
+                    option.textContent = user;
+                    userFilter.appendChild(option);
+                }
+            });
+        }
+
+        /**
+         * Converte uma string de data para um objeto Date.
+         */
+        function parseDate(dateString) {
+            if (!dateString) return null;
+            const match = dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2}):(\d{2})/);
+            if (!match) return null;
+            const [, day, month, year, hours, minutes, seconds] = match;
+            return new Date(year, month - 1, day, hours, minutes, seconds);
+        }
+
+        // Event listener para o botão de análise
+        analyzeButton.addEventListener('click', analyzeData);
+
+        /**
+         * Filtra e analisa os dados para gerar o resumo.
+         */
+        function analyzeData() {
+            const selectedUser = userFilter.value;
+            const selectedDate = dateFilter.value; // Formato YYYY-MM-DD
+
+            // 1. Filtra os dados com base na data selecionada (agora usando Data de Criação)
+            const dateFilteredData = csvData.filter(row => {
+                if (!selectedDate) return true; // Se nenhuma data for selecionada, inclui todos
+                
+                const dateCriacao = parseDate(row['Data de Criação']);
+                if (!dateCriacao) return false;
+
+                // **INÍCIO DA CORREÇÃO**
+                // Pega os componentes da data selecionada no filtro
+                const [year, month, day] = selectedDate.split('-').map(Number);
+
+                // Compara ano, mês e dia da tarefa com os do filtro, ignorando fuso horário
+                const dateMatch = dateCriacao.getFullYear() === year &&
+                                  (dateCriacao.getMonth() + 1) === month &&
+                                  dateCriacao.getDate() === day;
+                
+                return dateMatch;
+                // **FIM DA CORREÇÃO**
+            });
+
+            // 2. Calcula as estatísticas para cada usuário
+            const userStats = {};
+            dateFilteredData.forEach(row => {
+                const user = row['Usuário'];
+                if (!user) return; // Ignora linhas sem usuário
+
+                if (!userStats[user]) {
+                    userStats[user] = { total: 0, valid: 0, invalid: 0 };
+                }
+
+                userStats[user].total++;
+
+                const dateAlteracao = parseDate(row['Data de Alteração']);
+                const dateAssociacao = parseDate(row['Data Última Associação']);
+
+                if (dateAlteracao && dateAssociacao) {
+                    const differenceInSeconds = (dateAlteracao - dateAssociacao) / 1000;
+                    if (differenceInSeconds > 15) {
+                        userStats[user].valid++;
+                    } else {
+                        userStats[user].invalid++;
+                    }
+                } else {
+                    // Se uma das datas for inválida, considera a tarefa inválida
+                    userStats[user].invalid++;
+                }
+            });
+
+            // 3. Filtra as estatísticas com base no usuário selecionado
+            let finalStats = {};
+            if (selectedUser === 'all') {
+                finalStats = userStats;
+            } else if (userStats[selectedUser]) {
+                finalStats[selectedUser] = userStats[selectedUser];
+            }
+            
+            displayResults(finalStats);
+        }
+
+        /**
+         * Exibe os resultados resumidos na tabela.
+         */
+        function displayResults(stats) {
+            summaryTableBody.innerHTML = ''; // Limpa a tabela
+            resultsDiv.classList.remove('hidden');
+
+            const users = Object.keys(stats).sort();
+            
+            let grandTotal = 0;
+            let grandValid = 0;
+            let grandInvalid = 0;
+
+            if (users.length === 0) {
+                noResultsDiv.classList.remove('hidden');
+                summaryTableBody.parentElement.parentElement.classList.add('hidden');
+            } else {
+                noResultsDiv.classList.add('hidden');
+                summaryTableBody.parentElement.parentElement.classList.remove('hidden');
+                users.forEach(user => {
+                    const userData = stats[user];
+                    grandTotal += userData.total;
+                    grandValid += userData.valid;
+                    grandInvalid += userData.invalid;
+
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${user}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${userData.total}</td>
+                        <td class="px-6 py-4 whitespace-now-rap text-sm text-gray-500">${userData.invalid}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${userData.valid}</td>
+                    `;
+                    summaryTableBody.appendChild(row);
+                });
+            }
+
+            // Atualiza os cartões de resumo com os totais gerais
+            totalTasksEl.textContent = grandTotal;
+            invalidTasksEl.textContent = grandInvalid;
+            validTasksEl.textContent = grandValid;
+        }
+    </script>
+</body>
+</html>

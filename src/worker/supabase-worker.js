@@ -582,15 +582,27 @@ app.post('/api/calculator', async (c) => {
   let bonusKpis = 0;
   let kpisAtingidos = [];
   
+  console.log('🔍 DEBUG KPI Calculation (supabase-worker.js):');
+  console.log('- input.kpis_atingidos:', input.kpis_atingidos);
+  console.log('- input.funcao:', input.funcao);
+  console.log('- input.turno:', input.turno);
+  console.log('- available kpis:', kpis);
+  
   if (input.kpis_atingidos && input.kpis_atingidos.length > 0) {
     for (const kpiName of input.kpis_atingidos) {
       const kpi = kpis.find(k => k.nome_kpi === kpiName);
+      console.log(`🔍 Looking for KPI: ${kpiName}, Found:`, kpi);
       if (kpi) {
+        console.log(`💰 Adding KPI: ${kpi.nome_kpi}, Weight: ${kpi.peso_kpi}`);
         bonusKpis += kpi.peso_kpi;
         kpisAtingidos.push(kpiName);
       }
     }
   }
+  
+  console.log('🎯 Final KPI Calculation (supabase-worker.js):');
+  console.log('- bonusKpis:', bonusKpis);
+  console.log('- kpisAtingidos:', kpisAtingidos);
   
   const remuneracaoTotal = subtotalAtividades + bonusKpis + (input.input_adicional || 0);
   
@@ -876,7 +888,7 @@ app.post('/api/lancamentos/:id/validar', async (c) => {
   console.log('📋 ID recebido:', id);
   const body = await c.req.json();
   console.log('📋 Body recebido:', body);
-  const { acao, observacoes, dados_editados } = body;
+  const { acao, observacoes, dados_editados, admin_user_id } = body;
   
   try {
     // Test basic connection first
@@ -910,23 +922,47 @@ app.post('/api/lancamentos/:id/validar', async (c) => {
       return c.json({ error: 'Lançamento não encontrado' }, 404);
     }
     
-    // Get current admin user
+    // Get current admin user - use specific admin if provided
     console.log('🔍 Buscando usuário admin...');
-    const { data: adminUser, error: adminError } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('tipo_usuario', 'administrador')
-      .limit(1)
-      .single();
-    
-    console.log('👤 Resultado busca admin:', {
-      hasUser: !!adminUser,
-      error: adminError,
-      errorDetails: adminError ? JSON.stringify(adminError) : null
-    });
-    
-    if (adminError || !adminUser) {
-      return c.json({ error: 'Usuário admin não encontrado' }, 401);
+    let adminUser;
+    if (admin_user_id) {
+      const { data: specificAdmin, error: specificAdminError } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', admin_user_id)
+        .eq('tipo_usuario', 'administrador')
+        .single();
+      
+      console.log('👤 Resultado busca admin específico:', {
+        hasUser: !!specificAdmin,
+        error: specificAdminError,
+        errorDetails: specificAdminError ? JSON.stringify(specificAdminError) : null
+      });
+      
+      if (specificAdminError || !specificAdmin) {
+        console.error('Erro ao buscar administrador específico:', specificAdminError);
+        return c.json({ error: 'Administrador específico não encontrado' }, 500);
+      }
+      adminUser = specificAdmin;
+    } else {
+      // Fallback para buscar qualquer administrador
+      const { data: anyAdmin, error: anyAdminError } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('tipo_usuario', 'administrador')
+        .limit(1)
+        .single();
+      
+      console.log('👤 Resultado busca admin geral:', {
+        hasUser: !!anyAdmin,
+        error: anyAdminError,
+        errorDetails: anyAdminError ? JSON.stringify(anyAdminError) : null
+      });
+      
+      if (anyAdminError || !anyAdmin) {
+        return c.json({ error: 'Usuário admin não encontrado' }, 401);
+      }
+      adminUser = anyAdmin;
     }
     
     let newStatus = 'pendente';

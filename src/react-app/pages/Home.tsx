@@ -9,11 +9,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/react-app/components/Aler
 import { FileUpload } from '@/react-app/components/FileUpload';
 import AuthGuard from '@/react-app/components/AuthGuard';
 import UserMenu from '@/react-app/components/UserMenu';
+import WMSTaskManager from '@/react-app/components/WMSTaskManager';
 
 import { useAuth } from '@/react-app/hooks/useAuth';
 import { useActivityNames, useFunctions, useCalculator } from '@/react-app/hooks/useApi';
 import { CalculatorInputType, KPIType, MultipleActivityType, CreateLancamentoType } from '@/shared/types';
-import { parseCSV, calculateValidTasks } from '@/react-app/utils/taskProcessor';
+import { parseCSV, calculateValidTasks, parseDateTime, TASK_METAS, isOperatorMatch } from '@/react-app/utils/taskProcessor';
 
 export default function Home() {
   const { user, isAdmin } = useAuth();
@@ -27,6 +28,33 @@ export default function Home() {
   const [validTasksCount, setValidTasksCount] = useState<number>(0);
   const [validTasksDetails, setValidTasksDetails] = useState<any[]>([]);
   const [processingTasks, setProcessingTasks] = useState<boolean>(false);
+  const [existingValidTasks, setExistingValidTasks] = useState<number>(0);
+  const [loadingExistingTasks, setLoadingExistingTasks] = useState<boolean>(false);
+  
+  // Task statistics state
+  const [taskStats, setTaskStats] = useState<any>(null);
+  const [loadingTaskStats, setLoadingTaskStats] = useState<boolean>(false);
+  
+  // WMS Task Manager states
+  const [selectedOperator, setSelectedOperator] = useState<string>(user?.nome || '');
+  const [wmsReferenceDate, setWmsReferenceDate] = useState<string>('');
+  
+  // Update selectedOperator when user changes
+  useEffect(() => {
+    if (user?.nome) {
+      setSelectedOperator(user.nome);
+    }
+  }, [user?.nome]);
+
+  // Set user's function automatically when user is loaded
+  useEffect(() => {
+    if (user?.funcao) {
+      setFormData(prev => ({
+        ...prev,
+        funcao: user.funcao
+      }));
+    }
+  }, [user?.funcao]);
   
   // Lançamento states
   const [showLancamento, setShowLancamento] = useState<boolean>(false);
@@ -51,8 +79,8 @@ export default function Home() {
   const isAjudanteArmazem = formData.funcao === 'Ajudante de Armazém';
   const isOperadorEmpilhadeira = formData.funcao === 'Operador de Empilhadeira';
 
-  // Available operators list
-  const availableOperators = [
+  // Available operators list (será atualizada dinamicamente pelo WMSTaskManager)
+  const [availableOperators, setAvailableOperators] = useState<string[]>([
     'ERCILIO AUGUSTO DE SOUSA',
     'LUCAS PATRICK FERREIRA DA SILV',
     'ALMIR VICTOR ALENCAR DA ROCHA',
@@ -63,9 +91,194 @@ export default function Home() {
     'MURILO LUCAS DA SILVA',
     'DILSON ARLINDO DOS SANTOS',
     'Paulo Ursulino da Silva neto'
-  ];
+  ]);
 
-  
+  // Função para buscar tarefas válidas existentes do operador
+  const fetchExistingValidTasks = async (operatorName: string, date?: string) => {
+    if (!operatorName.trim()) {
+      setExistingValidTasks(0);
+      return;
+    }
+    
+    setLoadingExistingTasks(true);
+    try {
+      // Construir URL com parâmetro de data se fornecido
+      let url = `/api/wms-tasks/operator/${encodeURIComponent(operatorName)}`;
+      if (date) {
+        url += `?date=${date}`;
+      }
+      
+      const response = await fetch(url);
+      const result = await response.json();
+      
+      if (result.success) {
+        setExistingValidTasks(result.valid_tasks_count || 0);
+        console.log(`Tarefas válidas existentes para ${operatorName}${date ? ` na data ${date}` : ''}:`, result.valid_tasks_count);
+      } else {
+        setExistingValidTasks(0);
+        console.warn('Erro ao buscar tarefas existentes:', result.error);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar tarefas válidas existentes:', error);
+      setExistingValidTasks(0);
+    } finally {
+      setLoadingExistingTasks(false);
+    }
+  };
+
+  // Função para buscar estatísticas detalhadas das tarefas WMS
+  const fetchTaskStats = async (operatorName: string) => {
+    if (!operatorName.trim()) {
+      setTaskStats(null);
+      return;
+    }
+    
+    setLoadingTaskStats(true);
+    try {
+      const response = await fetch(`/api/wms-tasks/operator/${encodeURIComponent(operatorName)}/stats`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setTaskStats(result.estatisticas);
+        console.log(`Estatísticas para ${operatorName}:`, result.estatisticas);
+      } else {
+        setTaskStats(null);
+        console.warn('Erro ao buscar estatísticas:', result.error);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas das tarefas:', error);
+      setTaskStats(null);
+    } finally {
+      setLoadingTaskStats(false);
+    }
+  };
+
+  // Função para listar todos os operadores do banco
+  const listAllOperators = async () => {
+    try {
+      const response = await fetch('/api/wms-operators');
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('Operadores únicos no banco:', data.operadores);
+        console.log('Total de operadores:', data.total);
+        
+        // Verificar se ALMIR existe e como está armazenado
+        const almirVariations = data.operadores.filter(op => 
+          op.toLowerCase().includes('almir')
+        );
+        console.log('Variações do nome ALMIR encontradas:', almirVariations);
+        
+        alert(`Total de operadores: ${data.total}\n\nVariações do ALMIR encontradas:\n${almirVariations.join('\n')}\n\nVerifique o console para ver todos os operadores.`);
+      } else {
+        console.error('Erro ao buscar operadores:', data.error);
+        alert('Erro ao buscar operadores: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar operadores:', error);
+      alert('Erro ao buscar operadores: ' + error.message);
+    }
+  };
+
+  const checkOperatorExists = async (operatorName: string) => {
+    try {
+      const response = await fetch(`/api/check-operator/${encodeURIComponent(operatorName)}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        if (data.exists) {
+          alert(`✅ Operador encontrado na tabela usuarios:\n\nID: ${data.operador.id}\nNome: ${data.operador.nome}\nFunção: ${data.operador.funcao}`);
+        } else {
+          const shouldRegister = confirm(`❌ Operador "${operatorName}" não encontrado na tabela usuarios.\n\nDeseja cadastrá-lo agora?`);
+          if (shouldRegister) {
+            await registerOperator(operatorName);
+          }
+        }
+      } else {
+        alert('Erro ao verificar operador: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar operador:', error);
+      alert('Erro ao conectar com o servidor');
+    }
+  };
+
+  const registerOperator = async (operatorName: string) => {
+    try {
+      const response = await fetch('/api/register-operator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ nome_operador: operatorName })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✅ Operador cadastrado com sucesso!\n\nID: ${data.operador.id}\nNome: ${data.operador.nome}\nFunção: ${data.operador.funcao}`);
+      } else {
+        alert('Erro ao cadastrar operador: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao cadastrar operador:', error);
+      alert('Erro ao conectar com o servidor');
+    }
+  };
+
+  const testTaskImport = async () => {
+    try {
+      console.log('=== TESTE DE IMPORTAÇÃO DE TAREFAS ===');
+      
+      // Dados de teste simulando um CSV
+      const testTasks = [
+        {
+          Tarefa: 'TEST001',
+          Tipo: 'Picking',
+          Usuário: 'ALMIR VICTOR ALENCAR DA ROCHA',
+          'Concluída Task': '1',
+          'Data Última Associação': '2025-01-20 08:00:00',
+          'Data de Alteração': '2025-01-20 08:05:30',
+          'Data de Criação': '2025-01-20 07:55:00',
+          'Data de Liberação': '2025-01-20 07:58:00',
+          Origem: 'A1-01-01',
+          Destino: 'DOCK-01',
+          Palete: 'PAL001',
+          'Armazém Mapa': 'WH01',
+          'Placa Carreta': null,
+          'Placa Cavalo': null,
+          Prioridade: 'Normal',
+          Status: 'Concluída'
+        }
+      ];
+      
+      console.log('Enviando dados de teste:', {
+        nome_operador: 'ALMIR VICTOR ALENCAR DA ROCHA',
+        tarefas: testTasks
+      });
+      
+      const response = await fetch('/api/wms-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome_operador: 'ALMIR VICTOR ALENCAR DA ROCHA',
+          tarefas: testTasks
+        })
+      });
+      
+      const result = await response.json();
+      console.log('Resultado do teste:', result);
+      
+      if (result.success) {
+        alert(`✅ Teste de importação bem-sucedido!\n\nTarefas inseridas: ${result.tarefas_inseridas}\nTarefas válidas: ${result.tarefas_validas}\n\n${result.message}`);
+      } else {
+        alert(`❌ Erro no teste de importação:\n\n${result.error}`);
+      }
+    } catch (error) {
+      console.error('Erro no teste de importação:', error);
+      alert('Erro ao conectar com o servidor durante o teste');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,9 +303,12 @@ export default function Home() {
         tempo_horas: act.tempo_horas
       }));
     } else if (isOperadorEmpilhadeira) {
-      // For Operador de Empilhadeira, include valid tasks count
-      submitData.valid_tasks_count = validTasksCount;
+      // For Operador de Empilhadeira, use only the valid tasks count from form data
+      // Don't add existing tasks to avoid double counting
+      submitData.valid_tasks_count = formData.valid_tasks_count || 0;
       submitData.nome_operador = formData.nome_operador;
+      
+      console.log(`Tarefas válidas para cálculo: ${formData.valid_tasks_count || 0}`);
     } else {
       // Single activity validation
       if (!formData.nome_atividade || formData.quantidade_produzida! <= 0 || formData.tempo_horas! <= 0) return;
@@ -136,6 +352,11 @@ export default function Home() {
         alert('❌ Limite diário de KPIs atingido!\n\n💡 Você já possui 1 lançamento de KPI para hoje.\n\nPara lançar novos KPIs:\n• Remova os KPIs do cálculo atual, ou\n• Escolha uma data diferente no modal de lançamento');
         return;
       }
+    }
+    
+    // For forklift operators, set the launch date to the WMS reference date
+    if (isOperadorEmpilhadeira && wmsReferenceDate) {
+      setDataLancamento(wmsReferenceDate);
     }
     
     setShowLancamento(true);
@@ -215,10 +436,18 @@ export default function Home() {
       }
     }
     
-    // Reset valid tasks count when operator name changes
+    // Reset valid tasks count when operator name changes and fetch existing tasks
     if (field === 'nome_operador') {
       setValidTasksCount(0);
       setValidTasksDetails([]);
+      setExistingValidTasks(0);
+      
+      // Buscar tarefas válidas existentes do operador selecionado
+      if (value && typeof value === 'string') {
+        // Se há uma data selecionada no WMS, usar ela; caso contrário, buscar todas
+        const currentDate = new Date().toISOString().split('T')[0]; // Data atual como fallback
+        fetchExistingValidTasks(value, currentDate);
+      }
     }
   };
 
@@ -280,7 +509,130 @@ export default function Home() {
       if (validTasksResult.total === 0) {
         const operatorsInFile = uniqueOperators.join(', ');
         alert(`Nenhuma tarefa válida encontrada para o operador "${formData.nome_operador}".\n\nOperadores encontrados no arquivo:\n${operatorsInFile}\n\nVerifique se o nome do operador está correto.`);
+        return;
       }
+      
+      // Salvar tarefas processadas no banco de dados
+      if (validTasksResult.total > 0) {
+        try {
+          // Preparar dados das tarefas para salvar
+          const tarefasParaSalvar = tasks
+            .filter(task => {
+              // Usar a mesma função de comparação que calculateValidTasks
+              return task.Usuário && isOperatorMatch(task.Usuário, formData.nome_operador);
+            })
+            .filter(task => task['Concluída Task'] === '1') // Apenas tarefas concluídas
+            .map(task => {
+              const dataAssociacao = task['Data Última Associação'];
+              const dataAlteracao = task['Data de Alteração'];
+              
+              // Calcular tempo de execução
+              let tempoExecucao = 0;
+              if (dataAssociacao && dataAlteracao) {
+                const dateAssoc = parseDateTime(dataAssociacao);
+                const dateAlt = parseDateTime(dataAlteracao);
+                if (dateAssoc && dateAlt) {
+                  tempoExecucao = Math.abs(dateAlt.getTime() - dateAssoc.getTime()) / 1000;
+                }
+              }
+              
+              // Verificar se tarefa é válida: >10s = válida, ≤10s = inválida
+               // E também deve estar dentro da meta específica do tipo de tarefa
+               const meta = TASK_METAS.find(m => m.tipo === task.Tipo);
+               const tarefaValida = meta ? (tempoExecucao > 10 && tempoExecucao <= meta.meta_segundos) : false;
+              
+              return {
+                // Campos obrigatórios
+                tarefa: task.Tipo || '', // Usar o tipo como identificador da tarefa
+                tipo: task.Tipo || '',
+                usuario: formData.nome_operador,
+                tempo_execucao: tempoExecucao,
+                // tarefa_valida é calculada automaticamente pelo banco
+                concluida_task: task['Concluída Task'] === '1',
+                
+                // Campos de data/hora (apenas os disponíveis na interface TaskRow)
+                data_ultima_associacao: dataAssociacao,
+                data_alteracao: dataAlteracao,
+                
+                // Campos opcionais (definir como null já que não estão na interface TaskRow)
+                data_criacao: null,
+                data_liberacao: null,
+                origem: null,
+                destino: null,
+                palete: null,
+                armazem_mapa: null,
+                placa_carreta: null,
+                placa_cavalo: null,
+                prioridade: null,
+                status: null
+              };
+            });
+          
+          console.log('Dados que serão enviados para a API:');
+          console.log('Nome operador:', formData.nome_operador);
+          console.log('Quantidade de tarefas para salvar:', tarefasParaSalvar.length);
+          console.log('Primeiras 3 tarefas:', tarefasParaSalvar.slice(0, 3));
+          
+          const response = await fetch('/api/wms-tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              nome_operador: formData.nome_operador,
+              tarefas: tarefasParaSalvar
+            })
+          });
+          
+          const result = await response.json();
+          if (result.success) {
+            console.log('Tarefas salvas no banco:', result);
+            
+            // Atualizar contagem de tarefas válidas
+            const mensagemSucesso = [
+              `✅ Processamento concluído com sucesso!`,
+              ``,
+              `📊 Resumo:`,
+              `• Tarefas processadas: ${result.tarefas_inseridas || tarefasParaSalvar.length}`,
+              `• Tarefas válidas: ${result.tarefas_validas || validTasksResult.total}`,
+              `• Operador: ${formData.nome_operador}`,
+              ``,
+              `${result.message}`
+            ].join('\n');
+            
+            alert(mensagemSucesso);
+            
+            // Buscar contagem atualizada de tarefas válidas do operador
+            try {
+              const countResponse = await fetch(`/api/wms-tasks/${encodeURIComponent(formData.nome_operador)}`);
+              if (countResponse.ok) {
+                const countResult = await countResponse.json();
+                if (countResult.success) {
+                  setValidTasksCount(countResult.valid_tasks_count);
+                  console.log('Contagem atualizada de tarefas válidas:', countResult.valid_tasks_count);
+                }
+              }
+            } catch (countError) {
+              console.warn('Erro ao buscar contagem atualizada:', countError);
+            }
+            
+            // Buscar estatísticas detalhadas das tarefas
+            await fetchTaskStats(formData.nome_operador);
+            
+          } else {
+            console.warn('Erro ao salvar tarefas:', result);
+            const mensagemErro = [
+              `❌ Erro ao processar tarefas:`,
+              ``,
+              `${result.error}`,
+              result.details ? `\nDetalhes: ${result.details}` : ''
+            ].join('\n');
+            alert(mensagemErro);
+          }
+        } catch (saveError) {
+          console.error('Erro ao salvar tarefas no banco:', saveError);
+          alert(`❌ Erro ao salvar tarefas no banco:\n\n${saveError instanceof Error ? saveError.message : 'Erro desconhecido'}`);
+        }
+      }
+      
     } catch (error) {
       console.error('Erro ao processar arquivo:', error);
       alert('Erro ao processar arquivo: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
@@ -325,9 +677,22 @@ export default function Home() {
     }
   }, [formData.funcao, formData.turno]);
 
-  // Redirect admins to validation page directly - admins don't use calculator
+  // Buscar tarefas válidas existentes e estatísticas quando operador for selecionado
+  useEffect(() => {
+    if (isOperadorEmpilhadeira && formData.nome_operador) {
+      // Usar data atual como padrão para buscar tarefas do dia
+      const currentDate = new Date().toISOString().split('T')[0];
+      fetchExistingValidTasks(formData.nome_operador, currentDate);
+      fetchTaskStats(formData.nome_operador);
+    } else {
+      setExistingValidTasks(0);
+      setTaskStats(null);
+    }
+  }, [isOperadorEmpilhadeira, formData.nome_operador]);
+
+  // Redirect admins to admin panel - admins don't use calculator
   if (isAdmin) {
-    return <Navigate to="/admin/validacao" replace />;
+    return <Navigate to="/admin-redirect" replace />;
   }
 
   return (
@@ -393,8 +758,8 @@ export default function Home() {
                       <Select
                         value={formData.funcao}
                         onChange={(e) => handleInputChange('funcao', e.target.value)}
-                        placeholder="Selecione sua função"
-                        disabled={functionsLoading}
+                        placeholder="Função definida pelo usuário"
+                        disabled={true}
                       >
                         {functions.map((func) => (
                           <option key={func.funcao} value={func.funcao}>
@@ -402,6 +767,7 @@ export default function Home() {
                           </option>
                         ))}
                       </Select>
+                      <p className="text-xs text-gray-500">🔒 Função travada baseada no seu perfil de usuário</p>
                     </div>
 
                     <div className="space-y-2">
@@ -539,97 +905,33 @@ export default function Home() {
                     </>
                   )}
 
-                  {/* Valid Tasks for Operador de Empilhadeira */}
+                  {/* WMS Task Manager for Operador de Empilhadeira */}
                   {isOperadorEmpilhadeira && (
-                    <div className="space-y-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                      <h4 className="font-medium text-gray-900">Tarefas Válidas do Operador</h4>
-                      <p className="text-sm text-gray-600">
-                        Faça upload do arquivo de tarefas e informe o nome do operador para calcular as tarefas válidas:
-                      </p>
-                      
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">Nome do Operador</label>
-                          <Select
-                            value={formData.nome_operador || ''}
-                            onChange={(e) => handleInputChange('nome_operador', e.target.value)}
-                            placeholder="Selecione o operador"
-                          >
-                            {availableOperators.map((operator) => (
-                              <option key={operator} value={operator}>
-                                {operator}
-                              </option>
-                            ))}
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">Arquivo de Tarefas</label>
-                          <FileUpload
-                            onFileUpload={handleFileUpload}
-                            accept=".csv,.xlsx,.xls"
-                            uploadedFileName={uploadedFile?.name}
-                            onRemoveFile={handleRemoveFile}
-                          />
-                        </div>
-
-                        {uploadedFile && formData.nome_operador && (
-                          <div className="flex justify-center">
-                            <Button
-                              type="button"
-                              onClick={processTaskFile}
-                              disabled={processingTasks}
-                              className="bg-purple-600 hover:bg-purple-700 text-white"
-                            >
-                              <Play className="h-4 w-4 mr-2" />
-                              {processingTasks ? 'Processando...' : 'Processar Arquivo de Tarefas'}
-                            </Button>
-                          </div>
-                        )}
-
-                        {validTasksCount > 0 && (
-                          <div className="space-y-3">
-                            <div className="p-3 bg-green-100 border border-green-300 rounded-lg">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-green-800">
-                                  Total de Tarefas Válidas:
-                                </span>
-                                <span className="text-lg font-bold text-green-900">
-                                  {validTasksCount} tarefas
-                                </span>
-                              </div>
-                              <p className="text-xs text-green-700 mt-1">
-                                Valor: R$ {(validTasksCount * 0.093).toFixed(2)} (R$ 0,093 por tarefa)
-                              </p>
-                            </div>
-
-                            {validTasksDetails.length > 0 && (
-                              <div className="bg-white border border-gray-200 rounded-lg">
-                                <div className="p-3 border-b border-gray-200">
-                                  <h5 className="text-sm font-medium text-gray-900">Tarefas Válidas por Tipo</h5>
-                                </div>
-                                <div className="p-3 space-y-2">
-                                  {validTasksDetails.map((detail, index) => (
-                                    <div key={index} className="flex justify-between items-center text-sm">
-                                      <div>
-                                        <span className="font-medium text-gray-900">{detail.tipo}</span>
-                                        <span className="text-gray-500 ml-2">(Meta: {detail.meta_segundos}s)</span>
-                                      </div>
-                                      <div className="text-right">
-                                        <span className="font-semibold text-purple-600">{detail.quantidade} tarefas</span>
-                                        <div className="text-xs text-gray-500">
-                                          R$ {(detail.quantidade * 0.093).toFixed(2)}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <WMSTaskManager 
+                      selectedOperator={selectedOperator}
+                      onOperatorChange={setSelectedOperator}
+                      availableOperators={availableOperators}
+                      onOperatorsUpdate={setAvailableOperators}
+                      onCalculateProductivity={(data) => {
+                        // Atualizar dados do formulário com informações do WMS
+                        setFormData(prev => ({
+                          ...prev,
+                          nome_operador: data.nome_operador,
+                          valid_tasks_count: data.valid_tasks_count
+                        }));
+                        
+                        // Calcular automaticamente a produtividade
+                        const calculatorData: CalculatorInputType = {
+                          ...formData,
+                          nome_operador: data.nome_operador,
+                          valid_tasks_count: data.valid_tasks_count,
+                          kpis_atingidos: selectedKPIs
+                        };
+                        
+                        calculate(calculatorData);
+                      }}
+                      onDateChange={setWmsReferenceDate}
+                    />
                   )}
 
                   {/* Extra Activities Input */}
@@ -765,6 +1067,12 @@ export default function Home() {
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">KPIs Atingidos:</span>
                         <span className="font-semibold text-blue-600">
+                          {result?.kpis_atingidos?.length || 0}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Valor KPIs:</span>
+                        <span className="font-semibold text-blue-600">
                           R$ {(result?.bonus_kpis || 0).toFixed(2)}
                         </span>
                       </div>
@@ -838,6 +1146,11 @@ export default function Home() {
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Data do Lançamento
+                            {isOperadorEmpilhadeira && (
+                              <span className="text-xs text-blue-600 ml-2">
+                                (Travada pela data de referência das tarefas)
+                              </span>
+                            )}
                           </label>
                           <Input
                             type="date"
@@ -855,7 +1168,14 @@ export default function Home() {
                               }
                             }}
                             max={new Date().toISOString().split('T')[0]}
+                            disabled={isOperadorEmpilhadeira}
+                            className={isOperadorEmpilhadeira ? 'bg-gray-100 cursor-not-allowed' : ''}
                           />
+                          {isOperadorEmpilhadeira && !wmsReferenceDate && (
+                            <p className="text-xs text-amber-600 mt-1">
+                              ⚠️ Selecione uma data de referência no analisador de tarefas WMS primeiro
+                            </p>
+                          )}
                         </div>
                         
                         <div className="flex space-x-3 pt-4">

@@ -349,6 +349,7 @@ export const supabaseQueries = {
         .select('id')
         .eq('user_id', user_id)
         .eq('data_lancamento', data_lancamento)
+        .neq('status', 'reprovado') // Exclude reproved launches to allow relaunch
         .limit(1)
 
       if (error) {

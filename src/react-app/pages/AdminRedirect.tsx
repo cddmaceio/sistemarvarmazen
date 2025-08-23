@@ -17,7 +17,7 @@ export default function AdminRedirect() {
 
   // Redirect based on user role
   if (isAdmin) {
-    return <Navigate to="/admin/atividades" replace />;
+    return <Navigate to="/admin" replace />;
   } else if (isCollaborator) {
     return <Navigate to="/" replace />;
   } else {

@@ -12,6 +12,18 @@ import AuthGuard from '@/react-app/components/AuthGuard';
 import UserMenu from '@/react-app/components/UserMenu';
 import { UserType } from '@/shared/types';
 
+const formatDateSafe = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  // Se a data contém timezone (Z ou +/-), extrair apenas a parte da data
+  const dateOnly = dateString.split('T')[0];
+  const [year, month, day] = dateOnly.split('-');
+  
+  // Criar data local sem conversão de timezone
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  return date.toLocaleDateString('pt-BR');
+};
+
 const FUNCOES_SISTEMA = [
   'Ajudante de Armazém',
   'Operador de Empilhadeira',
@@ -754,7 +766,7 @@ export default function CadastroUsuarios() {
                     <div>
                       <label className="text-sm font-medium text-gray-500">Data de Nascimento 🔒</label>
                       <p className="text-sm text-gray-700">
-                        {new Date(viewingUser.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        {formatDateSafe(viewingUser.data_nascimento)}
                       </p>
                     </div>
                   </div>

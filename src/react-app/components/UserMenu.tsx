@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { User, Settings, LogOut, Shield, ChevronDown, TrendingUp, Calendar, CheckCircle, History, UserPlus, Activity, Download, Target } from 'lucide-react';
 import { Link } from 'react-router';
 import { Button } from '@/react-app/components/Button';
@@ -14,6 +15,37 @@ export function UserMenu() {
   const [nome, setNome] = useState(user?.nome || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const calculateMenuPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right
+      });
+    }
+  };
+
+  const toggleMenu = () => {
+    if (!showMenu) {
+      calculateMenuPosition();
+    }
+    setShowMenu(!showMenu);
+  };
+
+  // Close menu on window resize to prevent positioning issues
+  useEffect(() => {
+    const handleResize = () => {
+      if (showMenu) {
+        setShowMenu(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [showMenu]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,9 +79,10 @@ export function UserMenu() {
     <>
       <div className="relative">
         <Button
+          ref={buttonRef}
           variant="outline"
           size="sm"
-          onClick={() => setShowMenu(!showMenu)}
+          onClick={toggleMenu}
           className="flex items-center space-x-2"
         >
           <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
@@ -59,18 +92,29 @@ export function UserMenu() {
           <ChevronDown className="h-4 w-4" />
         </Button>
 
-        {showMenu && (
-          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-            <div className="px-4 py-2 border-b border-gray-100">
-              <p className="text-sm font-medium text-gray-900">{user.nome}</p>
-              <p className="text-xs text-gray-500">{user.cpf}</p>
-              {isAdmin && (
-                <div className="flex items-center space-x-1 mt-1">
-                  <Shield className="h-3 w-3 text-purple-600" />
-                  <span className="text-xs text-purple-600 font-medium">Administrador</span>
-                </div>
-              )}
-            </div>
+        {showMenu && createPortal(
+          <>
+            <div 
+              className="fixed inset-0 z-[999998]"
+              onClick={() => setShowMenu(false)}
+            />
+            <div 
+              className="fixed w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[999999]"
+              style={{
+                top: `${menuPosition.top}px`,
+                right: `${menuPosition.right}px`
+              }}
+            >
+              <div className="px-4 py-2 border-b border-gray-100">
+                <p className="text-sm font-medium text-gray-900">{user.nome}</p>
+                <p className="text-xs text-gray-500">{user.cpf}</p>
+                {isAdmin && (
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Shield className="h-3 w-3 text-purple-600" />
+                    <span className="text-xs text-purple-600 font-medium">Administrador</span>
+                  </div>
+                )}
+              </div>
             
             {/* Colaborator Menu Items */}
             {isCollaborator && (
@@ -165,7 +209,9 @@ export function UserMenu() {
               <LogOut className="h-4 w-4" />
               <span>Sair</span>
             </button>
-          </div>
+            </div>
+          </>,
+          document.body
         )}
       </div>
 
@@ -244,13 +290,7 @@ export function UserMenu() {
         </DialogContent>
       </Dialog>
 
-      {/* Backdrop */}
-      {showMenu && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowMenu(false)}
-        />
-      )}
+
     </>
   );
 }

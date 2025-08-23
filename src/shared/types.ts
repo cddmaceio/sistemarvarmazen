@@ -185,6 +185,7 @@ export const AdminValidationSchema = z.object({
   acao: z.enum(["aprovar", "reprovar", "editar"]),
   observacoes: z.string().optional(),
   dados_editados: CalculatorInputSchema.optional(),
+  admin_user_id: z.number().optional(),
 });
 
 export type AdminValidationType = z.infer<typeof AdminValidationSchema>;

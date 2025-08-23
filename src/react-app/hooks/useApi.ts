@@ -301,7 +301,8 @@ export function useAvailableKPIs() {
         .from('kpis')
         .select('*')
         .eq('funcao_kpi', funcao)
-        .eq('turno_kpi', turno)
+        .in('turno_kpi', [turno, 'Geral'])
+        .eq('status_ativo', true)
         .order('nome_kpi', { ascending: true });
       
       if (error) throw error;

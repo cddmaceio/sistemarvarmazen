@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Settings, Calculator, ArrowLeft, Users, CheckCircle, History, Download } from 'lucide-react';
-import { Link } from 'react-router';
+import { Plus, Edit, Trash2, Settings, Calculator, ArrowLeft, Users, CheckCircle, History, Download, Database, Activity, BarChart3 } from 'lucide-react';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/react-app/components/Card';
 import { Button } from '@/react-app/components/Button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/react-app/components/Table';
@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/react-app/co
 import { Input } from '@/react-app/components/Input';
 import { Select } from '@/react-app/components/Select';
 import AuthGuard from '@/react-app/components/AuthGuard';
-import UserMenu from '@/react-app/components/UserMenu';
+import AdminLayout from '@/react-app/components/AdminLayout';
 import UserManagement from '@/react-app/pages/UserManagement';
 import { useAuth } from '@/react-app/hooks/useAuth';
 import { useActivities, useKPIs } from '@/react-app/hooks/useApi';
@@ -16,7 +16,8 @@ import { ActivityType, KPIType, UserType } from '@/shared/types';
 
 export default function Admin() {
   const { user, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'activities' | 'kpis' | 'users'>('activities');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'activities' | 'kpis' | 'users' | 'wms'>('dashboard');
   const { activities, loading: activitiesLoading, createActivity, updateActivity, deleteActivity } = useActivities();
   const { kpis, loading: kpisLoading, createKPI, updateKPI, deleteKPI } = useKPIs();
   
@@ -24,10 +25,46 @@ export default function Admin() {
   const [users, setUsers] = useState<UserType[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
+  // WMS Users state
+  const [wmsUsers, setWmsUsers] = useState<any[]>([]);
+  const [wmsUsersLoading, setWmsUsersLoading] = useState(false);
+  const [wmsDialog, setWmsDialog] = useState(false);
+  const [editingWmsUser, setEditingWmsUser] = useState<any | null>(null);
+  const [wmsForm, setWmsForm] = useState({
+    nome: '',
+    cpf: '',
+    login_wms: '',
+    nome_wms: ''
+  });
+
+  // Sync activeTab with URL parameters
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['activities', 'kpis', 'users', 'wms'].includes(tab)) {
+      setActiveTab(tab as 'activities' | 'kpis' | 'users' | 'wms');
+    } else if (!tab) {
+      // Se não há parâmetro tab, mostra o dashboard
+      setActiveTab('dashboard');
+    }
+  }, [searchParams]);
+
+  // Update URL when activeTab changes
+  const handleTabChange = (newTab: 'dashboard' | 'activities' | 'kpis' | 'users' | 'wms') => {
+    setActiveTab(newTab);
+    if (newTab === 'dashboard') {
+      // Para dashboard, remove o parâmetro tab da URL
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: newTab });
+    }
+  };
+
   // Load users when tab is selected
   useEffect(() => {
     if (activeTab === 'users') {
       loadUsers();
+    } else if (activeTab === 'wms') {
+      loadWmsUsers();
     }
   }, [activeTab]);
 
@@ -82,6 +119,98 @@ export default function Admin() {
       setUsers(prev => prev.filter(user => user.id !== id));
     } else {
       throw new Error('Failed to delete user');
+    }
+  };
+
+  // WMS Users functions
+  const loadWmsUsers = async () => {
+    try {
+      setWmsUsersLoading(true);
+      const response = await fetch('/api/wms-users');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setWmsUsers(data.users);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading WMS users:', error);
+    } finally {
+      setWmsUsersLoading(false);
+    }
+  };
+
+  const createWmsUser = async (userData: any) => {
+    const response = await fetch('/api/wms-users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        loadWmsUsers(); // Recarregar lista
+      }
+    } else {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create WMS user');
+    }
+  };
+
+  const updateWmsUser = async (id: number, userData: any) => {
+    const response = await fetch(`/api/wms-users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        loadWmsUsers(); // Recarregar lista
+      }
+    } else {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update WMS user');
+    }
+  };
+
+  const deleteWmsUser = async (id: number) => {
+    const response = await fetch(`/api/wms-users/${id}`, {
+      method: 'DELETE'
+    });
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        setWmsUsers(prev => prev.filter(user => user.id !== id));
+      }
+    } else {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete WMS user');
+    }
+  };
+
+  const resetWmsForm = () => {
+    setWmsForm({
+      nome: '',
+      cpf: '',
+      login_wms: '',
+      nome_wms: ''
+    });
+    setEditingWmsUser(null);
+  };
+
+  const handleWmsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingWmsUser) {
+        await updateWmsUser(editingWmsUser.id, wmsForm);
+      } else {
+        await createWmsUser(wmsForm);
+      }
+      setWmsDialog(false);
+      resetWmsForm();
+    } catch (error) {
+      console.error('Error saving WMS user:', error);
     }
   };
 
@@ -224,182 +353,187 @@ export default function Admin() {
 
   return (
     <AuthGuard requireAdmin>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-        {/* Header */}
-        <header className="border-b bg-white/70 backdrop-blur-sm">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Link to="/">
-                  <Button variant="outline" size="sm">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Voltar
-                  </Button>
-                </Link>
-                <div className="flex items-center space-x-2">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-slate-600 to-blue-600 flex items-center justify-center">
-                    <Settings className="h-5 w-5 text-white" />
+      <AdminLayout activeTab={activeTab} onTabChange={handleTabChange}>
+
+        {activeTab === 'dashboard' ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-blue-100">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-600">Total de Atividades</p>
+                      <p className="text-2xl font-bold text-blue-900">{activities.length}</p>
+                    </div>
+                    <Activity className="h-8 w-8 text-blue-500" />
                   </div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-600 to-blue-600 bg-clip-text text-transparent">
-                    Painel Administrativo
-                  </h1>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-green-100">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-600">Total de KPIs</p>
+                      <p className="text-2xl font-bold text-green-900">{kpis.length}</p>
+                    </div>
+                    <Calculator className="h-8 w-8 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-50 to-purple-100">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-purple-600">Total de Usuários</p>
+                      <p className="text-2xl font-bold text-purple-900">{users.length}</p>
+                    </div>
+                    <Users className="h-8 w-8 text-purple-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-orange-50 to-orange-100">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-orange-600">Usuários WMS</p>
+                      <p className="text-2xl font-bold text-orange-900">{wmsUsers.length}</p>
+                    </div>
+                    <Database className="h-8 w-8 text-orange-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl">Painel Administrativo</CardTitle>
+                <CardDescription>
+                  Bem-vindo ao painel de administração do sistema RV Armazém
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-center">Status do Sistema</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                      <span className="text-sm font-medium text-green-800">Sistema Online</span>
+                      <span className="text-green-600 font-bold text-lg">✓ Ativo</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <span className="text-sm font-medium text-blue-800">Banco de Dados</span>
+                      <span className="text-blue-600 font-bold text-lg">✓ Conectado</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
+                      <span className="text-sm font-medium text-purple-800">Autenticação</span>
+                      <span className="text-purple-600 font-bold text-lg">✓ Funcionando</span>
+                    </div>
+                  </div>
+                  <div className="text-center mt-6">
+                    <p className="text-gray-600 text-sm">
+                      Use o menu lateral para navegar entre as diferentes seções do painel administrativo.
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Link to="/">
-                  <Button variant="outline" size="sm">
-                    <Calculator className="h-4 w-4 mr-2" />
-                    Calculadora
+              </CardContent>
+            </Card>
+          </div>
+        ) : activeTab === 'users' ? (
+          <UserManagement
+            users={users}
+            onAddUser={createUser}
+            onUpdateUser={updateUser}
+            onDeleteUser={deleteUser}
+            loading={usersLoading}
+          />
+        ) : activeTab === 'wms' ? (
+            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl">Cadastro de Usuários WMS</CardTitle>
+                    <CardDescription>
+                      Gerencie os usuários do sistema WMS com login e identificação
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      resetWmsForm();
+                      setWmsDialog(true);
+                    }}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Usuário WMS
                   </Button>
-                </Link>
-                <UserMenu />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Quick Actions */}
-        <div className="container mx-auto px-4 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-            <Link to="/admin/users">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <Users className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Gerenciar Usuários</h3>
-                      <p className="text-sm text-gray-600">Cadastrar e editar colaboradores</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link to="/admin/validacao">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-blue-50 border-green-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                      <CheckCircle className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Validar Lançamentos</h3>
-                      <p className="text-sm text-gray-600">Aprovar produtividade dos colaboradores</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link to="/admin/historico">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-lg bg-indigo-100 flex items-center justify-center">
-                      <History className="h-6 w-6 text-indigo-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Histórico de Aprovações</h3>
-                      <p className="text-sm text-gray-600">Ver lançamentos aprovados e editados</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <div onClick={() => setActiveTab('activities')}>
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-lg bg-orange-100 flex items-center justify-center">
-                      <Settings className="h-6 w-6 text-orange-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Gerenciar Atividades</h3>
-                      <p className="text-sm text-gray-600">Cadastrar atividades e valores</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Link to="/admin/kpis">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <Calculator className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Gerenciar KPIs</h3>
-                      <p className="text-sm text-gray-600">Configurar indicadores de performance</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link to="/admin/exportacao">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <Download className="h-6 w-6 text-emerald-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Exportação de Dados</h3>
-                      <p className="text-sm text-gray-600">Gerar relatórios em CSV, Excel e PDF</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="flex space-x-1 bg-white/60 backdrop-blur-sm rounded-lg p-1 w-fit">
-            <Button
-              variant={activeTab === 'activities' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('activities')}
-              className="flex items-center space-x-2"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Atividades</span>
-            </Button>
-            <Button
-              variant={activeTab === 'kpis' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('kpis')}
-              className="flex items-center space-x-2"
-            >
-              <Calculator className="h-4 w-4" />
-              <span>KPIs</span>
-            </Button>
-            <Button
-              variant={activeTab === 'users' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('users')}
-              className="flex items-center space-x-2"
-            >
-              <Users className="h-4 w-4" />
-              <span>Usuários</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <main className="container mx-auto px-4 pb-8">
-          {activeTab === 'users' ? (
-            <UserManagement
-              users={users}
-              onAddUser={createUser}
-              onUpdateUser={updateUser}
-              onDeleteUser={deleteUser}
-              loading={usersLoading}
-            />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {wmsUsersLoading ? (
+                  <div className="text-center py-8">Carregando usuários WMS...</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>CPF</TableHead>
+                        <TableHead>Login WMS</TableHead>
+                        <TableHead>Nome WMS</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {wmsUsers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                            Nenhum usuário WMS cadastrado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        wmsUsers.map((wmsUser) => (
+                          <TableRow key={wmsUser.id}>
+                            <TableCell className="font-medium">{wmsUser.nome}</TableCell>
+                            <TableCell>{wmsUser.cpf}</TableCell>
+                            <TableCell>{wmsUser.login_wms}</TableCell>
+                            <TableCell>{wmsUser.nome_wms}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingWmsUser(wmsUser);
+                                    setWmsForm({
+                                      nome: wmsUser.nome,
+                                      cpf: wmsUser.cpf,
+                                      login_wms: wmsUser.login_wms,
+                                      nome_wms: wmsUser.nome_wms
+                                    });
+                                    setWmsDialog(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => deleteWmsUser(wmsUser.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-8">
               {/* Activities Section */}
@@ -565,7 +699,6 @@ export default function Admin() {
               )}
             </div>
           )}
-        </main>
 
         {/* Activity Dialog */}
         <Dialog open={activityDialog} onOpenChange={setActivityDialog}>
@@ -750,7 +883,68 @@ export default function Admin() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+
+        {/* WMS User Dialog */}
+        <Dialog open={wmsDialog} onOpenChange={setWmsDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingWmsUser ? 'Editar Usuário WMS' : 'Novo Usuário WMS'}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleWmsSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Nome</label>
+                <Input
+                  value={wmsForm.nome}
+                  onChange={(e) => setWmsForm(prev => ({ ...prev, nome: e.target.value }))}
+                  placeholder="Nome completo do usuário"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">CPF</label>
+                <Input
+                  value={wmsForm.cpf}
+                  onChange={(e) => setWmsForm(prev => ({ ...prev, cpf: e.target.value }))}
+                  placeholder="000.000.000-00"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Login WMS</label>
+                <Input
+                  value={wmsForm.login_wms}
+                  onChange={(e) => setWmsForm(prev => ({ ...prev, login_wms: e.target.value }))}
+                  placeholder="Login do usuário no sistema WMS"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Nome WMS</label>
+                <Input
+                  value={wmsForm.nome_wms}
+                  onChange={(e) => setWmsForm(prev => ({ ...prev, nome_wms: e.target.value }))}
+                  placeholder="Nome de identificação no WMS"
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setWmsDialog(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {editingWmsUser ? 'Atualizar' : 'Criar'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </AdminLayout>
     </AuthGuard>
   );
 }
