@@ -342,6 +342,12 @@ app.get('/api/kpis/available', async (c) => {
   console.log(`Query 2 (Geral):`, kpis2?.length || 0, 'results');
   
   if (error) {
+    console.error('Error fetching available KPIs:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     return c.json({ error: error.message }, 500);
   }
   
