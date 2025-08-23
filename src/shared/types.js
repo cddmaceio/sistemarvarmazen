@@ -146,6 +146,7 @@ export const AdminValidationSchema = z.object({
     acao: z.enum(["aprovar", "reprovar", "editar"]),
     observacoes: z.string().optional(),
     dados_editados: CalculatorInputSchema.optional(),
+    admin_user_id: z.number().optional(),
 });
 // History schema for approved entries
 export const HistoricoAprovacaoSchema = z.object({

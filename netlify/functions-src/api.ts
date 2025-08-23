@@ -1,6 +1,4 @@
 // Netlify Function handler for Hono app with Supabase
-import app from '../../src/worker/supabase-worker.js';
-import { Handler } from '@netlify/functions';
 
 // Supabase Environment type
 interface Env {
@@ -8,7 +6,7 @@ interface Env {
   SUPABASE_ANON_KEY: string;
 }
 
-// Netlify function handler
+// Netlify function handler (ESM)
 const handler = async (event: any, context: any) => {
   try {
     console.log('Event path:', event.path);
@@ -70,6 +68,14 @@ const handler = async (event: any, context: any) => {
       SUPABASE_URL: supabaseUrl,
       SUPABASE_ANON_KEY: supabaseAnonKey
     };
+
+    // Import dinâmico para evitar que o TypeScript inclua arquivos fora do rootDir
+    // Importa o app Hono já compilado em JS ESM
+    const dynamicImport = new Function('p', 'return import(p)');
+    const appModule = await (dynamicImport as (p: string) => Promise<any>)(
+      '../../src/worker/supabase-worker.js'
+    );
+    const app = appModule.default as { fetch: (req: Request, env: Env) => Promise<Response> };
     
     // Call Hono app with environment
     const response = await app.fetch(request, env);
@@ -95,4 +101,4 @@ const handler = async (event: any, context: any) => {
   }
 };
 
-module.exports = { handler };
+export { handler };
