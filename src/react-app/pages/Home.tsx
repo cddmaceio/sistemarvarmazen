@@ -14,6 +14,7 @@ import WMSTaskManager from '@/react-app/components/WMSTaskManager';
 import { useAuth } from '@/react-app/hooks/useAuth';
 import { useActivityNames, useFunctions, useCalculator } from '@/react-app/hooks/useApi';
 import { CalculatorInputType, KPIType, MultipleActivityType, CreateLancamentoType } from '@/shared/types';
+import { FUNCAO_DB_TO_UI } from '@/shared/utils/encoding';
 
 
 export default function Home() {
@@ -41,9 +42,16 @@ export default function Home() {
   // Set user's function automatically when user is loaded
   useEffect(() => {
     if (user?.funcao) {
+      // Convert user function from DB format to UI format
+      const convertedFunction = FUNCAO_DB_TO_UI[user.funcao] || user.funcao;
+      console.log('Home - User function conversion:', { 
+        original: user.funcao, 
+        converted: convertedFunction 
+      });
+      
       setFormData(prev => ({
         ...prev,
-        funcao: user.funcao as string
+        funcao: convertedFunction
       }));
     }
   }, [user?.funcao]);
@@ -298,10 +306,15 @@ export default function Home() {
     if (!funcao || !turno) return;
     
     try {
+      console.log('Home - Fetching KPIs for:', { funcao, turno });
       const response = await fetch(`/api/kpis/available?funcao=${encodeURIComponent(funcao)}&turno=${encodeURIComponent(turno)}`);
       if (!response.ok) throw new Error('Failed to fetch KPIs');
       const data = await response.json();
-      setAvailableKPIs(data);
+      console.log('Home - KPIs response:', data);
+      // Extract KPIs from the response object
+      const kpisList = data.kpisAtingidos || data || [];
+      console.log('Home - Setting KPIs:', kpisList);
+      setAvailableKPIs(kpisList);
     } catch (err) {
       console.error('Error fetching KPIs:', err);
       setAvailableKPIs([]);
