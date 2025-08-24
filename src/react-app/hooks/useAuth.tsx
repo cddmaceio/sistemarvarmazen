@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
 import { UserType } from '@/shared/types';
 import { supabaseQueries } from '@/lib/supabase';
+import { FUNCAO_DB_TO_UI } from '@/shared/utils/encoding';
 
 interface AuthContextType {
   user: UserType | null;
@@ -119,7 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = user?.tipo_usuario === 'administrador';
   const isCollaborator = user?.tipo_usuario === 'colaborador';
-  const userFunction = user?.funcao || '';
+  // Convert user function from DB format to UI format
+  const userFunction = user?.funcao ? (FUNCAO_DB_TO_UI[user.funcao] || user.funcao) : '';
 
   const authValue = {
     user,

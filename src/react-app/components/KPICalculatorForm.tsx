@@ -40,22 +40,33 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
 
   // Check if user has a function defined
   useEffect(() => {
-    if (!user?.funcao && userFunction === 'Ajudante de Armazém') {
+    // Show function selector for test users or if no function is defined
+    if (!userFunction || userFunction === 'Ajudante de Armazém') {
       setShowFunctionSelector(true);
     } else {
       setShowFunctionSelector(false);
-      if (userFunction) {
-        setFormData(prev => ({ ...prev, funcao: userFunction }));
-      }
+    }
+    
+    // Always update form data with userFunction
+    if (userFunction) {
+      setFormData(prev => ({ ...prev, funcao: userFunction }));
     }
   }, [user, userFunction]);
 
   // Load available KPIs when function or shift changes
   useEffect(() => {
+    console.log('KPI Calculator - Function/Shift changed:', { 
+      funcao: formData.funcao, 
+      turno: formData.turno,
+      userFunction: userFunction,
+      userFuncaoFromDB: user?.funcao 
+    });
+    
     if (formData.funcao && formData.turno) {
+      console.log('Fetching KPIs for:', formData.funcao, formData.turno);
       fetchAvailableKPIs(formData.funcao, formData.turno);
     }
-  }, [formData.funcao, formData.turno]);
+  }, [formData.funcao, formData.turno, userFunction, user?.funcao, fetchAvailableKPIs]);
 
   // Check KPI limit when user or date changes
   useEffect(() => {
