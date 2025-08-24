@@ -118,7 +118,16 @@ export default function Home() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.funcao) return;
+    console.log('🔄 Home - Submit triggered');
+    console.log('📋 Form data:', formData);
+    console.log('🎯 Selected KPIs:', selectedKPIs);
+    console.log('👤 Function type checks:', { isAjudanteArmazem, isOperadorEmpilhadeira });
+    
+    if (!formData.funcao) {
+      console.log('❌ No function defined');
+      alert('Função não definida. Entre em contato com o administrador.');
+      return;
+    }
 
     const submitData: CalculatorInputType = {
       ...formData,
@@ -130,7 +139,18 @@ export default function Home() {
       const validActivities = multipleActivities.filter(
         act => act.nome_atividade && act.quantidade_produzida > 0 && act.tempo_horas > 0
       );
-      if (validActivities.length === 0) return;
+      console.log('📊 Multiple activities validation:', { 
+        total: multipleActivities.length, 
+        valid: validActivities.length,
+        activities: validActivities 
+      });
+      
+      if (validActivities.length === 0) {
+        console.log('❌ No valid activities for Ajudante de Armazém');
+        alert('Por favor, preencha pelo menos uma atividade válida com nome, quantidade e tempo.');
+        return;
+      }
+      
       // Map to the expected schema format
       submitData.multiple_activities = validActivities.map(act => ({
         nome_atividade: act.nome_atividade,
@@ -143,12 +163,17 @@ export default function Home() {
       submitData.valid_tasks_count = formData.valid_tasks_count || 0;
       submitData.nome_operador = formData.nome_operador;
       
-      console.log(`Tarefas válidas para cálculo: ${formData.valid_tasks_count || 0}`);
+      console.log(`📦 Tarefas válidas para cálculo: ${formData.valid_tasks_count || 0}`);
     } else {
       // Single activity validation
-      if (!formData.nome_atividade || formData.quantidade_produzida! <= 0 || formData.tempo_horas! <= 0) return;
+      if (!formData.nome_atividade || formData.quantidade_produzida! <= 0 || formData.tempo_horas! <= 0) {
+        console.log('❌ Invalid single activity data');
+        alert('Por favor, preencha todos os campos obrigatórios da atividade.');
+        return;
+      }
     }
 
+    console.log('✅ Calling calculate with data:', submitData);
     calculate(submitData);
   };
 
@@ -176,14 +201,24 @@ export default function Home() {
   };
 
   const handleOpenLancamento = async () => {
-    if (!result) return;
+    console.log('🚀 Home - Open Lançamento triggered');
+    console.log('📊 Result exists:', !!result);
+    console.log('🎯 Selected KPIs:', selectedKPIs);
+    
+    if (!result) {
+      console.log('❌ No calculation result available');
+      alert('Por favor, calcule a remuneração antes de fazer o lançamento.');
+      return;
+    }
     
     // If user has selected KPIs, check if they can launch more for today
     if (selectedKPIs.length > 0) {
       const today = new Date().toISOString().split('T')[0];
+      console.log('🔍 Checking KPI limit for date:', today);
       const canLaunch = await checkKPILimit(today);
       
       if (!canLaunch) {
+        console.log('❌ KPI limit reached for today');
         alert('❌ Limite diário de KPIs atingido!\n\n💡 Você já possui 1 lançamento de KPI para hoje.\n\nPara lançar novos KPIs:\n• Remova os KPIs do cálculo atual, ou\n• Escolha uma data diferente no modal de lançamento');
         return;
       }
@@ -191,9 +226,16 @@ export default function Home() {
     
     // For forklift operators, set the launch date to the WMS reference date
     if (isOperadorEmpilhadeira && wmsReferenceDate) {
+      console.log('📅 Setting WMS reference date:', wmsReferenceDate);
       setDataLancamento(wmsReferenceDate);
+    } else {
+      // Default to today's date for other roles
+      const today = new Date().toISOString().split('T')[0];
+      console.log('📅 Setting today\'s date:', today);
+      setDataLancamento(today);
     }
     
+    console.log('✅ Opening lançamento modal');
     setShowLancamento(true);
   };
 
