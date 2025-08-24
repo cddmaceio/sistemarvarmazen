@@ -351,8 +351,8 @@ exports.handler = async (event, context) => {
 
     // KPI check limit endpoint
     if (apiPath === '/kpis/check-limit') {
-      if (method === 'GET') {
-        const { user_id, date } = queryParams;
+      if (method === 'GET' || method === 'POST') {
+        const { user_id, date } = method === 'GET' ? queryParams : body;
         
         if (!user_id || !date) {
           return {
