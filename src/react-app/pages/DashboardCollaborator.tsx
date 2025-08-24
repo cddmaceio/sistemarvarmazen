@@ -77,6 +77,7 @@ export default function DashboardCollaborator() {
   const [loading, setLoading] = useState(true);
   const [mesAtual, setMesAtual] = useState(new Date());
   const [lancamentosPendentesReprovados, setLancamentosPendentesReprovados] = useState<any[]>([]);
+  const [mesInicializado, setMesInicializado] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -94,7 +95,7 @@ export default function DashboardCollaborator() {
       setLoading(true);
       
       // Buscar dados dos lançamentos aprovados para este colaborador
-      const response = await fetch(`/api/lancamentos?user_id=${user?.id}`);
+      const response = await fetch(`/api/lancamentos?user_id=${user?.id}&status=aprovado`);
       
       if (!response.ok) {
         throw new Error(`Falha ao carregar dados: ${response.status} ${response.statusText}`);
@@ -102,8 +103,23 @@ export default function DashboardCollaborator() {
       
       const historico = await response.json();
       
+      // Se é a primeira vez carregando e há dados, inicializar com o mês mais recente que tem dados
+      if (!mesInicializado && historico.length > 0) {
+        const datasLancamentos = historico.map((item: any) => {
+          const dateOnly = item.data_lancamento.split('T')[0];
+          const [year, month, day] = dateOnly.split('-');
+          return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        });
+        
+        // Encontrar a data mais recente
+        const dataMaisRecente = new Date(Math.max(...datasLancamentos.map((d: Date) => d.getTime())));
+        setMesAtual(dataMaisRecente);
+        setMesInicializado(true);
+        return; // Retornar para que o useEffect seja chamado novamente com o novo mês
+      }
+      
       // Buscar lançamentos pendentes e reprovados
-      const responsePendentesReprovados = await fetch(`/api/lancamentos?user_id=${user?.id}`);
+      const responsePendentesReprovados = await fetch(`/api/lancamentos/todos?user_id=${user?.id}`);
       if (responsePendentesReprovados.ok) {
         const todoLancamentos = await responsePendentesReprovados.json();
         const pendentesReprovados = todoLancamentos.filter((item: any) => 
@@ -133,7 +149,41 @@ export default function DashboardCollaborator() {
       }
 
       // Processar dados reais
-      const ganhoTotal = dadosUsuario.reduce((sum: number, item: any) => sum + item.remuneracao_total, 0);
+      let ganhoTotal = 0;
+      
+      console.log('Dados do usuário filtrados:', dadosUsuario);
+      console.log('Função do usuário:', userFunction);
+      
+      if (userFunction === 'Operador de Empilhadeira') {
+        // Para operador de empilhadeira: subtotal_atividades (já dividido por 2) + valor KPIs atingidos
+        // Garantir que não há duplicação de dados - usar apenas lançamentos aprovados únicos
+        const lancamentosUnicos = dadosUsuario.filter((item: any, index: number, arr: any[]) => {
+          return arr.findIndex(t => t.id === item.id) === index && item.status === 'aprovado';
+        });
+        
+        console.log('Lançamentos únicos (Operador):', lancamentosUnicos);
+        
+        // Usar remuneracao_total diretamente (já inclui subtotal_atividades + bonus_kpis + input_adicional)
+        ganhoTotal = lancamentosUnicos.reduce((sum: number, item: any) => {
+          console.log('Item remuneração total:', item.remuneracao_total, 'Tipo:', typeof item.remuneracao_total);
+          return sum + (item.remuneracao_total || 0);
+        }, 0);
+      } else {
+        // Para outras funções: soma da remuneração total - garantir lançamentos únicos
+        const lancamentosUnicos = dadosUsuario.filter((item: any, index: number, arr: any[]) => {
+          return arr.findIndex(t => t.id === item.id) === index && item.status === 'aprovado';
+        });
+        
+        console.log('Lançamentos únicos (Outras funções):', lancamentosUnicos);
+        
+        ganhoTotal = lancamentosUnicos.reduce((sum: number, item: any) => {
+          console.log('Item remuneração total:', item.remuneracao_total, 'Tipo:', typeof item.remuneracao_total);
+          return sum + (item.remuneracao_total || 0);
+        }, 0);
+      }
+      
+      console.log('Ganho total calculado:', ganhoTotal);
+      
       const diasTrabalhados = new Set(dadosUsuario.map((item: any) => item.data_lancamento)).size;
       const mediaDiaria = diasTrabalhados > 0 ? ganhoTotal / diasTrabalhados : 0;
 
@@ -142,6 +192,11 @@ export default function DashboardCollaborator() {
       
       // Agrupar por atividades baseado na função do usuário
       const atividadesPorTipo = dadosUsuario.reduce((acc: any, item: any) => {
+        // VERIFICAÇÃO CRÍTICA: Apenas processar lançamentos aprovados
+        if (item.status !== 'aprovado') {
+          return acc;
+        }
+        
         // Usar dados diretamente do lançamento
         const dados = {
           nome_atividade: item.nome_atividade,
@@ -166,48 +221,63 @@ export default function DashboardCollaborator() {
         const dataFormatada = formatDateSafe(item.data_lancamento);
         
         if (userFunction === 'Operador de Empilhadeira') {
-          // Para operadores de empilhadeira, verificar se tem atividade específica ou apenas KPIs
-          let nomeAtividade;
-          if (!dados.nome_atividade || dados.nome_atividade.trim() === '') {
-            // Lançamento apenas de KPIs
-            nomeAtividade = 'KPIs Atingidos';
-          } else {
-            nomeAtividade = dados.nome_atividade;
+          // Para operadores de empilhadeira, criar atividade específica para tarefas válidas
+          if (dados.tarefas_validas && dados.tarefas_validas > 0) {
+            const nomeAtividade = 'Tarefas Válidas';
+            
+            if (!acc[nomeAtividade]) {
+              acc[nomeAtividade] = {
+                nome: nomeAtividade,
+                icon: '📋',
+                dias: 0,
+                totalGanho: 0,
+                valores: [],
+                historico: [],
+                tarefasValidas: 0,
+                valorTarefas: 0
+              };
+            }
+            
+            // Usar o valor das tarefas (subtotal_atividades) em vez da remuneração total
+            const valorTarefas = dados.subtotal_atividades || dados.valor_tarefas || 0;
+            acc[nomeAtividade].totalGanho += valorTarefas;
+            acc[nomeAtividade].valores.push(valorTarefas);
+            acc[nomeAtividade].tarefasValidas = (acc[nomeAtividade].tarefasValidas || 0) + dados.tarefas_validas;
+            acc[nomeAtividade].valorTarefas = (acc[nomeAtividade].valorTarefas || 0) + valorTarefas;
+            acc[nomeAtividade].historico.push({
+              data: dataFormatada,
+              valor: valorTarefas,
+              atividade: nomeAtividade,
+              turno: item.turno,
+              aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema'
+            });
+            acc[nomeAtividade].dias = new Set(acc[nomeAtividade].historico.map((h: any) => h.data)).size;
           }
           
-          if (!acc[nomeAtividade]) {
-            acc[nomeAtividade] = {
-              nome: nomeAtividade,
-              icon: nomeAtividade === 'KPIs Atingidos' ? '📊' : '🏗️',
-              dias: 0,
-              totalGanho: 0,
-              valores: [],
-              historico: []
-            };
-          }
-          acc[nomeAtividade].totalGanho += item.remuneracao_total;
-          acc[nomeAtividade].valores.push(item.remuneracao_total);
-          acc[nomeAtividade].historico.push({
-            data: dataFormatada,
-            valor: item.remuneracao_total,
-            atividade: nomeAtividade,
-            turno: item.turno,
-            aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema'
-          });
-          acc[nomeAtividade].dias = new Set([...acc[nomeAtividade].valores.map((_: any, i: number) => i)]).size;
+          // KPIs são incluídos no valor total das tarefas válidas, não precisam de seção separada
           
-          historicoCompleto.push({
-            data: dataFormatada,
-            valor: item.remuneracao_total,
-            atividade: nomeAtividade,
-            turno: item.turno,
-            aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema',
-            kpis_atingidos: item.kpis_atingidos,
-            tarefas_validas: item.tarefas_validas,
-            valor_tarefas: item.valor_tarefas,
-            bonus_kpis: item.bonus_kpis,
-            subtotal_atividades: item.subtotal_atividades
-          });
+          // Adicionar ao histórico completo - UMA ÚNICA ENTRADA POR LANÇAMENTO APROVADO
+          if (item.status === 'aprovado') {
+            // Determinar o nome da atividade principal
+            let nomeAtividadePrincipal = 'Lançamento RV';
+            if (dados.tarefas_validas && dados.tarefas_validas > 0) {
+              nomeAtividadePrincipal = 'Operador de Empilhadeira';
+            }
+            
+            // Usar a remuneração total do lançamento (que já inclui tarefas + KPIs)
+            historicoCompleto.push({
+              data: dataFormatada,
+              valor: item.remuneracao_total || 0, // Valor total do lançamento
+              atividade: nomeAtividadePrincipal,
+              turno: item.turno,
+              aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema',
+              kpis_atingidos: item.kpis_atingidos,
+              tarefas_validas: item.tarefas_validas,
+              valor_tarefas: item.valor_tarefas,
+              bonus_kpis: item.bonus_kpis,
+              subtotal_atividades: item.subtotal_atividades
+            });
+          }
         } else if (userFunction === 'Ajudante de Armazém') {
           // Para múltiplas atividades
           if (dados.multiple_activities && Array.isArray(dados.multiple_activities)) {
@@ -235,18 +305,21 @@ export default function DashboardCollaborator() {
               });
               acc[subAtividade].dias = acc[subAtividade].valores.length;
               
-              historicoCompleto.push({
-                data: dataFormatada,
-                valor: valorProporcional,
-                atividade: subAtividade,
-                turno: item.turno,
-                aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema',
-                kpis_atingidos: item.kpis_atingidos,
-                tarefas_validas: item.tarefas_validas,
-                valor_tarefas: item.valor_tarefas,
-                bonus_kpis: item.bonus_kpis,
-                subtotal_atividades: item.subtotal_atividades
-              });
+              // Apenas adicionar ao histórico se aprovado
+              if (item.status === 'aprovado') {
+                historicoCompleto.push({
+                  data: dataFormatada,
+                  valor: valorProporcional,
+                  atividade: subAtividade,
+                  turno: item.turno,
+                  aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema',
+                  kpis_atingidos: item.kpis_atingidos,
+                  tarefas_validas: item.tarefas_validas,
+                  valor_tarefas: item.valor_tarefas,
+                  bonus_kpis: item.bonus_kpis,
+                  subtotal_atividades: item.subtotal_atividades
+                });
+              }
             });
           } else {
             // Atividade única - verificar se tem nome ou é apenas KPIs
@@ -279,18 +352,21 @@ export default function DashboardCollaborator() {
             });
             acc[nomeAtividade].dias = acc[nomeAtividade].valores.length;
             
-            historicoCompleto.push({
-              data: dataFormatada,
-              valor: item.remuneracao_total,
-              atividade: nomeAtividade,
-              turno: item.turno,
-              aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema',
-              kpis_atingidos: item.kpis_atingidos,
-              tarefas_validas: item.tarefas_validas,
-              valor_tarefas: item.valor_tarefas,
-              bonus_kpis: item.bonus_kpis,
-              subtotal_atividades: item.subtotal_atividades
-            });
+            // Apenas adicionar ao histórico se aprovado
+            if (item.status === 'aprovado') {
+              historicoCompleto.push({
+                data: dataFormatada,
+                valor: item.remuneracao_total,
+                atividade: nomeAtividade,
+                turno: item.turno,
+                aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema',
+                kpis_atingidos: item.kpis_atingidos,
+                tarefas_validas: item.tarefas_validas,
+                valor_tarefas: item.valor_tarefas,
+                bonus_kpis: item.bonus_kpis,
+                subtotal_atividades: item.subtotal_atividades
+              });
+            }
           }
         }
         
@@ -370,7 +446,11 @@ export default function DashboardCollaborator() {
     const ganhosPorDia = Array.from({ length: diasDoMes }, (_, i) => ({ dia: i + 1, valor: 0 }));
     
     dados.forEach(item => {
-      const dia = new Date(item.data_lancamento).getDate();
+      // Usar a mesma lógica da formatDateSafe para evitar problemas de timezone
+      const dateOnly = item.data_lancamento.split('T')[0];
+      const [year, month, day] = dateOnly.split('-');
+      const dataLancamento = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const dia = dataLancamento.getDate();
       ganhosPorDia[dia - 1].valor += item.remuneracao_total;
     });
     
@@ -554,23 +634,170 @@ export default function DashboardCollaborator() {
         <main className="container mx-auto px-2 sm:px-4 pb-6 sm:pb-8">
           <div className="max-w-7xl mx-auto space-y-4 sm:space-y-8">
             {!dashboardData || dashboardData.ganhoTotal === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Nenhum dado encontrado
-                  </h3>
-                  <p className="text-gray-600">
-                    Você ainda não possui lançamentos aprovados para este período.
-                  </p>
-                  <Link to="/">
-                    <Button className="mt-4">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Fazer um Lançamento
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+              // Verificar se há lançamentos pendentes para exibir no mês atual
+              lancamentosPendentesReprovados.filter((item: any) => {
+                // Usar a mesma lógica da formatDateSafe para evitar problemas de timezone
+                const dateOnly = item.data_lancamento.split('T')[0];
+                const [year, month, day] = dateOnly.split('-');
+                const dataLancamento = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                const mesLancamento = dataLancamento.getMonth();
+                const anoLancamento = dataLancamento.getFullYear();
+                return mesLancamento === mesAtual.getMonth() && anoLancamento === mesAtual.getFullYear();
+              }).length > 0 ? (
+                <div className="space-y-4 sm:space-y-6">
+                  {/* Aviso sobre lançamentos aprovados */}
+                  <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                    <CardContent className="p-6 text-center">
+                      <Activity className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-blue-900 mb-2">
+                        📊 Nenhum lançamento aprovado ainda
+                      </h3>
+                      <p className="text-blue-700 mb-4">
+                        Você não possui lançamentos aprovados para este período, mas há lançamentos pendentes de análise.
+                      </p>
+                      <Link to="/">
+                        <Button className="bg-blue-600 hover:bg-blue-700">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Fazer um Novo Lançamento
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+
+                  {/* Seção de Lançamentos Pendentes */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
+                        <Activity className="h-4 w-4 sm:h-6 sm:w-6" />
+                        <span className="text-sm sm:text-base">⏳ LANÇAMENTOS PENDENTES DE APROVAÇÃO</span>
+                      </CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        📋 Seus lançamentos que estão aguardando análise da supervisão
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
+                        {lancamentosPendentesReprovados
+                          .filter((item: any) => {
+                            // Usar a mesma lógica da formatDateSafe para evitar problemas de timezone
+                            const dateOnly = item.data_lancamento.split('T')[0];
+                            const [year, month, day] = dateOnly.split('-');
+                            const dataLancamento = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                            const mesLancamento = dataLancamento.getMonth();
+                            const anoLancamento = dataLancamento.getFullYear();
+                            return mesLancamento === mesAtual.getMonth() && anoLancamento === mesAtual.getFullYear() && item.status === 'pendente';
+                          })
+                          .map((item, index) => {
+                            // Parse dos dados do lançamento para exibir detalhes
+                            let kpisAtingidos = [];
+                            let tarefasValidas = null;
+                            
+                            try {
+                              if (item.kpis_atingidos && typeof item.kpis_atingidos === 'string') {
+                                kpisAtingidos = JSON.parse(item.kpis_atingidos);
+                              } else if (Array.isArray(item.kpis_atingidos)) {
+                                kpisAtingidos = item.kpis_atingidos;
+                              }
+                              
+                              if (item.tarefas_validas) {
+                                tarefasValidas = item.tarefas_validas;
+                              }
+                            } catch (e) {
+                              console.log('Erro ao parsear dados do lançamento:', e);
+                            }
+                            
+                            return (
+                              <div key={index} className="p-3 sm:p-4 border rounded-lg hover:shadow-md transition-all duration-200 bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                                  <div className="flex items-center space-x-3 sm:space-x-4">
+                                    <div className="text-xl sm:text-2xl">
+                                      {getActivityIcon(item.nome_atividade || 'KPIs Atingidos')}
+                                    </div>
+                                    <div className="flex-1">
+                                      <h4 className="font-semibold text-gray-900 text-base sm:text-lg">Lançamento RV</h4>
+                                      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-1 space-y-1 sm:space-y-0">
+                                        <p className="text-xs sm:text-sm text-gray-600 flex items-center">
+                                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                          📅 {formatDateSafe(item.data_lancamento)}
+                                        </p>
+                                        <p className="text-xs sm:text-sm text-gray-600">
+                                          🏢 {item.turno || 'N/A'}
+                                        </p>
+                                      </div>
+                                      
+                                      {/* Resumo detalhado */}
+                                      <div className="mt-2 sm:mt-3 space-y-1 sm:space-y-2 bg-white p-2 sm:p-3 rounded border">
+                                        <h5 className="font-medium text-gray-800 text-xs sm:text-sm">📊 Resumo do Lançamento:</h5>
+                                        
+                                        {/* KPIs Atingidos */}
+                                        {kpisAtingidos.length > 0 && (
+                                          <div className="text-xs sm:text-sm">
+                                            <span className="font-medium text-blue-600">🎯 KPIs Atingidos ({kpisAtingidos.length}):</span>
+                                            <span className="text-gray-700 ml-1 sm:ml-2">{kpisAtingidos.join(', ')}</span>
+                                            <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {(item.bonus_kpis || 0).toFixed(2)}</span>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Tarefas Válidas */}
+                                        {tarefasValidas && (
+                                          <div className="text-xs sm:text-sm">
+                                            <span className="font-medium text-purple-600">📋 Tarefas Válidas:</span>
+                                            <span className="text-gray-700 ml-1 sm:ml-2">{tarefasValidas} tarefas</span>
+                                            <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {(item.valor_tarefas || 0).toFixed(2)}</span>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Subtotal Atividades */}
+                                        {item.subtotal_atividades && (
+                                          <div className="text-xs sm:text-sm">
+                                            <span className="font-medium text-orange-600">💼 Subtotal Atividades:</span>
+                                            <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {(item.subtotal_atividades || 0).toFixed(2)}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-2 space-y-1 sm:space-y-0">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                          ⏳ Aguardando Aprovação
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-center sm:text-right">
+                                    <p className="text-lg sm:text-2xl font-bold text-yellow-600">
+                                      ⏳ R$ {(item.remuneracao_total || 0).toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">💰 Valor Pendente</p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        }
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                // Caso não tenha nem aprovados nem pendentes
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Nenhum dado encontrado
+                    </h3>
+                    <p className="text-gray-600">
+                      Você ainda não possui lançamentos para este período.
+                    </p>
+                    <Link to="/">
+                      <Button className="mt-4">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Fazer um Lançamento
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              )
             ) : (
               <>
                 {/* Seção 1: Resumo Financeiro */}
@@ -653,17 +880,20 @@ export default function DashboardCollaborator() {
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{atividade.nome}</h3>
                               <p className="text-xs sm:text-sm text-gray-600">{atividade.dias} dias trabalhados</p>
-                              {/* Exibir detalhes específicos para Operador de Empilhadeira */}
-                              {userFunction === 'Operador de Empilhadeira' && atividade.tarefasValidas && (
+                              {/* Exibir detalhes específicos para Tarefas Válidas de Operador de Empilhadeira */}
+                              {userFunction === 'Operador de Empilhadeira' && atividade.nome === 'Tarefas Válidas' && atividade.tarefasValidas && (
                                 <div className="mt-2 space-y-1">
                                   <p className="text-xs sm:text-sm text-blue-600 font-medium">
-                                    📋 Tarefas Válidas: {atividade.tarefasValidas} tarefas
+                                    📋 Total de Tarefas: {atividade.tarefasValidas} tarefas
                                   </p>
                                   <p className="text-xs sm:text-sm text-green-600">
-                                    💰 Valor por Tarefa: R$ 0,093
+                                    💰 Valor Total das Tarefas: R$ {(atividade.valorTarefas || 0).toFixed(2)}
                                   </p>
                                   <p className="text-xs sm:text-sm text-purple-600">
                                     📊 Média Diária: {(atividade.tarefasValidas / atividade.dias).toFixed(1)} tarefas/dia
+                                  </p>
+                                  <p className="text-xs sm:text-sm text-orange-600">
+                                    💵 Valor por Tarefa: R$ 0,093
                                   </p>
                                 </div>
                               )}
@@ -795,14 +1025,27 @@ export default function DashboardCollaborator() {
                         {(() => {
                           const diasDoMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0).getDate();
                           const primeiroDia = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1).getDay();
-                          const diasComLancamento = new Set(dashboardData.historicoCompleto.map(item => {
+                          // Separar lançamentos aprovados dos pendentes/reprovados para o calendário
+                          const diasAprovados = new Set();
+                          const diasPendentesReprovados = new Set();
+                          
+                          // Adicionar dias com lançamentos aprovados
+                          dashboardData.historicoCompleto.forEach(item => {
                             const [dia] = item.data.split('/');
-                            return parseInt(dia);
-                          }));
-                          const diasPendentesReprovados = new Set(lancamentosPendentesReprovados.map(item => {
-                            const data = new Date(item.data_lancamento);
-                            return data.getDate();
-                          }));
+                            diasAprovados.add(parseInt(dia));
+                          });
+                          
+                          // Adicionar dias com lançamentos pendentes/reprovados
+                          lancamentosPendentesReprovados.forEach(item => {
+                            // Usar a mesma lógica da formatDateSafe para evitar problemas de timezone
+                            const dateOnly = item.data_lancamento.split('T')[0];
+                            const [year, month, day] = dateOnly.split('-');
+                            const data = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                            const dia = data.getDate();
+                            diasPendentesReprovados.add(dia);
+                          });
+                          
+                          // Verificação de dias com lançamentos feita diretamente com diasAprovados e diasPendentesReprovados
                           
                           const calendario = [];
                           
@@ -817,7 +1060,7 @@ export default function DashboardCollaborator() {
                           for (let dia = 1; dia <= diasDoMes; dia++) {
                             const diaDaSemana = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), dia).getDay();
                             const isDomingo = diaDaSemana === 0;
-                            const temLancamento = diasComLancamento.has(dia);
+                            const temAprovado = diasAprovados.has(dia);
                             const temPendenteReprovado = diasPendentesReprovados.has(dia);
                             
                             let corFundo = 'bg-gray-300'; // Domingo
@@ -825,7 +1068,7 @@ export default function DashboardCollaborator() {
                             let titulo = 'Domingo - Não há trabalho';
                             
                             if (!isDomingo) {
-                              if (temLancamento) {
+                              if (temAprovado) {
                                 corFundo = 'bg-green-500';
                                 icone = '✅';
                                 titulo = 'Dia com lançamento aprovado';
@@ -840,7 +1083,7 @@ export default function DashboardCollaborator() {
                               }
                             }
                             
-                            const podeClicar = !isDomingo && !temLancamento && !temPendenteReprovado;
+                            const podeClicar = !isDomingo && !temAprovado && !temPendenteReprovado;
                             
                             calendario.push(
                               <div 
@@ -874,14 +1117,18 @@ export default function DashboardCollaborator() {
                         <div className="text-center p-2 sm:p-3 bg-green-50 rounded-lg border border-green-200">
                           <div className="text-lg sm:text-2xl font-bold text-green-600">
                             {(() => {
-                              const diasComLancamento = new Set(dashboardData.historicoCompleto.map(item => {
+                              // Contar apenas dias com lançamentos aprovados
+                              const diasAprovados = new Set();
+                              
+                              dashboardData.historicoCompleto.forEach(item => {
                                 const [dia] = item.data.split('/');
-                                return parseInt(dia);
-                              }));
-                              return diasComLancamento.size;
+                                diasAprovados.add(parseInt(dia));
+                              });
+                              
+                              return diasAprovados.size;
                             })()} 
                           </div>
-                          <div className="text-xs sm:text-sm text-green-700">✅ Dias com lançamento</div>
+                          <div className="text-xs sm:text-sm text-green-700">✅ Dias Aprovados</div>
                         </div>
                         
                         <div className="text-center p-2 sm:p-3 bg-yellow-50 rounded-lg border border-yellow-200">
@@ -899,15 +1146,25 @@ export default function DashboardCollaborator() {
                                 const diaDaSemana = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), dia).getDay();
                                 return diaDaSemana !== 0; // Não é domingo
                               }).length;
-                              const diasComLancamento = new Set(dashboardData.historicoCompleto.map(item => {
+                              
+                              // Combinar todos os lançamentos (aprovados + pendentes/reprovados)
+                              const todosLancamentos = new Set();
+                              
+                              // Adicionar dias com lançamentos aprovados
+                              dashboardData.historicoCompleto.forEach(item => {
                                 const [dia] = item.data.split('/');
-                                return parseInt(dia);
-                              }));
-                              const diasPendentesReprovados = new Set(lancamentosPendentesReprovados.map(item => {
-                                const data = new Date(item.data_lancamento);
-                                return data.getDate();
-                              }));
-                              return diasUteis - diasComLancamento.size - diasPendentesReprovados.size;
+                                todosLancamentos.add(parseInt(dia));
+                              });
+                              
+                              // Adicionar dias com lançamentos pendentes/reprovados
+                              lancamentosPendentesReprovados.forEach(item => {
+                                const dateOnly = item.data_lancamento.split('T')[0];
+                                const [year, month, day] = dateOnly.split('-');
+                                const data = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                todosLancamentos.add(data.getDate());
+                              });
+                              
+                              return diasUteis - todosLancamentos.size;
                             })()} 
                           </div>
                           <div className="text-xs sm:text-sm text-red-700">❌ Dias sem lançamento</div>
@@ -921,11 +1178,24 @@ export default function DashboardCollaborator() {
                                 const diaDaSemana = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), dia).getDay();
                                 return diaDaSemana !== 0; // Não é domingo
                               }).length;
-                              const diasComLancamento = new Set(dashboardData.historicoCompleto.map(item => {
+                              // Combinar todos os lançamentos (aprovados + pendentes/reprovados)
+                              const todosLancamentos = new Set();
+                              
+                              // Adicionar dias com lançamentos aprovados
+                              dashboardData.historicoCompleto.forEach(item => {
                                 const [dia] = item.data.split('/');
-                                return parseInt(dia);
-                              }));
-                              return Math.round((diasComLancamento.size / diasUteis) * 100);
+                                todosLancamentos.add(parseInt(dia));
+                              });
+                              
+                              // Adicionar dias com lançamentos pendentes/reprovados
+                              lancamentosPendentesReprovados.forEach(item => {
+                                const dateOnly = item.data_lancamento.split('T')[0];
+                                const [year, month, day] = dateOnly.split('-');
+                                const data = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                todosLancamentos.add(data.getDate());
+                              });
+                              
+                              return Math.round((todosLancamentos.size / diasUteis) * 100);
                             })()}%
                           </div>
                           <div className="text-xs sm:text-sm text-blue-700">📊 Taxa de lançamentos</div>
@@ -953,7 +1223,6 @@ export default function DashboardCollaborator() {
                           // Parse dos dados do lançamento para exibir detalhes
                           let kpisAtingidos = [];
                           let tarefasValidas = null;
-                          let valorTarefas = null;
                           
                           try {
                             if (item.kpis_atingidos && typeof item.kpis_atingidos === 'string') {
@@ -965,12 +1234,14 @@ export default function DashboardCollaborator() {
                             if (item.tarefas_validas) {
                               tarefasValidas = item.tarefas_validas;
                             }
-                            if (item.valor_tarefas) {
-                              valorTarefas = item.valor_tarefas;
-                            }
                           } catch (e) {
                             console.log('Erro ao parsear dados do lançamento:', e);
                           }
+                          
+                          // Calcular valor final correto (Atividades + KPIs)
+                          const valorAtividades = item.subtotal_atividades || item.valor_tarefas || 0;
+                          const valorKpis = item.bonus_kpis || 0;
+                          const valorFinal = valorAtividades + valorKpis;
                           
                           return (
                             <div key={index} className="p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:shadow-md transition-all duration-200">
@@ -1004,21 +1275,24 @@ export default function DashboardCollaborator() {
                                         </div>
                                       )}
                                       
-                                      {/* Atividades para Operador de Empilhadeira */}
-                                      {userFunction === 'Operador de Empilhadeira' && tarefasValidas && (
+                                      {/* Tarefas Válidas - sempre exibir quando disponível */}
+                                      {tarefasValidas && (
                                         <div className="text-xs sm:text-sm">
                                           <span className="font-medium text-purple-600">📋 Tarefas Válidas:</span>
                                           <span className="text-gray-700 ml-1 sm:ml-2">{tarefasValidas} tarefas</span>
-                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {((valorTarefas || 0) / 2).toFixed(2)}</span>
+                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">
+                                            R$ {(item.subtotal_atividades || item.valor_tarefas || 0).toFixed(2)}
+                                          </span>
+                                          <span className="text-gray-500 ml-1 text-xs">(Valor Bruto/Líquido)</span>
                                         </div>
                                       )}
                                       
-                                      {/* Atividade principal */}
-                                      {item.atividade && item.atividade !== 'KPIs Atingidos' && (
+                                      {/* Atividade principal - para outras funções */}
+                                      {item.atividade && item.atividade !== 'KPIs Atingidos' && item.atividade !== 'Tarefas Válidas' && (
                                         <div className="text-xs sm:text-sm">
                                           <span className="font-medium text-orange-600">🏃‍♂️ Atividade:</span>
                                           <span className="text-gray-700 ml-1 sm:ml-2">{item.atividade}</span>
-                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {((item.subtotal_atividades || 0) / 2).toFixed(2)}</span>
+                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {item.valor.toFixed(2)}</span>
                                         </div>
                                       )}
                                     </div>
@@ -1027,16 +1301,16 @@ export default function DashboardCollaborator() {
                                       <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
                                         ✅ Aprovado
                                       </span>
-                                      {item.aprovadoPor && (
-                                        <span className="text-xs text-gray-500">
-                                          👤 Aprovado por: {item.aprovadoPor}
-                                        </span>
-                                      )}
+                                      <span className="text-xs text-gray-500">
+                                        👤 Aprovado por: {item.aprovadoPor || 'Sistema'}
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-lg sm:text-2xl font-bold text-green-600">+ R$ {item.valor.toFixed(2)}</p>
+                                  <p className="text-lg sm:text-2xl font-bold text-green-600">
+                                    + R$ {userFunction === 'Operador de Empilhadeira' ? valorFinal.toFixed(2) : item.valor.toFixed(2)}
+                                  </p>
                                   <p className="text-xs text-gray-500 mt-1">💰 Valor Final</p>
                                 </div>
                               </div>
@@ -1095,17 +1369,20 @@ export default function DashboardCollaborator() {
                             <p className="text-lg sm:text-2xl font-bold text-green-900">
                               {dashboardData.historicoCompleto ? 
                                 dashboardData.historicoCompleto.reduce((total, item) => {
-                                  try {
-                                    let kpis = [];
-                                    if (item.kpis_atingidos && typeof item.kpis_atingidos === 'string') {
-                                      kpis = JSON.parse(item.kpis_atingidos);
+                                  if (item.kpis_atingidos) {
+                                    let kpisArray: string[] = [];
+                                    if (typeof item.kpis_atingidos === 'string') {
+                                      try {
+                                        kpisArray = JSON.parse(item.kpis_atingidos);
+                                      } catch {
+                                        kpisArray = [];
+                                      }
                                     } else if (Array.isArray(item.kpis_atingidos)) {
-                                      kpis = item.kpis_atingidos;
+                                      kpisArray = item.kpis_atingidos;
                                     }
-                                    return total + (kpis.length || 0);
-                                  } catch (e) {
-                                    return total;
+                                    return total + kpisArray.length;
                                   }
+                                  return total;
                                 }, 0) : 0
                               }
                             </p>
@@ -1178,7 +1455,10 @@ export default function DashboardCollaborator() {
                       {lancamentosPendentesReprovados.length > 0 ? (
                       lancamentosPendentesReprovados
                         .filter((item: any) => {
-                          const dataLancamento = new Date(item.data_lancamento);
+                          // Usar a mesma lógica da formatDateSafe para evitar problemas de timezone
+                          const dateOnly = item.data_lancamento.split('T')[0];
+                          const [year, month, day] = dateOnly.split('-');
+                          const dataLancamento = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                           const mesLancamento = dataLancamento.getMonth();
                           const anoLancamento = dataLancamento.getFullYear();
                           return mesLancamento === mesAtual.getMonth() && anoLancamento === mesAtual.getFullYear();
@@ -1187,7 +1467,6 @@ export default function DashboardCollaborator() {
                           // Parse dos dados do lançamento para exibir detalhes
                           let kpisAtingidos = [];
                           let tarefasValidas = null;
-                          let valorTarefas = null;
                           
                           try {
                             if (item.kpis_atingidos && typeof item.kpis_atingidos === 'string') {
@@ -1198,9 +1477,6 @@ export default function DashboardCollaborator() {
                             
                             if (item.tarefas_validas) {
                               tarefasValidas = item.tarefas_validas;
-                            }
-                            if (item.valor_tarefas) {
-                              valorTarefas = item.valor_tarefas;
                             }
                           } catch (e) {
                             console.log('Erro ao parsear dados do lançamento:', e);
@@ -1244,12 +1520,12 @@ export default function DashboardCollaborator() {
                                         </div>
                                       )}
                                       
-                                      {/* Atividades para Operador de Empilhadeira */}
-                                      {userFunction === 'Operador de Empilhadeira' && tarefasValidas && (
+                                      {/* Tarefas Válidas */}
+                                      {tarefasValidas && (
                                         <div className="text-xs sm:text-sm">
                                           <span className="font-medium text-purple-600">📋 Tarefas Válidas:</span>
                                           <span className="text-gray-700 ml-1 sm:ml-2">{tarefasValidas} tarefas</span>
-                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {((valorTarefas || 0) / 2).toFixed(2)}</span>
+                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {(item.subtotal_atividades || 0).toFixed(2)}</span>
                                         </div>
                                       )}
                                       

@@ -39,6 +39,11 @@ export const UserSchema = z.object({
   tipo_usuario: z.string().default("colaborador"),
   status_usuario: z.string().default("ativo"),
   funcao: z.string().optional(),
+  turno: z.enum(["Manhã", "Tarde", "Noite", "Geral"]).optional(), // Opcional para administradores
+  email: z.string().optional(),
+  telefone: z.string().optional(),
+  data_admissao: z.string().optional(),
+  observacoes: z.string().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });

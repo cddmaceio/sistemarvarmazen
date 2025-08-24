@@ -1,16 +1,18 @@
-import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema } from "../shared/types";
-import { cors } from 'hono/cors';
-import { createClient } from '@supabase/supabase-js';
-const app = new Hono();
-app.use('*', cors());
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const hono_1 = require("hono");
+const zod_validator_1 = require("@hono/zod-validator");
+const types_1 = require("../shared/types");
+const cors_1 = require("hono/cors");
+const supabase_js_1 = require("@supabase/supabase-js");
+const app = new hono_1.Hono();
+app.use('*', (0, cors_1.cors)());
 // Helper function to get Supabase client
 const getSupabase = (env) => {
-    return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+    return (0, supabase_js_1.createClient)(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 };
 // Authentication endpoints
-app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
+app.post('/api/auth/login', (0, zod_validator_1.zValidator)('json', types_1.LoginSchema), async (c) => {
     const supabase = getSupabase(c.env);
     const { cpf, data_nascimento } = c.req.valid('json');
     const { data: user, error } = await supabase
@@ -46,7 +48,7 @@ app.get('/api/usuarios', async (c) => {
     }
     return c.json(users || []);
 });
-app.post('/api/usuarios', zValidator('json', UserSchema), async (c) => {
+app.post('/api/usuarios', (0, zod_validator_1.zValidator)('json', types_1.UserSchema), async (c) => {
     const supabase = getSupabase(c.env);
     const data = c.req.valid('json');
     const { data: user, error } = await supabase
@@ -66,14 +68,19 @@ app.post('/api/usuarios', zValidator('json', UserSchema), async (c) => {
     }
     return c.json(user);
 });
-app.put('/api/usuarios/:id', zValidator('json', UserSchema.partial()), async (c) => {
+app.put('/api/usuarios/:id', (0, zod_validator_1.zValidator)('json', types_1.UserSchema.partial()), async (c) => {
     const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const data = c.req.valid('json');
+    // Clean data - convert empty strings to undefined for date fields
+    const cleanData = { ...data };
+    if (cleanData.data_admissao === '') {
+        delete cleanData.data_admissao;
+    }
     const { data: user, error } = await supabase
         .from('usuarios')
         .update({
-        ...data,
+        ...cleanData,
         updated_at: new Date().toISOString()
     })
         .eq('id', id)
@@ -120,7 +127,7 @@ app.get('/api/activity-names', async (c) => {
     const uniqueNames = [...new Set(activities?.map(a => a.nome_atividade) || [])];
     return c.json(uniqueNames);
 });
-app.post('/api/activities', zValidator('json', ActivitySchema), async (c) => {
+app.post('/api/activities', (0, zod_validator_1.zValidator)('json', types_1.ActivitySchema), async (c) => {
     const supabase = getSupabase(c.env);
     const data = c.req.valid('json');
     const { data: activity, error } = await supabase
@@ -133,7 +140,7 @@ app.post('/api/activities', zValidator('json', ActivitySchema), async (c) => {
     }
     return c.json(activity);
 });
-app.put('/api/activities/:id', zValidator('json', ActivitySchema.partial()), async (c) => {
+app.put('/api/activities/:id', (0, zod_validator_1.zValidator)('json', types_1.ActivitySchema.partial()), async (c) => {
     const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const data = c.req.valid('json');
@@ -187,7 +194,7 @@ app.get('/api/functions', async (c) => {
     const uniqueFunctions = [...new Set(kpis?.map(k => k.funcao_kpi) || [])];
     return c.json(uniqueFunctions);
 });
-app.post('/api/kpis', zValidator('json', KPISchema), async (c) => {
+app.post('/api/kpis', (0, zod_validator_1.zValidator)('json', types_1.KPISchema), async (c) => {
     const supabase = getSupabase(c.env);
     const data = c.req.valid('json');
     const { data: kpi, error } = await supabase
@@ -200,7 +207,7 @@ app.post('/api/kpis', zValidator('json', KPISchema), async (c) => {
     }
     return c.json(kpi);
 });
-app.put('/api/kpis/:id', zValidator('json', KPISchema.partial()), async (c) => {
+app.put('/api/kpis/:id', (0, zod_validator_1.zValidator)('json', types_1.KPISchema.partial()), async (c) => {
     const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const data = c.req.valid('json');
@@ -299,7 +306,7 @@ app.get('/api/lancamentos', async (c) => {
     }
     return c.json(lancamentos || []);
 });
-app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (c) => {
+app.post('/api/lancamentos', (0, zod_validator_1.zValidator)('json', types_1.CreateLancamentoSchema), async (c) => {
     const supabase = getSupabase(c.env);
     const data = c.req.valid('json');
     const { data: lancamento, error } = await supabase
@@ -351,7 +358,7 @@ const normalizeString = (str) => {
         .replace(/Ç/g, 'C');
 };
 // Calculator endpoint
-app.post('/api/calculator', zValidator('json', CalculatorInputSchema), async (c) => {
+app.post('/api/calculator', (0, zod_validator_1.zValidator)('json', types_1.CalculatorInputSchema), async (c) => {
     console.log('🚀 CALCULATOR FUNCTION STARTED 🚀');
     const supabase = getSupabase(c.env);
     const input = c.req.valid('json');
@@ -456,16 +463,50 @@ app.post('/api/calculator', zValidator('json', CalculatorInputSchema), async (c)
                 unidadeMedida = selectedActivity.unidade_medida;
             }
         }
+        // Função para calcular valor dinâmico dos KPIs baseado no mês
+        function calcularDiasUteisMes(year, month) {
+            const diasUteis = [];
+            const ultimoDia = new Date(year, month, 0).getDate();
+            for (let dia = 1; dia <= ultimoDia; dia++) {
+                const data = new Date(year, month - 1, dia);
+                const diaSemana = data.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
+                // Incluir segunda (1) a sábado (6), excluir domingo (0)
+                if (diaSemana >= 1 && diaSemana <= 6) {
+                    diasUteis.push(dia);
+                }
+            }
+            return diasUteis.length;
+        }
+        function calcularValorKpiDinamico(year, month, orcamentoMensal = 150.00, maxKpisPorDia = 2) {
+            const diasUteis = calcularDiasUteisMes(year, month);
+            const totalKpisMes = diasUteis * maxKpisPorDia;
+            const valorPorKpi = orcamentoMensal / totalKpisMes;
+            // Arredondar para 2 casas decimais
+            return Math.round(valorPorKpi * 100) / 100;
+        }
         // Handle KPIs with normalized data
         console.log("Processing KPIs:", input.kpis_atingidos);
         console.log("Available KPIs from query:", kpis);
+        // Calcular valor dinâmico baseado no mês atual
+        const dataLancamento = new Date();
+        const anoLancamento = dataLancamento.getFullYear();
+        const mesLancamento = dataLancamento.getMonth() + 1;
+        const valorKpiDinamico = calcularValorKpiDinamico(anoLancamento, mesLancamento);
+        const diasUteis = calcularDiasUteisMes(anoLancamento, mesLancamento);
+        console.log('📅 Cálculo Dinâmico de KPIs:');
+        console.log(`- Data atual: ${dataLancamento.toISOString()}`);
+        console.log(`- Mês/Ano: ${mesLancamento}/${anoLancamento}`);
+        console.log(`- Dias úteis no mês: ${diasUteis}`);
+        console.log(`- Valor dinâmico por KPI: R$ ${valorKpiDinamico}`);
         if (input.kpis_atingidos && input.kpis_atingidos.length > 0 && kpis && kpis.length > 0) {
             for (const kpiName of input.kpis_atingidos) {
                 const matchingKpi = kpis.find(k => k.nome_kpi === kpiName);
                 if (matchingKpi) {
-                    bonusKpis += parseFloat(matchingKpi.peso_kpi) || 0;
+                    // Usar valor dinâmico para Operador de Empilhadeira, valor fixo para outras funções
+                    const valorKpi = input.funcao === 'Operador de Empilhadeira' ? valorKpiDinamico : (parseFloat(matchingKpi.peso_kpi) || 0);
+                    bonusKpis += valorKpi;
                     kpisAtingidos.push(matchingKpi.nome_kpi);
-                    console.log(`Added KPI: ${matchingKpi.nome_kpi}, Weight: ${matchingKpi.peso_kpi}`);
+                    console.log(`Added KPI: ${matchingKpi.nome_kpi}, Weight: R$ ${valorKpi} (${input.funcao === 'Operador de Empilhadeira' ? 'dinâmico' : 'fixo'})`);
                 }
                 else {
                     console.log(`KPI not found: ${kpiName}`);
@@ -496,4 +537,4 @@ app.post('/api/calculator', zValidator('json', CalculatorInputSchema), async (c)
 app.get('/api/health', async (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-export default app;
+exports.default = app;

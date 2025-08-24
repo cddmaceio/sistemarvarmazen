@@ -20,5 +20,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/worker/**/*", "src/shared/**/*"]
+  "include": ["src/worker/**/*", "src/shared/**/*"],
+  "exclude": ["src/shared/utils/debug.ts"]
 }

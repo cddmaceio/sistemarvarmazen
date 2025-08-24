@@ -9,6 +9,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isCollaborator: boolean;
   userFunction: string;
+  userTurno: string | null;
   login: (cpf: string, dataNascimento: string) => Promise<void>;
   logout: () => void;
   updateUser: (data: Partial<UserType>) => Promise<void>;
@@ -122,6 +123,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isCollaborator = user?.tipo_usuario === 'colaborador';
   // Convert user function from DB format to UI format
   const userFunction = user?.funcao ? (FUNCAO_DB_TO_UI[user.funcao] || user.funcao) : '';
+  // Get user turno (NULL para administradores)
+  const userTurno = user?.turno || null;
 
   const authValue = {
     user,
@@ -129,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin,
     isCollaborator,
     userFunction,
+    userTurno,
     login,
     logout,
     updateUser

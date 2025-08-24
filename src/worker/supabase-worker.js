@@ -439,16 +439,60 @@ app.post('/api/calculator', zValidator('json', CalculatorInputSchema), async (c)
                 unidadeMedida = selectedActivity.unidade_medida;
             }
         }
+        // Função para calcular valor dinâmico dos KPIs baseado no mês
+        function calcularDiasUteisMes(year, month) {
+            const diasUteis = [];
+            const ultimoDia = new Date(year, month, 0).getDate();
+            
+            for (let dia = 1; dia <= ultimoDia; dia++) {
+                const data = new Date(year, month - 1, dia);
+                const diaSemana = data.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
+                
+                // Incluir segunda (1) a sábado (6), excluir domingo (0)
+                if (diaSemana >= 1 && diaSemana <= 6) {
+                    diasUteis.push(dia);
+                }
+            }
+            
+            return diasUteis.length;
+        }
+
+        function calcularValorKpiDinamico(year, month, orcamentoMensal = 150.00, maxKpisPorDia = 2) {
+            const diasUteis = calcularDiasUteisMes(year, month);
+            const totalKpisMes = diasUteis * maxKpisPorDia;
+            const valorPorKpi = orcamentoMensal / totalKpisMes;
+            
+            // Arredondar para 2 casas decimais
+            return Math.round(valorPorKpi * 100) / 100;
+        }
+
         // Handle KPIs with normalized data
         console.log("Processing KPIs:", input.kpis_atingidos);
         console.log("Available KPIs from query:", kpis);
+        
+        // Calcular valor dinâmico baseado no mês da data de lançamento
+        const dataLancamento = new Date(input.data_lancamento || new Date());
+        const anoLancamento = dataLancamento.getFullYear();
+        const mesLancamento = dataLancamento.getMonth() + 1;
+        
+        const valorKpiDinamico = calcularValorKpiDinamico(anoLancamento, mesLancamento);
+        const diasUteis = calcularDiasUteisMes(anoLancamento, mesLancamento);
+        
+        console.log('📅 Cálculo Dinâmico de KPIs:');
+        console.log(`- Data lançamento: ${input.data_lancamento}`);
+        console.log(`- Mês/Ano: ${mesLancamento}/${anoLancamento}`);
+        console.log(`- Dias úteis no mês: ${diasUteis}`);
+        console.log(`- Valor dinâmico por KPI: R$ ${valorKpiDinamico}`);
+        
         if (input.kpis_atingidos && input.kpis_atingidos.length > 0 && kpis && kpis.length > 0) {
             for (const kpiName of input.kpis_atingidos) {
                 const matchingKpi = kpis.find(k => k.nome_kpi === kpiName);
                 if (matchingKpi) {
-                    bonusKpis += parseFloat(matchingKpi.peso_kpi) || 0;
+                    // Usar valor dinâmico para Operador de Empilhadeira, valor fixo para outras funções
+                    const valorKpi = input.funcao === 'Operador de Empilhadeira' ? valorKpiDinamico : (parseFloat(matchingKpi.peso_kpi) || 0);
+                    bonusKpis += valorKpi;
                     kpisAtingidos.push(matchingKpi.nome_kpi);
-                    console.log(`Added KPI: ${matchingKpi.nome_kpi}, Weight: ${matchingKpi.peso_kpi}`);
+                    console.log(`Added KPI: ${matchingKpi.nome_kpi}, Weight: R$ ${valorKpi} (${input.funcao === 'Operador de Empilhadeira' ? 'dinâmico' : 'fixo'})`);
                 }
                 else {
                     console.log(`KPI not found: ${kpiName}`);

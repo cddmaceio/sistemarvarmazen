@@ -98,16 +98,32 @@ export default function Admin() {
   };
 
   const updateUser = async (id: number, userData: Partial<UserType>) => {
-    const response = await fetch(`/api/usuarios/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
-    });
-    if (response.ok) {
-      const updatedUser = await response.json();
-      setUsers(prev => prev.map(user => user.id === id ? updatedUser : user));
-    } else {
-      throw new Error('Failed to update user');
+    try {
+      console.log('Updating user:', { id, userData });
+      const response = await fetch(`/api/usuarios/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (response.ok) {
+        const updatedUser = await response.json();
+        console.log('User updated successfully:', updatedUser);
+        setUsers(prev => prev.map(user => user.id === id ? updatedUser : user));
+      } else {
+        const errorText = await response.text();
+        console.error('Update failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        throw new Error(`Failed to update user: ${response.status} - ${errorText}`);
+      }
+    } catch (error) {
+      console.error('Error in updateUser:', error);
+      throw error;
     }
   };
 

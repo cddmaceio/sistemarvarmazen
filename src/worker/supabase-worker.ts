@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema } from "../shared/types";
 import { cors } from 'hono/cors';
 import { createClient } from '@supabase/supabase-js';
+import { createApiLogger, createDbLogger } from './debug';
 
 // Supabase Environment type
 type Env = {
@@ -11,8 +12,25 @@ type Env = {
 };
 
 const app = new Hono<{ Bindings: Env }>();
+const apiLogger = createApiLogger();
+const dbLogger = createDbLogger();
 
 app.use('*', cors());
+
+// Middleware para log de todas as requisições
+app.use('*', async (c, next) => {
+  const startTime = Date.now();
+  const method = c.req.method;
+  const url = c.req.url;
+  
+  apiLogger.info(`${method} ${url} - Request started`);
+  
+  await next();
+  
+  const duration = Date.now() - startTime;
+  const status = c.res.status;
+  apiLogger.info(`${method} ${url} - Response ${status} (${duration}ms)`);
+});
 
 // Helper function to get Supabase client
 const getSupabase = (env: Env) => {
@@ -24,6 +42,8 @@ app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
   const supabase = getSupabase(c.env);
   const { cpf, data_nascimento } = c.req.valid('json');
   
+  apiLogger.debug('Login attempt', { cpf: cpf.substring(0, 3) + '***', data_nascimento });
+  
   const { data: user, error } = await supabase
     .from('usuarios')
     .select('*')
@@ -32,10 +52,17 @@ app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
     .eq('is_active', true)
     .single();
   
-  if (error || !user) {
+  if (error) {
+    dbLogger.error('Login database error', { error: error.message, code: error.code });
     return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
   }
   
+  if (!user) {
+    apiLogger.warn('Login failed - user not found', { cpf: cpf.substring(0, 3) + '***' });
+    return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
+  }
+  
+  apiLogger.info('Login successful', { userId: user.id, nome: user.nome });
   return c.json(user);
 });
 
@@ -46,13 +73,16 @@ app.post('/api/auth/logout', async (c) => {
 // User management endpoints
 app.get('/api/usuarios', async (c) => {
   const supabase = getSupabase(c.env);
+  
+  apiLogger.debug('Fetching all users');
+  
   const { data: users, error } = await supabase
     .from('usuarios')
     .select('*')
     .order('created_at', { ascending: false });
   
   if (error) {
-    console.error('Error fetching lancamentos:', {
+    dbLogger.error('Error fetching users', {
       message: error.message,
       details: error.details,
       hint: error.hint,
@@ -61,12 +91,19 @@ app.get('/api/usuarios', async (c) => {
     return c.json({ error: error.message }, 500);
   }
   
+  apiLogger.debug('Users fetched successfully', { count: users?.length || 0 });
   return c.json(users || []);
 });
 
 app.post('/api/usuarios', zValidator('json', UserSchema), async (c) => {
   const supabase = getSupabase(c.env);
   const data = c.req.valid('json');
+  
+  apiLogger.debug('Creating new user', { 
+    nome: data.nome, 
+    cpf: data.cpf?.substring(0, 3) + '***',
+    tipo_usuario: data.tipo_usuario 
+  });
   
   const { data: user, error } = await supabase
     .from('usuarios')
@@ -82,9 +119,15 @@ app.post('/api/usuarios', zValidator('json', UserSchema), async (c) => {
     .single();
   
   if (error) {
+    dbLogger.error('Error creating user', { 
+      error: error.message, 
+      code: error.code,
+      details: error.details 
+    });
     return c.json({ error: error.message }, 500);
   }
   
+  apiLogger.info('User created successfully', { userId: user.id, nome: user.nome });
   return c.json(user);
 });
 
@@ -93,10 +136,39 @@ app.put('/api/usuarios/:id', zValidator('json', UserSchema.partial()), async (c)
   const id = parseInt(c.req.param('id'));
   const data = c.req.valid('json');
   
+  apiLogger.debug('Updating user', { 
+    userId: id, 
+    fields: Object.keys(data)
+  });
+  
+  // Create a mutable copy of the data to clean
+  const dataToUpdate = { ...data } as any;
+
+  // List of fields that should be converted to null if they are empty strings
+  const fieldsToNullify = [
+    'data_admissao',
+    'data_nascimento',
+    'email',
+    'telefone',
+    'observacoes',
+  ];
+
+  fieldsToNullify.forEach((field) => {
+    if (dataToUpdate[field] === '') {
+      apiLogger.debug(`Field '${field}' is an empty string, converting to null.`, { userId: id });
+      dataToUpdate[field] = null;
+    }
+  });
+  
+  dbLogger.debug('Executing user update query with cleaned data', { 
+    userId: id, 
+    cleanData: { ...dataToUpdate, updated_at: 'ISO_STRING' } 
+  });
+  
   const { data: user, error } = await supabase
     .from('usuarios')
     .update({
-      ...data,
+      ...dataToUpdate,
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
@@ -104,9 +176,19 @@ app.put('/api/usuarios/:id', zValidator('json', UserSchema.partial()), async (c)
     .single();
   
   if (error) {
+    dbLogger.error('Error updating user', {
+      userId: id,
+      error: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      originalData: data,
+      cleanData: dataToUpdate
+    });
     return c.json({ error: error.message }, 500);
   }
   
+  apiLogger.info('User updated successfully', { userId: id, nome: user?.nome });
   return c.json(user);
 });
 
@@ -573,17 +655,60 @@ app.post('/api/calculator', zValidator('json', CalculatorInputSchema), async (c)
       }
     }
 
+    // Função para calcular valor dinâmico dos KPIs baseado no mês
+    function calcularDiasUteisMes(year: number, month: number): number {
+      const diasUteis = [];
+      const ultimoDia = new Date(year, month, 0).getDate();
+      
+      for (let dia = 1; dia <= ultimoDia; dia++) {
+        const data = new Date(year, month - 1, dia);
+        const diaSemana = data.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
+        
+        // Incluir segunda (1) a sábado (6), excluir domingo (0)
+        if (diaSemana >= 1 && diaSemana <= 6) {
+          diasUteis.push(dia);
+        }
+      }
+      
+      return diasUteis.length;
+    }
+
+    function calcularValorKpiDinamico(year: number, month: number, orcamentoMensal: number = 150.00, maxKpisPorDia: number = 2): number {
+      const diasUteis = calcularDiasUteisMes(year, month);
+      const totalKpisMes = diasUteis * maxKpisPorDia;
+      const valorPorKpi = orcamentoMensal / totalKpisMes;
+      
+      // Arredondar para 2 casas decimais
+      return Math.round(valorPorKpi * 100) / 100;
+    }
+
     // Handle KPIs with normalized data
     console.log("Processing KPIs:", input.kpis_atingidos);
     console.log("Available KPIs from query:", kpis);
+    
+    // Calcular valor dinâmico baseado no mês atual
+    const dataLancamento = new Date();
+    const anoLancamento = dataLancamento.getFullYear();
+    const mesLancamento = dataLancamento.getMonth() + 1;
+    
+    const valorKpiDinamico = calcularValorKpiDinamico(anoLancamento, mesLancamento);
+    const diasUteis = calcularDiasUteisMes(anoLancamento, mesLancamento);
+    
+    console.log('📅 Cálculo Dinâmico de KPIs:');
+    console.log(`- Data atual: ${dataLancamento.toISOString()}`);
+    console.log(`- Mês/Ano: ${mesLancamento}/${anoLancamento}`);
+    console.log(`- Dias úteis no mês: ${diasUteis}`);
+    console.log(`- Valor dinâmico por KPI: R$ ${valorKpiDinamico}`);
     
     if (input.kpis_atingidos && input.kpis_atingidos.length > 0 && kpis && kpis.length > 0) {
       for (const kpiName of input.kpis_atingidos) {
         const matchingKpi = kpis.find(k => k.nome_kpi === kpiName);
         if (matchingKpi) {
-          bonusKpis += parseFloat(matchingKpi.peso_kpi) || 0;
+          // Usar valor dinâmico para Operador de Empilhadeira, valor fixo para outras funções
+          const valorKpi = input.funcao === 'Operador de Empilhadeira' ? valorKpiDinamico : (parseFloat(matchingKpi.peso_kpi) || 0);
+          bonusKpis += valorKpi;
           kpisAtingidos.push(matchingKpi.nome_kpi);
-          console.log(`Added KPI: ${matchingKpi.nome_kpi}, Weight: ${matchingKpi.peso_kpi}`);
+          console.log(`Added KPI: ${matchingKpi.nome_kpi}, Weight: R$ ${valorKpi} (${input.funcao === 'Operador de Empilhadeira' ? 'dinâmico' : 'fixo'})`);
         } else {
           console.log(`KPI not found: ${kpiName}`);
         }

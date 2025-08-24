@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-08-24T17:26:43.153Z",
+  "action": "fix-operador-validation",
+  "description": "Adicionada validação para impedir multiple_activities em Operador de Empilhadeira",
+  "files_modified": [
+    "netlify/functions-build/api.js"
+  ],
+  "files_created": [
+    "test-operador-validation.js"
+  ],
+  "validation_added": {
+    "condition": "input.funcao === \"Operador de Empilhadeira\" && input.multiple_activities && input.multiple_activities.length > 0",
+    "response": "HTTP 400 - Error message explaining the issue",
+    "solution": "Use valid_tasks_count instead of multiple_activities for Operador de Empilhadeira"
+  }
+}

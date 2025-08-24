@@ -1,0 +1,211 @@
+{
+  "totalLancamentos": 12,
+  "totalHistorico": 21,
+  "inconsistencias": [
+    {
+      "id": 3,
+      "data": "2025-08-03",
+      "motivos": [
+        "❌ Operador apenas com KPIs, sem tarefas válidas (inconsistente)"
+      ],
+      "dados": {
+        "nome_atividade": null,
+        "multiple_activities": null,
+        "funcao": "Operador de Empilhadeira",
+        "kpis_atingidos": "[\"Pontualidade\", \"Produtividade\", \"Eficiência\"]",
+        "tarefas_validas": null,
+        "valor_tarefas": null,
+        "bonus_kpis": 9,
+        "subtotal_atividades": null
+      }
+    },
+    {
+      "id": 4,
+      "data": "2025-08-04",
+      "motivos": [
+        "❌ Operador de Empilhadeira com multiple_activities (deveria ser Ajudante)",
+        "❌ Operador com atividade específica mas sem tarefas válidas",
+        "❌ Operador apenas com KPIs, sem tarefas válidas (inconsistente)"
+      ],
+      "dados": {
+        "nome_atividade": "Limpeza e Organização",
+        "multiple_activities": [
+          {
+            "nome_atividade": "Limpeza e Organização",
+            "valor": 12
+          }
+        ],
+        "funcao": "Operador de Empilhadeira",
+        "kpis_atingidos": "[\"Pontualidade\"]",
+        "tarefas_validas": null,
+        "valor_tarefas": null,
+        "bonus_kpis": 3,
+        "subtotal_atividades": 12
+      }
+    }
+  ],
+  "totais": {
+    "kpis": 28,
+    "bonusKpis": 84,
+    "tarefasValidas": 975,
+    "valorTarefas": 487.5
+  },
+  "historicoCompleto": [
+    {
+      "data": "11/08/2025",
+      "valor": 14.8,
+      "atividade": "Tarefas Válidas",
+      "turno": "Tarde",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 12",
+      "kpis_atingidos": "[\"Pontualidade\"]",
+      "tarefas_validas": 48,
+      "valor_tarefas": 24,
+      "bonus_kpis": 3,
+      "subtotal_atividades": 27
+    },
+    {
+      "data": "11/08/2025",
+      "valor": 3,
+      "atividade": "KPIs Atingidos",
+      "turno": "Tarde",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 12",
+      "kpis_atingidos": "[\"Pontualidade\"]",
+      "tarefas_validas": 48,
+      "valor_tarefas": 24,
+      "bonus_kpis": 3,
+      "subtotal_atividades": 27
+    },
+    {
+      "data": "10/08/2025",
+      "valor": 15.75,
+      "atividade": "Tarefas Válidas",
+      "turno": "Manhã",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 11",
+      "kpis_atingidos": "[\"Produtividade\"]",
+      "tarefas_validas": 52,
+      "valor_tarefas": 26,
+      "bonus_kpis": 3,
+      "subtotal_atividades": 29
+    },
+    {
+      "data": "10/08/2025",
+      "valor": 3,
+      "atividade": "KPIs Atingidos",
+      "turno": "Manhã",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 11",
+      "kpis_atingidos": "[\"Produtividade\"]",
+      "tarefas_validas": 52,
+      "valor_tarefas": 26,
+      "bonus_kpis": 3,
+      "subtotal_atividades": 29
+    },
+    {
+      "data": "09/08/2025",
+      "valor": 19.5,
+      "atividade": "Tarefas Válidas",
+      "turno": "Tarde",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 10",
+      "kpis_atingidos": "[\"Eficiência\"]",
+      "tarefas_validas": 65,
+      "valor_tarefas": 32.5,
+      "bonus_kpis": 3,
+      "subtotal_atividades": 35.5
+    },
+    {
+      "data": "09/08/2025",
+      "valor": 3,
+      "atividade": "KPIs Atingidos",
+      "turno": "Tarde",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 10",
+      "kpis_atingidos": "[\"Eficiência\"]",
+      "tarefas_validas": 65,
+      "valor_tarefas": 32.5,
+      "bonus_kpis": 3,
+      "subtotal_atividades": 35.5
+    },
+    {
+      "data": "08/08/2025",
+      "valor": 17.25,
+      "atividade": "Tarefas Válidas",
+      "turno": "Manhã",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 9",
+      "kpis_atingidos": "[\"Pontualidade\", \"Produtividade\"]",
+      "tarefas_validas": 50,
+      "valor_tarefas": 25,
+      "bonus_kpis": 6,
+      "subtotal_atividades": 31
+    },
+    {
+      "data": "08/08/2025",
+      "valor": 6,
+      "atividade": "KPIs Atingidos",
+      "turno": "Manhã",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 9",
+      "kpis_atingidos": "[\"Pontualidade\", \"Produtividade\"]",
+      "tarefas_validas": 50,
+      "valor_tarefas": 25,
+      "bonus_kpis": 6,
+      "subtotal_atividades": 31
+    },
+    {
+      "data": "07/08/2025",
+      "valor": 13.5,
+      "atividade": "Tarefas Válidas",
+      "turno": "Tarde",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 8",
+      "kpis_atingidos": "[]",
+      "tarefas_validas": 45,
+      "valor_tarefas": 22.5,
+      "bonus_kpis": 0,
+      "subtotal_atividades": 22.5
+    },
+    {
+      "data": "06/08/2025",
+      "valor": 16.8,
+      "atividade": "Tarefas Válidas",
+      "turno": "Manhã",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 7",
+      "kpis_atingidos": "[\"Eficiência\", \"Produtividade\"]",
+      "tarefas_validas": 55,
+      "valor_tarefas": 27.5,
+      "bonus_kpis": 6,
+      "subtotal_atividades": 33.5
+    },
+    {
+      "data": "06/08/2025",
+      "valor": 6,
+      "atividade": "KPIs Atingidos",
+      "turno": "Manhã",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 7",
+      "kpis_atingidos": "[\"Eficiência\", \"Produtividade\"]",
+      "tarefas_validas": 55,
+      "valor_tarefas": 27.5,
+      "bonus_kpis": 6,
+      "subtotal_atividades": 33.5
+    },
+    {
+      "data": "05/08/2025",
+      "valor": 14.2,
+      "atividade": "Tarefas Válidas",
+      "turno": "Tarde",
+      "aprovadoPor": "Admin",
+      "origem": "Lançamento 6",
+      "kpis_atingidos": "[\"Pontualidade\"]",
+      "tarefas_validas": 45,
+      "valor_tarefas": 22.5,
+      "bonus_kpis": 3,
+      "subtotal_atividades": 25.5
+    }
+  ]
+}

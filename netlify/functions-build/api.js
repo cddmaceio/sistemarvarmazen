@@ -863,6 +863,45 @@ exports.handler = async (event, context) => {
       }
     }
 
+    // Lançamentos todos endpoint (includes all statuses)
+    if (apiPath === '/lancamentos/todos') {
+      if (method === 'GET') {
+        const userId = queryParams.user_id;
+        
+        let query = supabase
+          .from('lancamentos_produtividade')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (userId) {
+          query = query.eq('user_id', parseInt(userId));
+        }
+        
+        const { data: lancamentos, error } = await query;
+        
+        if (error) {
+          console.error('Error fetching all lancamentos:', error);
+          return {
+            statusCode: 500,
+            headers: { 
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({ error: error.message })
+          };
+        }
+        
+        return {
+          statusCode: 200,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          },
+          body: JSON.stringify(lancamentos || [])
+        };
+      }
+    }
+
     // Lançamentos validation endpoint
     if (apiPath.startsWith('/lancamentos/') && apiPath.endsWith('/validar')) {
       if (method === 'POST') {

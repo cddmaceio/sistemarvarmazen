@@ -1,0 +1,52 @@
+{
+  "totalLancamentos": 12,
+  "totalHistorico": 20,
+  "inconsistencias": [
+    {
+      "id": 3,
+      "data": "2025-08-03",
+      "motivos": [
+        "Operador apenas com KPIs, sem tarefas válidas"
+      ],
+      "dados": {
+        "nome_atividade": "",
+        "multiple_activities": null,
+        "funcao": "Operador de Empilhadeira",
+        "kpis_atingidos": "[\"Pontualidade\", \"Produtividade\", \"Eficiência\"]",
+        "tarefas_validas": 0,
+        "valor_tarefas": 0,
+        "bonus_kpis": 9,
+        "subtotal_atividades": 0
+      }
+    },
+    {
+      "id": 4,
+      "data": "2025-08-04",
+      "motivos": [
+        "Operador de Empilhadeira com multiple_activities (típico de Ajudante)",
+        "Operador com atividade específica mas sem tarefas válidas",
+        "Operador apenas com KPIs, sem tarefas válidas"
+      ],
+      "dados": {
+        "nome_atividade": "Limpeza e Organização",
+        "multiple_activities": [
+          {
+            "nome_atividade": "Limpeza e Organização",
+            "valor": 12
+          },
+          {
+            "nome_atividade": "Organização de Estoque",
+            "valor": 3
+          }
+        ],
+        "funcao": "Operador de Empilhadeira",
+        "kpis_atingidos": "[\"Pontualidade\"]",
+        "tarefas_validas": 0,
+        "valor_tarefas": 0,
+        "bonus_kpis": 3,
+        "subtotal_atividades": 12
+      }
+    }
+  ],
+  "lancamentosSemHistorico": []
+}

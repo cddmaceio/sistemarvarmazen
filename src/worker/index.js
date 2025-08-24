@@ -450,6 +450,13 @@ app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (
             }, 400);
         }
     }
+    // Para lançamentos pendentes, armazenar dados da calculadora mas não calcular valor final
+    const status = 'pendente';
+    const remuneracaoFinal = status === 'pendente' ? 0 : calculator_result.remuneracao_total;
+    const subtotalFinal = status === 'pendente' ? 0 : calculator_result.subtotal_atividades;
+    const bonusFinal = status === 'pendente' ? 0 : calculator_result.bonus_kpis;
+    const valorTarefasFinal = status === 'pendente' ? 0 : (calculator_result.valor_tarefas || 0);
+    
     const result = await db.prepare(`
     INSERT INTO lancamentos_produtividade (
       user_id, user_nome, user_cpf, data_lancamento, funcao, turno,
@@ -460,7 +467,7 @@ app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (
       atividades_detalhes, tarefas_validas, valor_tarefas,
       status, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `).bind(currentUser.id, currentUser.nome, currentUser.cpf, data_lancamento, calculator_data.funcao, calculator_data.turno, calculator_data.nome_atividade || null, calculator_data.quantidade_produzida || null, calculator_data.tempo_horas || null, calculator_data.input_adicional || 0, calculator_data.multiple_activities ? JSON.stringify(calculator_data.multiple_activities) : null, calculator_data.nome_operador || null, calculator_data.valid_tasks_count || null, calculator_data.kpis_atingidos ? JSON.stringify(calculator_data.kpis_atingidos) : null, calculator_result.subtotal_atividades, calculator_result.bonus_kpis, calculator_result.remuneracao_total, calculator_result.produtividade_alcancada || null, calculator_result.nivel_atingido || null, calculator_result.unidade_medida || null, calculator_result.atividades_detalhes ? JSON.stringify(calculator_result.atividades_detalhes) : null, calculator_result.tarefas_validas || null, calculator_result.valor_tarefas || null, 'pendente').run();
+  `).bind(currentUser.id, currentUser.nome, currentUser.cpf, data_lancamento, calculator_data.funcao, calculator_data.turno, calculator_data.nome_atividade || null, calculator_data.quantidade_produzida || null, calculator_data.tempo_horas || null, calculator_data.input_adicional || 0, calculator_data.multiple_activities ? JSON.stringify(calculator_data.multiple_activities) : null, calculator_data.nome_operador || null, calculator_data.valid_tasks_count || null, calculator_data.kpis_atingidos ? JSON.stringify(calculator_data.kpis_atingidos) : null, subtotalFinal, bonusFinal, remuneracaoFinal, calculator_result.produtividade_alcancada || null, calculator_result.nivel_atingido || null, calculator_result.unidade_medida || null, calculator_result.atividades_detalhes ? JSON.stringify(calculator_result.atividades_detalhes) : null, calculator_result.tarefas_validas || null, valorTarefasFinal, status).run();
     if (result.success) {
         const lancamento = await db.prepare('SELECT * FROM lancamentos_produtividade WHERE id = ?').bind(result.meta.last_row_id).first();
         return c.json(lancamento);
@@ -470,12 +477,44 @@ app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (
 app.get('/api/lancamentos', async (c) => {
     const db = c.env.DB;
     const status = c.req.query('status');
+    const user_id = c.req.query('user_id');
+    
     let query = 'SELECT * FROM lancamentos_produtividade';
     let params = [];
+    let whereConditions = [];
+    
     if (status) {
-        query += ' WHERE status = ?';
+        whereConditions.push('status = ?');
         params.push(status);
     }
+    
+    if (user_id) {
+        whereConditions.push('user_id = ?');
+        params.push(user_id);
+    }
+    
+    if (whereConditions.length > 0) {
+        query += ' WHERE ' + whereConditions.join(' AND ');
+    }
+    
+    query += ' ORDER BY created_at DESC';
+    const lancamentos = await db.prepare(query).bind(...params).all();
+    return c.json(lancamentos.results);
+});
+
+// Nova rota para buscar todos os lançamentos (incluindo pendentes/reprovados)
+app.get('/api/lancamentos/todos', async (c) => {
+    const db = c.env.DB;
+    const user_id = c.req.query('user_id');
+    
+    let query = 'SELECT * FROM lancamentos_produtividade';
+    let params = [];
+    
+    if (user_id) {
+        query += ' WHERE user_id = ?';
+        params.push(user_id);
+    }
+    
     query += ' ORDER BY created_at DESC';
     const lancamentos = await db.prepare(query).bind(...params).all();
     return c.json(lancamentos.results);
@@ -646,7 +685,8 @@ app.post('/api/lancamentos/:id/validar', zValidator('json', AdminValidationSchem
                 console.log('New Status:', newStatus);
                 console.log('Admin User ID:', adminUser.id);
                 console.log('Observacoes:', observacoes);
-                const updateData = {
+                
+                let updateData = {
                     status: newStatus,
                     observacoes: observacoes || null,
                     aprovado_por: adminUser.id,
@@ -654,6 +694,66 @@ app.post('/api/lancamentos/:id/validar', zValidator('json', AdminValidationSchem
                     data_aprovacao: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 };
+                
+                // Se for aprovação, recalcular os valores finais
+                if (newStatus === 'aprovado') {
+                    try {
+                        // Reconstituir dados da calculadora a partir do lançamento
+                        const calculatorData = {
+                            funcao: originalLancamento.funcao,
+                            turno: originalLancamento.turno,
+                            nome_atividade: originalLancamento.nome_atividade,
+                            quantidade_produzida: originalLancamento.quantidade_produzida,
+                            tempo_horas: originalLancamento.tempo_horas,
+                            input_adicional: originalLancamento.input_adicional || 0,
+                            multiple_activities: originalLancamento.multiple_activities ? JSON.parse(originalLancamento.multiple_activities) : null,
+                            nome_operador: originalLancamento.nome_operador,
+                            valid_tasks_count: originalLancamento.valid_tasks_count,
+                            kpis_atingidos: originalLancamento.kpis_atingidos ? JSON.parse(originalLancamento.kpis_atingidos) : []
+                        };
+                        
+                        // Recalcular valores
+                        const calcResponse = await fetch(`${c.req.url.split('/api')[0]}/api/calculate`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(calculatorData),
+                        });
+                        
+                        if (calcResponse.ok) {
+                            const responseText = await calcResponse.text();
+                            try {
+                                const calculatedResult = JSON.parse(responseText);
+                                
+                                // Adicionar valores calculados ao updateData
+                                updateData.subtotal_atividades = calculatedResult.subtotal_atividades;
+                                updateData.bonus_kpis = calculatedResult.bonus_kpis;
+                                updateData.remuneracao_total = calculatedResult.remuneracao_total;
+                                updateData.produtividade_alcancada = calculatedResult.produtividade_alcancada || null;
+                                updateData.nivel_atingido = calculatedResult.nivel_atingido || null;
+                                updateData.unidade_medida = calculatedResult.unidade_medida || null;
+                                updateData.atividades_detalhes = calculatedResult.atividades_detalhes ? JSON.stringify(calculatedResult.atividades_detalhes) : null;
+                                updateData.tarefas_validas = calculatedResult.tarefas_validas || null;
+                                updateData.valor_tarefas = calculatedResult.valor_tarefas || null;
+                                
+                                console.log('Valores recalculados para aprovação:', {
+                                    subtotal_atividades: calculatedResult.subtotal_atividades,
+                                    bonus_kpis: calculatedResult.bonus_kpis,
+                                    remuneracao_total: calculatedResult.remuneracao_total
+                                });
+                            } catch (parseError) {
+                                console.error('Error parsing calculation response:', responseText);
+                                return c.json({ error: 'Erro ao processar cálculo na aprovação' }, 500);
+                            }
+                        } else {
+                            console.error('Calculation request failed:', calcResponse.status);
+                            return c.json({ error: 'Erro na requisição de cálculo para aprovação' }, 500);
+                        }
+                    } catch (fetchError) {
+                        console.error('Error fetching calculation for approval:', fetchError);
+                        return c.json({ error: 'Erro ao conectar com o serviço de cálculo para aprovação' }, 500);
+                    }
+                }
+                
                 console.log('Update Data:', updateData);
                 const { data: updateResult, error: updateError } = await supabase
                     .from('lancamentos_produtividade')

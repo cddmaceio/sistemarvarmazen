@@ -78,20 +78,28 @@ export default function Dashboard() {
       setLoading(true);
       
       // Buscar dados dos lançamentos aprovados
-      const response = await fetch('/api/lancamentos');
+      const response = await fetch('/api/lancamentos?status=aprovado');
       if (!response.ok) throw new Error('Falha ao carregar dados');
       
       const historico = await response.json();
       
       // Filtrar por usuário e mês atual - apenas para colaboradores
-      const dadosUsuario = isCollaborator ? historico.filter((item: any) => 
-        item.user_cpf === user?.cpf &&
-        new Date(item.data_lancamento).getMonth() === mesAtual.getMonth() &&
-        new Date(item.data_lancamento).getFullYear() === mesAtual.getFullYear()
-      ) : historico.filter((item: any) => 
-        new Date(item.data_lancamento).getMonth() === mesAtual.getMonth() &&
-        new Date(item.data_lancamento).getFullYear() === mesAtual.getFullYear()
-      );
+      const dadosUsuario = isCollaborator ? historico.filter((item: any) => {
+        // Usar a mesma lógica da formatDateSafe para evitar problemas de timezone
+        const dateOnly = item.data_lancamento.split('T')[0];
+        const [year, month, day] = dateOnly.split('-');
+        const dataLancamento = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return item.user_cpf === user?.cpf &&
+               dataLancamento.getMonth() === mesAtual.getMonth() &&
+               dataLancamento.getFullYear() === mesAtual.getFullYear();
+      }) : historico.filter((item: any) => {
+        // Usar a mesma lógica da formatDateSafe para evitar problemas de timezone
+        const dateOnly = item.data_lancamento.split('T')[0];
+        const [year, month, day] = dateOnly.split('-');
+        const dataLancamento = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return dataLancamento.getMonth() === mesAtual.getMonth() &&
+               dataLancamento.getFullYear() === mesAtual.getFullYear();
+      });
 
       if (dadosUsuario.length === 0) {
         setDashboardData(generateMockData());
@@ -310,7 +318,11 @@ export default function Dashboard() {
     const ganhosPorDia = Array.from({ length: diasDoMes }, (_, i) => ({ dia: i + 1, valor: 0 }));
     
     dados.forEach(item => {
-      const dia = new Date(item.data_lancamento).getDate();
+      // Usar a mesma lógica da formatDateSafe para evitar problemas de timezone
+      const dateOnly = item.data_lancamento.split('T')[0];
+      const [year, month, day] = dateOnly.split('-');
+      const dataLancamento = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const dia = dataLancamento.getDate();
       ganhosPorDia[dia - 1].valor += item.remuneracao_total;
     });
     

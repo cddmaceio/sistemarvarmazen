@@ -122,7 +122,12 @@ app.put('/api/usuarios/:id', zValidator('json', UserSchema.partial()), async (c)
   const id = parseInt(c.req.param('id'));
   const data = c.req.valid('json');
   
+  console.log('=== PUT /api/usuarios/:id DEBUG ===');
+  console.log('User ID:', id);
+  console.log('Raw payload:', JSON.stringify(data, null, 2));
+  
   if (isNaN(id)) {
+    console.log('ERROR: Invalid user ID');
     return c.json({ error: 'Invalid user ID' }, 400);
   }
   
@@ -131,29 +136,48 @@ app.put('/api/usuarios/:id', zValidator('json', UserSchema.partial()), async (c)
     Object.entries(data).filter(([_, value]) => value !== undefined)
   );
   
+  console.log('Cleaned update data:', JSON.stringify(updateData, null, 2));
+  
   if (Object.keys(updateData).length === 0) {
+    console.log('ERROR: No fields to update');
     return c.json({ error: 'No fields to update' }, 400);
   }
   
+  // Add updated_at timestamp
+  const finalUpdateData = {
+    ...updateData,
+    updated_at: new Date().toISOString()
+  };
+  
+  console.log('Final update data with timestamp:', JSON.stringify(finalUpdateData, null, 2));
+  
   try {
+    console.log('Calling Supabase update...');
     const { data: user, error } = await supabase
       .from('usuarios')
-      .update(updateData)
+      .update(finalUpdateData)
       .eq('id', id)
       .select()
       .single();
     
     if (error) {
-      console.error('Error updating user:', error);
+      console.error('Supabase error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
       if (error.code === 'PGRST116') {
         return c.json({ error: 'User not found' }, 404);
       }
       return c.json({ error: 'Erro ao atualizar usuário' }, 500);
     }
     
+    console.log('User updated successfully:', JSON.stringify(user, null, 2));
     return c.json(user);
   } catch (error) {
-    console.error('Error updating user:', error);
+    console.error('Catch block error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return c.json({ error: 'Erro interno do servidor' }, 500);
   }
 });
@@ -638,6 +662,33 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
       unidade_medida = selectedActivity.unidade_medida;
     }
     
+    // Função para calcular valor dinâmico dos KPIs baseado no mês
+    function calcularDiasUteisMes(year: number, month: number): number {
+      const diasUteis = [];
+      const ultimoDia = new Date(year, month, 0).getDate();
+      
+      for (let dia = 1; dia <= ultimoDia; dia++) {
+        const data = new Date(year, month - 1, dia);
+        const diaSemana = data.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
+        
+        // Incluir segunda (1) a sábado (6), excluir domingo (0)
+        if (diaSemana >= 1 && diaSemana <= 6) {
+          diasUteis.push(dia);
+        }
+      }
+      
+      return diasUteis.length;
+    }
+
+    function calcularValorKpiDinamico(year: number, month: number, orcamentoMensal: number = 150.00, maxKpisPorDia: number = 2): number {
+      const diasUteis = calcularDiasUteisMes(year, month);
+      const totalKpisMes = diasUteis * maxKpisPorDia;
+      const valorPorKpi = orcamentoMensal / totalKpisMes;
+      
+      // Arredondar para 2 casas decimais
+      return Math.round(valorPorKpi * 100) / 100;
+    }
+
     // Get applicable KPIs and calculate bonus
     let bonus_kpis = 0;
     const kpis_atingidos_resultado: string[] = [];
@@ -648,6 +699,20 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
     console.log('- turno:', turno);
     
     if (kpis_atingidos && kpis_atingidos.length > 0) {
+      // Calcular valor dinâmico baseado no mês atual
+      const dataLancamento = new Date();
+      const anoLancamento = dataLancamento.getFullYear();
+      const mesLancamento = dataLancamento.getMonth() + 1;
+      
+      const valorKpiDinamico = calcularValorKpiDinamico(anoLancamento, mesLancamento);
+      const diasUteis = calcularDiasUteisMes(anoLancamento, mesLancamento);
+      
+      console.log('📅 Cálculo Dinâmico de KPIs:');
+      console.log(`- Data atual: ${dataLancamento.toISOString()}`);
+      console.log(`- Mês/Ano: ${mesLancamento}/${anoLancamento}`);
+      console.log(`- Dias úteis no mês: ${diasUteis}`);
+      console.log(`- Valor dinâmico por KPI: R$ ${valorKpiDinamico}`);
+      
       const { data: kpis, error: kpisError } = await supabase
         .from('kpis')
         .select('*')
@@ -667,8 +732,10 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
       
       if (kpis) {
         for (const kpi of kpis) {
-          console.log(`💰 Adding KPI: ${kpi.nome_kpi}, Weight: ${kpi.peso_kpi}`);
-          bonus_kpis += kpi.peso_kpi;
+          // Usar valor dinâmico em vez do valor fixo do banco
+          const valorKpi = funcao === 'Operador de Empilhadeira' ? valorKpiDinamico : kpi.peso_kpi;
+          console.log(`💰 Adding KPI: ${kpi.nome_kpi}, Weight: R$ ${valorKpi} (${funcao === 'Operador de Empilhadeira' ? 'dinâmico' : 'fixo'})`);
+          bonus_kpis += valorKpi;
           kpis_atingidos_resultado.push(kpi.nome_kpi);
         }
       }
@@ -683,10 +750,10 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
     const remuneracao_total = subtotal_atividades + bonus_kpis + atividades_extras;
     
     const result: any = {
-      subtotal_atividades,
-      bonus_kpis,
-      remuneracao_total,
-      kpis_atingidos: kpis_atingidos_resultado,
+      subtotalAtividades: subtotal_atividades,
+      bonusKpis: bonus_kpis,
+      remuneracaoTotal: remuneracao_total,
+      kpisAtingidos: kpis_atingidos_resultado,
     };
 
     // Add optional fields only if they exist

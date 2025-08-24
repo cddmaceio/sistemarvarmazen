@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/react-app/components/Alert';
 import { useAuth } from '@/react-app/hooks/useAuth';
 import { useAvailableKPIs, useKPILimit, useCalculator } from '@/react-app/hooks/useApi';
 import { CalculatorInputType } from '@/shared/types';
-import { FUNCOES_UI_FORMAT, TURNOS_UI_FORMAT } from '@/shared/utils/encoding';
+import { FUNCOES_UI_FORMAT } from '@/shared/utils/encoding';
 
 interface KPICalculatorFormProps {
   onCalculate: (input: CalculatorInputType, result: any) => void;
@@ -16,14 +16,14 @@ interface KPICalculatorFormProps {
 }
 
 export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculatorFormProps) {
-  const { user, userFunction } = useAuth();
+  const { user, userFunction, userTurno, isAdmin } = useAuth();
   const { kpis: availableKPIs, loading: kpisLoading, fetchAvailableKPIs } = useAvailableKPIs();
   const { checkLimit } = useKPILimit();
   const { calculate, loading: calculating, error: calcError, reset, lastCalculationSuccess } = useCalculator();
   
   const [formData, setFormData] = useState<CalculatorInputType>({
     funcao: userFunction || 'Ajudante de Armazém',
-    turno: 'Manhã' as 'Manhã' | 'Tarde' | 'Noite',
+    turno: (userTurno as 'Manhã' | 'Tarde' | 'Noite') || 'Manhã',
     kpis_atingidos: []
   });
   
@@ -36,7 +36,7 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
 
   const funcoes = FUNCOES_UI_FORMAT;
 
-  const turnos: ('Manhã' | 'Tarde' | 'Noite')[] = TURNOS_UI_FORMAT.filter(t => t !== 'Geral') as ('Manhã' | 'Tarde' | 'Noite')[];
+  // Turnos disponíveis (removido variável não utilizada)
 
   // Check if user has a function defined
   useEffect(() => {
@@ -47,11 +47,15 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
       setShowFunctionSelector(false);
     }
     
-    // Always update form data with userFunction
+    // Always update form data with userFunction and userTurno
     if (userFunction) {
       setFormData(prev => ({ ...prev, funcao: userFunction }));
     }
-  }, [user, userFunction]);
+    // Apenas atualizar turno se não for administrador e tiver turno definido
+    if (userTurno && !isAdmin) {
+      setFormData(prev => ({ ...prev, turno: userTurno as 'Manhã' | 'Tarde' | 'Noite' }));
+    }
+  }, [user, userFunction, userTurno]);
 
   // Load available KPIs when function or shift changes
   useEffect(() => {
@@ -250,22 +254,23 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
             </div>
           )}
 
-          {/* Shift Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center space-x-2">
-              <Clock className="h-4 w-4" />
-              <span>Turno</span>
-            </label>
-            <Select
-              value={formData.turno}
-              onChange={(e) => setFormData(prev => ({ ...prev, turno: e.target.value as any }))}
-              disabled={disabled}
-            >
-              {turnos.map(turno => (
-                <option key={turno} value={turno}>{turno}</option>
-              ))}
-            </Select>
-          </div>
+          {/* Shift Selection - Fixed based on user's registered shift */}
+          {!isAdmin ? (
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center space-x-2 text-green-800">
+                <Clock className="h-4 w-4" />
+                <span className="font-medium">Turno: {formData.turno}</span>
+                <span className="text-sm opacity-75">(baseado no seu cadastro)</span>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center space-x-2 text-gray-600">
+                <Clock className="h-4 w-4" />
+                <span className="font-medium">Administrador - Sem turno específico</span>
+              </div>
+            </div>
+          )}
 
           {/* Available KPIs */}
           <div className="space-y-2">

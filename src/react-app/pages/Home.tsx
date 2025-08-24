@@ -18,7 +18,7 @@ import { FUNCAO_DB_TO_UI } from '@/shared/utils/encoding';
 
 
 export default function Home() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, userTurno } = useAuth();
   const { activityNames, loading: activityNamesLoading } = useActivityNames();
   const { functions } = useFunctions();
   const { result, loading: calculating, error, calculate } = useCalculator();
@@ -55,6 +55,14 @@ export default function Home() {
       }));
     }
   }, [user?.funcao]);
+
+  // Set user's turno automatically when user is loaded
+  useEffect(() => {
+    // Apenas atualizar turno se não for administrador e tiver turno definido
+    if (userTurno && !isAdmin) {
+      setFormData(prev => ({ ...prev, turno: userTurno as 'Manhã' | 'Tarde' | 'Noite' }));
+    }
+  }, [userTurno, isAdmin]);
 
   // Capturar parâmetro de data da URL e preencher automaticamente
   useEffect(() => {
@@ -462,17 +470,27 @@ export default function Home() {
                       <p className="text-xs text-gray-500">🔒 Função travada baseada no seu perfil de usuário</p>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Turno</label>
-                      <Select
-                        value={formData.turno}
-                        onChange={(e) => handleInputChange('turno', e.target.value as any)}
-                      >
-                        <option value="Manhã">Manhã</option>
-                        <option value="Tarde">Tarde</option>
-                        <option value="Noite">Noite</option>
-                      </Select>
-                    </div>
+                    {/* Turno - Fixed based on user's registered shift */}
+                    {!isAdmin ? (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Turno</label>
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="flex items-center space-x-2 text-green-800">
+                            <span className="font-medium">Turno: {formData.turno}</span>
+                            <span className="text-sm opacity-75">(baseado no seu cadastro)</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Turno</label>
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center space-x-2 text-gray-600">
+                            <span className="font-medium">Administrador - Sem turno específico</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Multiple Activities for Ajudantes de Armazém */}
@@ -611,6 +629,9 @@ export default function Home() {
                           nome_operador: data.nome_operador,
                           valid_tasks_count: data.valid_tasks_count
                         }));
+                        
+                        // Atualizar o estado validTasksCount
+                        setValidTasksCount(data.valid_tasks_count);
                         
                         // Calcular automaticamente a produtividade
                         const calculatorData: CalculatorInputType = {
