@@ -193,7 +193,7 @@ export default function Home() {
       if (!response.ok) return true; // If check fails, allow the attempt
       
       const data = await response.json();
-      return data.can_launch;
+      return data.canLaunch;
     } catch (err) {
       console.error('Erro ao verificar limite de KPIs:', err);
       return true; // If check fails, allow the attempt
