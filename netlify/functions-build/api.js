@@ -120,8 +120,8 @@ exports.handler = async (event, context) => {
         try {
           console.log('POST /lancamentos - Received body:', JSON.stringify(body, null, 2));
           
-          // Validate required fields
-          if (!body.user_id || !body.data_lancamento || !body.funcao || !body.turno || !body.user_nome || !body.user_cpf) {
+          // Validate required fields for new format
+          if (!body.user_id || !body.data_lancamento || !body.calculator_data || !body.calculator_result) {
             return {
               statusCode: 400,
               headers: { 
@@ -129,23 +129,66 @@ exports.handler = async (event, context) => {
                 'Access-Control-Allow-Origin': '*'
               },
               body: JSON.stringify({ 
-                error: 'user_id, data_lancamento, funcao, turno, user_nome e user_cpf são obrigatórios',
+                error: 'user_id, data_lancamento, calculator_data e calculator_result são obrigatórios',
                 missing_fields: {
                   user_id: !body.user_id,
                   data_lancamento: !body.data_lancamento,
-                  funcao: !body.funcao,
-                  turno: !body.turno,
-                  user_nome: !body.user_nome,
-                  user_cpf: !body.user_cpf
+                  calculator_data: !body.calculator_data,
+                  calculator_result: !body.calculator_result
                 }
               })
             };
           }
           
-          // Ensure user_id is an integer
+          // Get user information
+          const { data: userData, error: userError } = await supabase
+            .from('usuarios')
+            .select('nome, cpf, funcao')
+            .eq('id', parseInt(body.user_id))
+            .single();
+            
+          if (userError || !userData) {
+            console.error('Error fetching user data:', userError);
+            return {
+              statusCode: 400,
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              },
+              body: JSON.stringify({ error: 'Usuário não encontrado' })
+            };
+          }
+          
+          // Extract data from calculator_data and calculator_result
+          const calculatorData = body.calculator_data;
+          const calculatorResult = body.calculator_result;
+          
+          // Build the complete lancamento data
           const lancamentoData = {
-            ...body,
             user_id: parseInt(body.user_id),
+            user_nome: userData.nome,
+            user_cpf: userData.cpf,
+            data_lancamento: body.data_lancamento,
+            funcao: calculatorData.funcao || userData.funcao,
+            turno: calculatorData.turno,
+            nome_atividade: calculatorData.nome_atividade || null,
+            quantidade_produzida: calculatorData.quantidade_produzida || null,
+            tempo_horas: calculatorData.tempo_horas || null,
+            input_adicional: calculatorData.input_adicional || 0,
+            multiple_activities: calculatorData.multiple_activities ? JSON.stringify(calculatorData.multiple_activities) : null,
+            nome_operador: calculatorData.nome_operador || null,
+            valid_tasks_count: calculatorData.valid_tasks_count || null,
+            kpis_atingidos: calculatorResult.kpisAtingidos ? JSON.stringify(calculatorResult.kpisAtingidos) : null,
+            subtotal_atividades: calculatorResult.subtotalAtividades,
+            bonus_kpis: calculatorResult.bonusKpis,
+            remuneracao_total: calculatorResult.remuneracaoTotal,
+            produtividade_alcancada: calculatorResult.produtividade_alcancada || null,
+            nivel_atingido: calculatorResult.nivel_atingido || null,
+            unidade_medida: calculatorResult.unidade_medida || null,
+            atividades_detalhes: calculatorResult.atividades_detalhes ? JSON.stringify(calculatorResult.atividades_detalhes) : null,
+            tarefas_validas: calculatorResult.tarefas_validas || null,
+            valor_tarefas: calculatorResult.valor_tarefas || null,
+            status: 'pendente',
             created_at: new Date().toISOString()
           };
           
@@ -352,7 +395,9 @@ exports.handler = async (event, context) => {
     // KPI check limit endpoint
     if (apiPath === '/kpis/check-limit') {
       if (method === 'GET' || method === 'POST') {
-        const { user_id, date } = method === 'GET' ? queryParams : body;
+        const params = method === 'GET' ? queryParams : body;
+        const user_id = params.user_id;
+        const date = params.date || params.data_lancamento; // Accept both formats
         
         if (!user_id || !date) {
           return {
@@ -361,7 +406,7 @@ exports.handler = async (event, context) => {
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*'
             },
-            body: JSON.stringify({ error: 'user_id e date são obrigatórios' })
+            body: JSON.stringify({ error: 'user_id e date/data_lancamento são obrigatórios' })
           };
         }
         
