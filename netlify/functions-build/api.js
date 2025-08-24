@@ -117,31 +117,79 @@ exports.handler = async (event, context) => {
       }
       
       if (method === 'POST') {
-        const { data: lancamento, error } = await supabase
-          .from('lancamentos_produtividade')
-          .insert(body)
-          .select()
-          .single();
-        
-        if (error) {
+        try {
+          console.log('POST /lancamentos - Received body:', JSON.stringify(body, null, 2));
+          
+          // Validate required fields
+          if (!body.user_id || !body.data_lancamento || !body.funcao || !body.turno || !body.user_nome || !body.user_cpf) {
+            return {
+              statusCode: 400,
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              },
+              body: JSON.stringify({ 
+                error: 'user_id, data_lancamento, funcao, turno, user_nome e user_cpf são obrigatórios',
+                missing_fields: {
+                  user_id: !body.user_id,
+                  data_lancamento: !body.data_lancamento,
+                  funcao: !body.funcao,
+                  turno: !body.turno,
+                  user_nome: !body.user_nome,
+                  user_cpf: !body.user_cpf
+                }
+              })
+            };
+          }
+          
+          // Ensure user_id is an integer
+          const lancamentoData = {
+            ...body,
+            user_id: parseInt(body.user_id),
+            created_at: new Date().toISOString()
+          };
+          
+          console.log('Inserting lancamento data:', JSON.stringify(lancamentoData, null, 2));
+          
+          const { data: lancamento, error } = await supabase
+            .from('lancamentos_produtividade')
+            .insert(lancamentoData)
+            .select()
+            .single();
+          
+          if (error) {
+            console.error('Supabase insert error:', error);
+            return {
+              statusCode: 500,
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              },
+              body: JSON.stringify({ error: error.message, details: error })
+            };
+          }
+          
+          console.log('Successfully inserted lancamento:', lancamento);
+          
+          return {
+            statusCode: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify(lancamento)
+          };
+        } catch (error) {
+          console.error('Error in POST /lancamentos:', error);
           return {
             statusCode: 500,
             headers: { 
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*'
             },
-            body: JSON.stringify({ error: error.message })
+            body: JSON.stringify({ error: 'Internal server error', message: error.message })
           };
         }
-        
-        return {
-          statusCode: 200,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          },
-          body: JSON.stringify(lancamento)
-        };
       }
     }
 
@@ -298,6 +346,74 @@ exports.handler = async (event, context) => {
           },
           body: JSON.stringify(kpis || [])
         };
+      }
+    }
+
+    // KPI check limit endpoint
+    if (apiPath === '/kpis/check-limit') {
+      if (method === 'GET') {
+        const { user_id, date } = queryParams;
+        
+        if (!user_id || !date) {
+          return {
+            statusCode: 400,
+            headers: { 
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({ error: 'user_id e date são obrigatórios' })
+          };
+        }
+        
+        try {
+          // Check how many launches the user has for the given date
+          const { data: lancamentos, error } = await supabase
+            .from('lancamentos_produtividade')
+            .select('id')
+            .eq('user_id', parseInt(user_id))
+            .gte('data_lancamento', date)
+            .lt('data_lancamento', new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+          
+          if (error) {
+            console.error('Error checking KPI limit:', error);
+            return {
+              statusCode: 500,
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              },
+              body: JSON.stringify({ error: error.message })
+            };
+          }
+          
+          const count = lancamentos?.length || 0;
+          const limit = 1; // Maximum 1 launch per day
+          const canLaunch = count < limit;
+          
+          return {
+            statusCode: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({ 
+              canLaunch,
+              currentCount: count,
+              limit,
+              message: canLaunch ? 'Pode lançar' : 'Limite de lançamentos atingido para hoje'
+            })
+          };
+        } catch (error) {
+          console.error('Error in check-limit:', error);
+          return {
+            statusCode: 500,
+            headers: { 
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({ error: 'Internal server error', message: error.message })
+          };
+        }
       }
     }
 
