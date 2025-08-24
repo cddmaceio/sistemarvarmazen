@@ -211,29 +211,32 @@ export default function Home() {
       return;
     }
     
-    // If user has selected KPIs, check if they can launch more for today
+    // Get the launch date first
+    let launchDate = dataLancamento;
+    
+    // For forklift operators, use the WMS reference date
+    if (isOperadorEmpilhadeira && wmsReferenceDate) {
+      launchDate = wmsReferenceDate;
+    } else if (!launchDate) {
+      // Default to today's date if no date is set
+      launchDate = new Date().toISOString().split('T')[0];
+    }
+    
+    // If user has selected KPIs, check if they can launch more for the selected date
     if (selectedKPIs.length > 0) {
-      const today = new Date().toISOString().split('T')[0];
-      console.log('🔍 Checking KPI limit for date:', today);
-      const canLaunch = await checkKPILimit(today);
+      console.log('🔍 Checking KPI limit for date:', launchDate);
+      const canLaunch = await checkKPILimit(launchDate);
       
       if (!canLaunch) {
-        console.log('❌ KPI limit reached for today');
-        alert('❌ Limite diário de KPIs atingido!\n\n💡 Você já possui 1 lançamento de KPI para hoje.\n\nPara lançar novos KPIs:\n• Remova os KPIs do cálculo atual, ou\n• Escolha uma data diferente no modal de lançamento');
+        console.log('❌ KPI limit reached for selected date');
+        alert(`❌ Limite diário de KPIs atingido!\n\n💡 Você já possui 1 lançamento de KPI para a data ${launchDate}.\n\nPara lançar novos KPIs:\n• Remova os KPIs do cálculo atual, ou\n• Escolha uma data diferente no modal de lançamento`);
         return;
       }
     }
     
-    // For forklift operators, set the launch date to the WMS reference date
-    if (isOperadorEmpilhadeira && wmsReferenceDate) {
-      console.log('📅 Setting WMS reference date:', wmsReferenceDate);
-      setDataLancamento(wmsReferenceDate);
-    } else {
-      // Default to today's date for other roles
-      const today = new Date().toISOString().split('T')[0];
-      console.log('📅 Setting today\'s date:', today);
-      setDataLancamento(today);
-    }
+    // Set the calculated launch date
+    console.log('📅 Setting launch date:', launchDate);
+    setDataLancamento(launchDate);
     
     console.log('✅ Opening lançamento modal');
     setShowLancamento(true);
