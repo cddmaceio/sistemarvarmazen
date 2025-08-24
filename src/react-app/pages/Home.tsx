@@ -744,25 +744,25 @@ export default function Home() {
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Valor Bruto Atividades:</span>
                         <span className="font-semibold text-purple-600">
-                          R$ {((result?.subtotal_atividades || 0) * 2).toFixed(2)}
+                          R$ {((result?.subtotalAtividades || 0) * 2).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Atividades (50%):</span>
                         <span className="font-semibold text-green-600">
-                          R$ {(result?.subtotal_atividades || 0).toFixed(2)}
+                          R$ {(result?.subtotalAtividades || 0).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">KPIs Atingidos:</span>
                         <span className="font-semibold text-blue-600">
-                          {result?.kpis_atingidos?.length || 0}
+                          {result?.kpisAtingidos?.length || 0}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Valor KPIs:</span>
                         <span className="font-semibold text-blue-600">
-                          R$ {(result?.bonus_kpis || 0).toFixed(2)}
+                          R$ {(result?.bonusKpis || 0).toFixed(2)}
                         </span>
                       </div>
                       {formData.input_adicional && formData.input_adicional > 0 && (
@@ -777,15 +777,15 @@ export default function Home() {
                         <div className="flex justify-between items-center">
                           <span className="text-lg font-semibold text-gray-900">Total Estimado do Dia:</span>
                           <span className="text-2xl font-bold text-gray-900">
-                            R$ {(result?.remuneracao_total || 0).toFixed(2)}
+                            R$ {(result?.remuneracaoTotal || 0).toFixed(2)}
                           </span>
                         </div>
                       </div>
-                      {result?.kpis_atingidos && result.kpis_atingidos.length > 0 && (
+                      {result?.kpisAtingidos && result.kpisAtingidos.length > 0 && (
                         <div className="mt-4">
                           <p className="text-sm text-gray-600 mb-2">KPIs Atingidos:</p>
                           <div className="flex flex-wrap gap-2 mb-3">
-                            {result?.kpis_atingidos?.map((kpi, index) => (
+                            {result?.kpisAtingidos?.map((kpi, index) => (
                               <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                                 {kpi}
                               </span>
@@ -828,7 +828,7 @@ export default function Home() {
                     <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Lançar Produtividade</h3>
                       <p className="text-sm text-gray-600 mb-4">
-                        Selecione a data para lançar sua produtividade calculada de <strong>R$ {(result?.remuneracao_total || 0).toFixed(2)}</strong>
+                        Selecione a data para lançar sua produtividade calculada de <strong>R$ {(result?.remuneracaoTotal || 0).toFixed(2)}</strong>
                       </p>
                       
                       <div className="space-y-4">

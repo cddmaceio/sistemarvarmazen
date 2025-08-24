@@ -374,15 +374,15 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-green-600">Nova Remuneração:</span>
-                    <p className="font-semibold text-green-900">R$ {result.remuneracao_total.toFixed(2)}</p>
+                    <p className="font-semibold text-green-900">R$ {result.remuneracaoTotal.toFixed(2)}</p>
                   </div>
                   <div>
                     <span className="text-green-600">Atividades:</span>
-                    <p className="font-semibold text-green-900">R$ {result.subtotal_atividades.toFixed(2)}</p>
+                    <p className="font-semibold text-green-900">R$ {result.subtotalAtividades.toFixed(2)}</p>
                   </div>
                   <div>
                     <span className="text-green-600">KPIs:</span>
-                    <p className="font-semibold text-green-900">R$ {result.bonus_kpis.toFixed(2)}</p>
+                    <p className="font-semibold text-green-900">R$ {result.bonusKpis.toFixed(2)}</p>
                   </div>
                   {result.produtividade_alcancada && (
                     <div>
@@ -395,8 +395,8 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
                 {/* Difference Indicator */}
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-blue-700 text-sm font-medium">
-                    Diferença: R$ {(result.remuneracao_total - (lancamento.remuneracao_total || 0)).toFixed(2)}
-                    {result.remuneracao_total > (lancamento.remuneracao_total || 0) ? ' (aumento)' : ' (redução)'}
+                    Diferença: R$ {(result.remuneracaoTotal - (lancamento.remuneracao_total || 0)).toFixed(2)}
+                    {result.remuneracaoTotal > (lancamento.remuneracao_total || 0) ? ' (aumento)' : ' (redução)'}
                   </p>
                 </div>
               </CardContent>

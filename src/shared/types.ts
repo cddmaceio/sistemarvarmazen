@@ -92,10 +92,10 @@ export type CalculatorInputType = z.infer<typeof CalculatorInputSchema>;
 
 // Calculator result schema
 export const CalculatorResultSchema = z.object({
-  subtotal_atividades: z.number(),
-  bonus_kpis: z.number(),
-  remuneracao_total: z.number(),
-  kpis_atingidos: z.array(z.string()),
+  subtotalAtividades: z.number(),
+  bonusKpis: z.number(),
+  remuneracaoTotal: z.number(),
+  kpisAtingidos: z.array(z.string()),
   produtividade_alcancada: z.number().optional(),
   nivel_atingido: z.string().optional(),
   unidade_medida: z.string().optional(),

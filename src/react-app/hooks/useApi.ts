@@ -222,6 +222,9 @@ export function useCalculator() {
 
   const calculate = async (input: CalculatorInputType) => {
     try {
+      console.log('🧮 useCalculator - Starting calculation');
+      console.log('📤 Sending to API:', input);
+      
       setLoading(true);
       setError(null);
       setLastCalculationSuccess(false);
@@ -232,14 +235,29 @@ export function useCalculator() {
         body: JSON.stringify(input),
       });
       
+      console.log('📡 API Response status:', response.status);
+      console.log('📡 API Response ok:', response.ok);
+      
       if (!response.ok) {
-        throw new Error('Failed to calculate');
+        const errorText = await response.text();
+        console.log('❌ API Error response:', errorText);
+        throw new Error(`Failed to calculate: ${response.status} - ${errorText}`);
       }
       
       const data = await response.json();
+      console.log('✅ API Response data:', data);
+      console.log('💰 Breakdown:');
+      console.log('  - subtotalAtividades:', data.subtotalAtividades);
+      console.log('  - bonusKpis:', data.bonusKpis);
+      console.log('  - remuneracaoTotal:', data.remuneracaoTotal);
+      console.log('  - atividadesDetalhes:', data.atividadesDetalhes);
+      console.log('  - kpisAtingidos:', data.kpisAtingidos);
+      
       setResult(data);
       setLastCalculationSuccess(true);
+      console.log('✅ Calculation completed successfully');
     } catch (err) {
+      console.error('❌ Calculation error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
       setResult(null);
       setLastCalculationSuccess(false);
