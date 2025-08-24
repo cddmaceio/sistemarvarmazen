@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Edit, Trash2, Search, Eye, Shield, User, Phone, Mail, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Search, Eye, Shield, User } from 'lucide-react';
 import { Link } from 'react-router';
 import { Button } from '@/react-app/components/Button';
 import { Input } from '@/react-app/components/Input';
@@ -19,6 +19,7 @@ import {
   FUNCAO_DB_TO_UI,
   TURNO_DB_TO_UI
 } from '@/shared/utils/encoding';
+import { createComponentLogger } from '@/shared/utils/debug';
 
 const formatDateSafe = (dateString: string): string => {
   if (!dateString) return '';
@@ -40,7 +41,7 @@ interface ExtendedUserType extends UserType {
   email?: string;
   telefone?: string;
   data_admissao?: string;
-  turno?: string;
+  turno?: 'Manhã' | 'Tarde' | 'Noite' | 'Geral';
   observacoes?: string;
   // Legacy fields for compatibility
   role?: 'user' | 'admin';
@@ -48,6 +49,8 @@ interface ExtendedUserType extends UserType {
 }
 
 export default function CadastroUsuarios() {
+  const logger = createComponentLogger('CadastroUsuarios');
+  
   const [users, setUsers] = useState<ExtendedUserType[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -65,13 +68,13 @@ export default function CadastroUsuarios() {
     nome: '',
     cpf: '',
     data_nascimento: '',
-    funcao: 'Ajudante de Armazém',
+    funcao: '',
     tipo_usuario: 'colaborador',
     status_usuario: 'ativo',
+    turno: 'Manhã',
     email: '',
     telefone: '',
     data_admissao: '',
-    turno: 'Manhã',
     observacoes: ''
   });
 
@@ -82,13 +85,22 @@ export default function CadastroUsuarios() {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      logger.debug('Loading users from API');
+      
       const response = await fetch('/api/usuarios');
+      logger.debug('Users API response', { status: response.status, ok: response.ok });
+      
       if (response.ok) {
         const data = await response.json();
+        logger.info('Users loaded successfully', { count: data?.length || 0 });
         setUsers(data);
+      } else {
+        const errorText = await response.text();
+        logger.error('Failed to load users', { status: response.status, error: errorText });
+        setError('Erro ao carregar usuários');
       }
     } catch (error) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users', { error: error instanceof Error ? error.message : error });
       setError('Erro ao carregar usuários');
     } finally {
       setLoading(false);
@@ -115,13 +127,7 @@ export default function CadastroUsuarios() {
     return value;
   };
 
-  const formatTelefone = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length <= 11) {
-      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    }
-    return value;
-  };
+
 
   const maskCPF = (cpf: string) => {
     if (!cpf) return '';
@@ -133,13 +139,13 @@ export default function CadastroUsuarios() {
       nome: '',
       cpf: '',
       data_nascimento: '',
-      funcao: 'Ajudante de Armazém',
+      funcao: '',
       tipo_usuario: 'colaborador',
       status_usuario: 'ativo',
+      turno: 'Manhã',
       email: '',
       telefone: '',
       data_admissao: '',
-      turno: 'Manhã',
       observacoes: ''
     });
     setEditingUser(null);
@@ -159,10 +165,10 @@ export default function CadastroUsuarios() {
       funcao: FUNCAO_DB_TO_UI[user.funcao || ''] || user.funcao || 'Ajudante de Armazém',
       tipo_usuario: user.tipo_usuario || (user.role === 'admin' ? 'administrador' : 'colaborador'),
       status_usuario: user.status_usuario || (user.is_active ? 'ativo' : 'inativo'),
+      turno: TURNO_DB_TO_UI[user.turno || ''] || user.turno || 'Manhã',
       email: user.email || '',
       telefone: user.telefone || '',
       data_admissao: user.data_admissao || '',
-      turno: TURNO_DB_TO_UI[user.turno || ''] || user.turno || 'Manhã',
       observacoes: user.observacoes || ''
     });
     setEditingUser(user);
@@ -179,10 +185,7 @@ export default function CadastroUsuarios() {
     setFormData(prev => ({ ...prev, cpf: formatted }));
   };
 
-  const handleTelefoneChange = (value: string) => {
-    const formatted = formatTelefone(value);
-    setFormData(prev => ({ ...prev, telefone: formatted }));
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,22 +218,47 @@ export default function CadastroUsuarios() {
 
     try {
       setSubmitting(true);
-      const payload = {
+
+      // Prepare payload with proper handling of empty date fields
+      const payload: any = {
         nome: formData.nome.trim(),
         cpf: formData.cpf,
         data_nascimento: formData.data_nascimento,
         funcao: FUNCAO_UI_TO_DB[formData.funcao] || formData.funcao,
         tipo_usuario: formData.tipo_usuario,
         status_usuario: formData.status_usuario,
-        email: formData.email,
-        telefone: formData.telefone,
-        data_admissao: formData.data_admissao,
         turno: TURNO_UI_TO_DB[formData.turno] || formData.turno,
-        observacoes: formData.observacoes
       };
+
+      // Only include optional fields if they have values
+      if (formData.email && formData.email.trim() !== '') {
+        payload.email = formData.email.trim();
+      }
+
+      if (formData.telefone && formData.telefone.trim() !== '') {
+        payload.telefone = formData.telefone.trim();
+      }
+
+      if (formData.data_admissao && formData.data_admissao.trim() !== '') {
+        payload.data_admissao = formData.data_admissao;
+      }
+
+      if (formData.observacoes && formData.observacoes.trim() !== '') {
+        payload.observacoes = formData.observacoes.trim();
+      }
 
       const url = editingUser ? `/api/usuarios/${editingUser.id}` : '/api/usuarios';
       const method = editingUser ? 'PUT' : 'POST';
+
+      logger.debug('Submitting user form', {
+        method,
+        url,
+        userId: editingUser?.id,
+        payload: {
+          ...payload,
+          cpf: payload.cpf?.substring(0, 3) + '***' // Mask CPF for security
+        }
+      });
 
       const response = await fetch(url, {
         method,
@@ -238,15 +266,50 @@ export default function CadastroUsuarios() {
         body: JSON.stringify(payload)
       });
 
+      logger.debug('User form submission response', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText
+      });
+
       if (response.ok) {
+        const responseData = await response.json();
+        logger.info('User saved successfully', {
+          method,
+          userId: responseData?.id,
+          nome: responseData?.nome
+        });
         await loadUsers();
         setShowDialog(false);
         resetForm();
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao salvar usuário');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        const errorText = await response.text().catch(() => 'No error text');
+        
+        logger.error('User form submission failed', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          errorText,
+          payload: {
+            ...payload,
+            cpf: payload.cpf?.substring(0, 3) + '***'
+          }
+        });
+        
+        throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
+      logger.error('Form submission error', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        editingUser: editingUser?.id,
+        formData: {
+          nome: formData.nome,
+          funcao: formData.funcao,
+          cpf: formData.cpf?.substring(0, 3) + '***'
+        }
+      });
       setError(error instanceof Error ? error.message : 'Erro ao salvar usuário');
     } finally {
       setSubmitting(false);
@@ -259,17 +322,37 @@ export default function CadastroUsuarios() {
     }
 
     try {
+      logger.debug('Deleting user', { userId: user.id, nome: user.nome });
+      
       const response = await fetch(`/api/usuarios/${user.id}`, {
         method: 'DELETE'
       });
-
+      
+      logger.debug('Delete user response', {
+        status: response.status,
+        ok: response.ok,
+        userId: user.id
+      });
+      
       if (response.ok) {
+        logger.info('User deleted successfully', { userId: user.id, nome: user.nome });
         await loadUsers();
       } else {
-        alert('Erro ao excluir usuário');
+        const errorText = await response.text();
+        logger.error('Failed to delete user', {
+          status: response.status,
+          error: errorText,
+          userId: user.id
+        });
+        setError('Erro ao excluir usuário');
       }
     } catch (error) {
-      alert('Erro ao excluir usuário');
+      logger.error('Error deleting user', {
+        error: error instanceof Error ? error.message : error,
+        userId: user.id,
+        nome: user.nome
+      });
+      setError('Erro ao excluir usuário');
     }
   };
 
@@ -649,10 +732,7 @@ export default function CadastroUsuarios() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 flex items-center space-x-2">
-                      <Mail className="h-4 w-4" />
-                      <span>Email</span>
-                    </label>
+                    <label className="text-sm font-medium text-gray-700">Email</label>
                     <Input
                       type="email"
                       value={formData.email}
@@ -662,23 +742,17 @@ export default function CadastroUsuarios() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 flex items-center space-x-2">
-                      <Phone className="h-4 w-4" />
-                      <span>Telefone</span>
-                    </label>
+                    <label className="text-sm font-medium text-gray-700">Telefone</label>
                     <Input
+                      type="tel"
                       value={formData.telefone}
-                      onChange={(e) => handleTelefoneChange(e.target.value)}
+                      onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
                       placeholder="(11) 99999-9999"
-                      maxLength={15}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 flex items-center space-x-2">
-                      <Calendar className="h-4 w-4" />
-                      <span>Data de Admissão</span>
-                    </label>
+                    <label className="text-sm font-medium text-gray-700">Data de Admissão</label>
                     <Input
                       type="date"
                       value={formData.data_admissao}

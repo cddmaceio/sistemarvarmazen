@@ -236,35 +236,7 @@ exports.handler = async (event, context) => {
       }
     }
 
-    // Usuarios endpoints
-    if (apiPath === '/usuarios') {
-      if (method === 'GET') {
-        const { data: users, error } = await supabase
-          .from('usuarios')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          return {
-            statusCode: 500,
-            headers: { 
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*'
-            },
-            body: JSON.stringify({ error: error.message })
-          };
-        }
-        
-        return {
-          statusCode: 200,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          },
-          body: JSON.stringify(users || [])
-        };
-      }
-    }
+    // Usuarios endpoints removed - using complete routes below
 
     // Auth endpoints
     if (apiPath === '/auth/login') {
@@ -677,9 +649,39 @@ exports.handler = async (event, context) => {
           let tarefasValidas = 0;
           let valorTarefas = 0;
 
-          // Handle multiple activities
-          console.log("Using updated multiple_activities logic with input:", input);
-          if (input.multiple_activities && input.multiple_activities.length > 0) {
+          // Handle valid tasks for Operador de Empilhadeira
+          if (input.funcao === 'Operador de Empilhadeira' && input.valid_tasks_count !== undefined) {
+            console.log('🚛 Processing Operador de Empilhadeira with valid tasks count:', input.valid_tasks_count);
+            tarefasValidas = input.valid_tasks_count;
+            valorTarefas = input.valid_tasks_count * 0.093; // R$ 0,093 per valid task
+            subtotalAtividades = valorTarefas / 2; // Apply 50% rule
+            
+            console.log(`📦 Tarefas válidas: ${tarefasValidas}`);
+            console.log(`💰 Valor total das tarefas: R$ ${valorTarefas.toFixed(3)}`);
+            console.log(`📊 Subtotal atividades (50%): R$ ${subtotalAtividades.toFixed(3)}`);
+          }
+          
+          // VALIDAÇÃO: Operador de Empilhadeira não pode ter multiple_activities
+          if (input.funcao === 'Operador de Empilhadeira' && input.multiple_activities && input.multiple_activities.length > 0) {
+            console.log('❌ ERRO: Operador de Empilhadeira não pode ter multiple_activities');
+            console.log('Dados recebidos:', {
+              funcao: input.funcao,
+              multiple_activities: input.multiple_activities,
+              valid_tasks_count: input.valid_tasks_count
+            });
+            return c.json({ 
+              error: 'Operador de Empilhadeira não pode ter múltiplas atividades. Use valid_tasks_count para tarefas válidas.',
+              details: {
+                funcao_recebida: input.funcao,
+                multiple_activities_recebidas: input.multiple_activities.length,
+                solucao: 'Para Operador de Empilhadeira, use o campo valid_tasks_count em vez de multiple_activities'
+              }
+            }, 400);
+          }
+
+          // // Handle multiple activities
+          else if (input.multiple_activities && input.multiple_activities.length > 0) {
+            console.log("Using updated multiple_activities logic with input:", input);
             for (const act of input.multiple_activities) {
               console.log(`Processing activity: ${act.nome_atividade}`);
               
@@ -858,6 +860,588 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({ error: 'Calculation failed', message: error.message })
           };
         }
+      }
+    }
+
+    // Lançamentos validation endpoint
+    if (apiPath.startsWith('/lancamentos/') && apiPath.endsWith('/validar')) {
+      if (method === 'POST') {
+        try {
+          // Extract ID from path like /lancamentos/47/validar
+          const pathParts = apiPath.split('/');
+          const lancamentoId = pathParts[2];
+          
+          if (!lancamentoId || isNaN(parseInt(lancamentoId))) {
+            return {
+              statusCode: 400,
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              },
+              body: JSON.stringify({ error: 'ID do lançamento inválido' })
+            };
+          }
+          
+          const { acao, observacoes, dados_editados, admin_user_id } = body;
+          
+          if (!acao || !['aprovar', 'reprovar', 'editar'].includes(acao)) {
+            return {
+              statusCode: 400,
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              },
+              body: JSON.stringify({ error: 'Ação inválida. Use: aprovar, reprovar ou editar' })
+            };
+          }
+          
+          // Get the original lancamento
+          const { data: originalLancamento, error: lancamentoError } = await supabase
+            .from('lancamentos_produtividade')
+            .select('*')
+            .eq('id', parseInt(lancamentoId))
+            .single();
+          
+          if (lancamentoError || !originalLancamento) {
+            return {
+              statusCode: 404,
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              },
+              body: JSON.stringify({ error: 'Lançamento não encontrado' })
+            };
+          }
+          
+          // Get admin user info if provided
+          let adminUser = null;
+          if (admin_user_id) {
+            const { data: specificAdmin, error: specificAdminError } = await supabase
+              .from('usuarios')
+              .select('*')
+              .eq('id', admin_user_id)
+              .eq('tipo_usuario', 'administrador')
+              .single();
+            
+            if (!specificAdminError && specificAdmin) {
+              adminUser = specificAdmin;
+            }
+          }
+          
+          let updateData = {
+            updated_at: new Date().toISOString()
+          };
+          
+          if (acao === 'editar' && dados_editados) {
+            // Handle edit action
+            updateData = {
+              ...updateData,
+              status: 'pendente', // Keep as pending after edit
+              observacoes: observacoes || null,
+              editado_por_admin: adminUser ? adminUser.nome : 'Admin',
+              data_edicao: new Date().toISOString(),
+              // Update fields from dados_editados
+              funcao: dados_editados.funcao || originalLancamento.funcao,
+              turno: dados_editados.turno || originalLancamento.turno,
+              nome_atividade: dados_editados.nome_atividade || originalLancamento.nome_atividade,
+              quantidade_produzida: dados_editados.quantidade_produzida || originalLancamento.quantidade_produzida,
+              tempo_horas: dados_editados.tempo_horas || originalLancamento.tempo_horas,
+              input_adicional: dados_editados.input_adicional || originalLancamento.input_adicional,
+              multiple_activities: dados_editados.multiple_activities ? JSON.stringify(dados_editados.multiple_activities) : originalLancamento.multiple_activities,
+              nome_operador: dados_editados.nome_operador || originalLancamento.nome_operador,
+              valid_tasks_count: dados_editados.valid_tasks_count || originalLancamento.valid_tasks_count
+            };
+          } else {
+            // Handle approve/reject actions
+          const status = acao === 'aprovar' ? 'aprovado' : 'reprovado';
+          updateData = {
+            ...updateData,
+            status,
+            observacoes: observacoes || null
+          };
+          }
+          
+          // Update the lancamento
+          const { data: updatedLancamento, error: updateError } = await supabase
+            .from('lancamentos_produtividade')
+            .update(updateData)
+            .eq('id', parseInt(lancamentoId))
+            .select()
+            .single();
+          
+          if (updateError) {
+            console.error('Error updating lancamento:', updateError);
+            return {
+              statusCode: 500,
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              },
+              body: JSON.stringify({ error: updateError.message })
+            };
+          }
+          
+          return {
+            statusCode: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({
+              success: true,
+              message: `Lançamento ${acao === 'editar' ? 'editado' : acao === 'aprovar' ? 'aprovado' : 'reprovado'} com sucesso`,
+              data: updatedLancamento
+            })
+          };
+          
+        } catch (error) {
+          console.error('Error in lancamento validation:', error);
+          return {
+            statusCode: 500,
+            headers: { 
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({ error: 'Erro interno do servidor', message: error.message })
+          };
+        }
+      }
+    }
+
+    // WMS Users management routes
+    if (apiPath === '/wms-users' && method === 'GET') {
+      try {
+        const { data: users, error } = await supabase
+          .from('cadastro_wms')
+          .select('id, nome, cpf, login_wms, nome_wms, created_at, updated_at')
+          .order('nome', { ascending: true });
+        
+        if (error) {
+          console.error('Erro na consulta de usuários WMS:', error);
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: error.message })
+          };
+        }
+        
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ success: true, users: users || [] })
+        };
+      } catch (error) {
+        console.error('Erro ao buscar usuários WMS:', error);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ success: false, error: 'Erro interno do servidor' })
+        };
+      }
+    }
+    
+    if (apiPath === '/wms-users' && method === 'POST') {
+      try {
+        const { nome, cpf, login_wms, nome_wms } = JSON.parse(event.body || '{}');
+        
+        // Verificar se CPF ou login já existem
+        const { data: existing, error: checkError } = await supabase
+          .from('cadastro_wms')
+          .select('id')
+          .or(`cpf.eq.${cpf},login_wms.eq.${login_wms}`)
+          .limit(1);
+        
+        if (checkError) {
+          console.error('Erro ao verificar usuário existente:', checkError);
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: checkError.message })
+          };
+        }
+        
+        if (existing && existing.length > 0) {
+          return {
+            statusCode: 400,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: 'CPF ou Login WMS já cadastrado' })
+          };
+        }
+        
+        const { data: newUser, error: insertError } = await supabase
+          .from('cadastro_wms')
+          .insert({
+            nome,
+            cpf,
+            login_wms,
+            nome_wms
+          })
+          .select('id')
+          .single();
+        
+        if (insertError) {
+          console.error('Erro ao inserir usuário WMS:', insertError);
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: insertError.message })
+          };
+        }
+        
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ success: true, id: newUser.id })
+        };
+      } catch (error) {
+        console.error('Erro ao criar usuário WMS:', error);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ success: false, error: 'Erro interno do servidor' })
+        };
+      }
+    }
+    
+    if (apiPath.startsWith('/wms-users/') && method === 'PUT') {
+      try {
+        const id = apiPath.split('/')[3];
+        const { nome, cpf, login_wms, nome_wms } = JSON.parse(event.body || '{}');
+        
+        // Verificar se CPF ou login já existem em outros registros
+        const { data: existing, error: existingError } = await supabase
+          .from('cadastro_wms')
+          .select('id')
+          .or(`cpf.eq.${cpf},login_wms.eq.${login_wms}`)
+          .neq('id', id)
+          .single();
+        
+        if (existingError && existingError.code !== 'PGRST116') {
+          console.error('Erro ao verificar usuário WMS existente:', existingError);
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: 'Erro interno do servidor' })
+          };
+        }
+        
+        if (existing) {
+          return {
+            statusCode: 400,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: 'CPF ou Login WMS já cadastrado' })
+          };
+        }
+        
+        const { data, error } = await supabase
+          .from('cadastro_wms')
+          .update({ nome, cpf, login_wms, nome_wms })
+          .eq('id', id)
+          .select();
+        
+        if (error) {
+          console.error('Erro ao atualizar usuário WMS:', error);
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: 'Erro interno do servidor' })
+          };
+        }
+        
+        if (data && data.length > 0) {
+          return {
+            statusCode: 200,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: true })
+          };
+        } else {
+          return {
+            statusCode: 404,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: 'Usuário WMS não encontrado' })
+          };
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar usuário WMS:', error);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ success: false, error: 'Erro interno do servidor' })
+        };
+      }
+    }
+    
+    if (apiPath.startsWith('/wms-users/') && method === 'DELETE') {
+      try {
+        const id = apiPath.split('/')[3];
+        
+        const { data, error } = await supabase
+          .from('cadastro_wms')
+          .delete()
+          .eq('id', id)
+          .select();
+        
+        if (error) {
+          console.error('Erro ao deletar usuário WMS:', error);
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: 'Erro interno do servidor' })
+          };
+        }
+        
+        if (data && data.length > 0) {
+          return {
+            statusCode: 200,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: true })
+          };
+        } else {
+          return {
+            statusCode: 404,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: 'Usuário WMS não encontrado' })
+          };
+        }
+      } catch (error) {
+        console.error('Erro ao deletar usuário WMS:', error);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ success: false, error: 'Erro interno do servidor' })
+        };
+      }
+    }
+
+    // Users management routes
+    if (apiPath === '/usuarios' && method === 'GET') {
+      try {
+        const { data: users, error } = await supabase
+          .from('usuarios')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching users:', error);
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ error: error.message })
+          };
+        }
+        
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify(users || [])
+        };
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ error: 'Internal server error' })
+        };
+      }
+    }
+    
+    if (apiPath === '/usuarios' && method === 'POST') {
+      try {
+        const { cpf, data_nascimento, nome, tipo_usuario, status_usuario, funcao } = JSON.parse(event.body || '{}');
+        
+        const { data: newUser, error } = await supabase
+          .from('usuarios')
+          .insert({
+            cpf,
+            data_nascimento,
+            nome,
+            tipo_usuario: tipo_usuario || 'colaborador',
+            status_usuario: status_usuario || 'ativo',
+            funcao,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Error creating user:', error);
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ error: error.message })
+          };
+        }
+        
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify(newUser)
+        };
+      } catch (error) {
+        console.error('Error creating user:', error);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ error: 'Internal server error' })
+        };
+      }
+    }
+    
+    if (apiPath.startsWith('/usuarios/') && method === 'PUT') {
+      try {
+        console.log('=== PUT /usuarios DEBUG START ===');
+        const id = parseInt(apiPath.split('/')[2]);
+        console.log('User ID:', id);
+        console.log('Raw event.body:', event.body);
+        
+        const updateData = JSON.parse(event.body || '{}');
+        console.log('Parsed updateData:', JSON.stringify(updateData, null, 2));
+        
+        if (isNaN(id)) {
+          console.log('Invalid ID detected');
+          return {
+            statusCode: 400,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ error: 'Invalid user ID' })
+          };
+        }
+        
+        // Create a mutable copy of the data to clean
+        const dataToUpdate = { ...updateData };
+        
+        // List of fields that should be converted to null if they are empty strings
+        const fieldsToNullify = [
+          'data_admissao',
+          'data_nascimento',
+          'email',
+          'telefone',
+          'observacoes',
+        ];
+        
+        fieldsToNullify.forEach((field) => {
+          if (dataToUpdate[field] === '') {
+            console.log(`Field '${field}' is an empty string, converting to null.`);
+            dataToUpdate[field] = null;
+          }
+        });
+        
+        // Remove undefined fields
+        const cleanData = Object.fromEntries(
+          Object.entries(dataToUpdate).filter(([_, value]) => value !== undefined)
+        );
+        console.log('Clean data after filtering:', JSON.stringify(cleanData, null, 2));
+        
+        if (Object.keys(cleanData).length === 0) {
+          console.log('No fields to update');
+          return {
+            statusCode: 400,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ error: 'No fields to update' })
+          };
+        }
+        
+        cleanData.updated_at = new Date().toISOString();
+        console.log('Final data to update:', JSON.stringify(cleanData, null, 2));
+        
+        console.log('Calling Supabase update...');
+        const { data: user, error } = await supabase
+          .from('usuarios')
+          .update(cleanData)
+          .eq('id', id)
+          .select()
+          .single();
+        
+        console.log('Supabase response - data:', user);
+        console.log('Supabase response - error:', error);
+        
+        if (error) {
+          console.error('Supabase error details:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          if (error.code === 'PGRST116') {
+            return {
+              statusCode: 404,
+              headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+              body: JSON.stringify({ error: 'User not found' })
+            };
+          }
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ error: 'Error updating user', details: error.message })
+          };
+        }
+        
+        console.log('Success! Returning user data');
+        console.log('=== PUT /usuarios DEBUG END ===');
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify(user)
+        };
+      } catch (error) {
+        console.error('Catch block - Error updating user:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ error: 'Internal server error', details: error.message })
+        };
+      }
+    }
+    
+    if (apiPath.startsWith('/usuarios/') && method === 'DELETE') {
+      try {
+        const id = parseInt(apiPath.split('/')[2]);
+        
+        if (isNaN(id)) {
+          return {
+            statusCode: 400,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ error: 'Invalid user ID' })
+          };
+        }
+        
+        const { error } = await supabase
+          .from('usuarios')
+          .delete()
+          .eq('id', id);
+        
+        if (error) {
+          console.error('Error deleting user:', error);
+          if (error.code === 'PGRST116') {
+            return {
+              statusCode: 404,
+              headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+              body: JSON.stringify({ error: 'User not found' })
+            };
+          }
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ error: 'Error deleting user' })
+          };
+        }
+        
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ success: true })
+        };
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ error: 'Internal server error' })
+        };
       }
     }
 
