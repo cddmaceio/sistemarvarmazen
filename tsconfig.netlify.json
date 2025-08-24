@@ -1,16 +1,15 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ES2020",
-    "moduleResolution": "bundler",
-    "verbatimModuleSyntax": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "allowJs": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "./netlify/functions-build",
+    "outDir": "./netlify/functions-temp",
     "rootDir": "netlify/functions-src",
     "declaration": false,
     "sourceMap": false
@@ -20,9 +19,9 @@
   ],
   "exclude": [
     "node_modules",
-    "dist",
     "src/react-app/**/*",
     "src/worker/**/*",
-    "src/shared/**/*"
+    "src/shared/**/*",
+    "dist/**/*"
   ]
 }

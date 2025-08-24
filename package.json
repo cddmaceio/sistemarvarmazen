@@ -54,7 +54,7 @@
   "scripts": {
     "build": "tsc -b && vite build",
     "build:netlify": "npm run build:worker && npm run build:functions && npm run build",
-    "build:functions": "tsc --project tsconfig.netlify.json",
+    "build:functions": "echo \"Functions build: using pre-built api.mjs\"",
     "build:worker": "tsc --project tsconfig.worker.json",
     "cf-typegen": "wrangler types",
     "check": "tsc && vite build && wrangler deploy --dry-run",

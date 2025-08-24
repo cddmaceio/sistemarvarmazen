@@ -11,6 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import AuthGuard from '@/react-app/components/AuthGuard';
 import UserMenu from '@/react-app/components/UserMenu';
 import { ActivityType } from '@/shared/types';
+import { 
+  FUNCOES_UI_FORMAT, 
+  convertToDbFormat
+} from '@/shared/utils/encoding';
 
 const CATEGORIAS_ATIVIDADE = [
   'Repack',
@@ -25,13 +29,7 @@ const CATEGORIAS_ATIVIDADE = [
   'Outras'
 ];
 
-const FUNCOES_SISTEMA = [
-  'Ajudante de Armazém',
-  'Operador de Empilhadeira',
-  'Conferente',
-  'Supervisor',
-  'Gerente'
-];
+const FUNCOES_SISTEMA = FUNCOES_UI_FORMAT;
 
 export default function CadastroAtividades() {
   const [activities, setActivities] = useState<ActivityType[]>([]);
@@ -132,7 +130,7 @@ export default function CadastroAtividades() {
     try {
       setSubmitting(true);
       const payload = {
-        nome_atividade: formData.nome_atividade,
+        nome_atividade: convertToDbFormat(formData.nome_atividade),
         nivel_atividade: formData.nivel_atividade,
         valor_atividade: parseFloat(formData.valor_atividade),
         produtividade_minima: formData.produtividade_minima ? parseFloat(formData.produtividade_minima) : 0,

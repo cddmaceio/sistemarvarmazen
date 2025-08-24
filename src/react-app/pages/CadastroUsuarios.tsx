@@ -11,6 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import AuthGuard from '@/react-app/components/AuthGuard';
 import UserMenu from '@/react-app/components/UserMenu';
 import { UserType } from '@/shared/types';
+import { 
+  FUNCOES_UI_FORMAT, 
+  TURNOS_UI_FORMAT, 
+  FUNCAO_UI_TO_DB, 
+  TURNO_UI_TO_DB,
+  FUNCAO_DB_TO_UI,
+  TURNO_DB_TO_UI
+} from '@/shared/utils/encoding';
 
 const formatDateSafe = (dateString: string): string => {
   if (!dateString) return '';
@@ -24,20 +32,9 @@ const formatDateSafe = (dateString: string): string => {
   return date.toLocaleDateString('pt-BR');
 };
 
-const FUNCOES_SISTEMA = [
-  'Ajudante de Armazém',
-  'Operador de Empilhadeira',
-  'Conferente',
-  'Supervisor',
-  'Gerente'
-];
+const FUNCOES_SISTEMA = FUNCOES_UI_FORMAT;
 
-const TURNOS = [
-  'Manhã',
-  'Tarde',
-  'Noite',
-  'Todos'
-];
+const TURNOS = TURNOS_UI_FORMAT;
 
 interface ExtendedUserType extends UserType {
   email?: string;
@@ -159,13 +156,13 @@ export default function CadastroUsuarios() {
       nome: user.nome || '',
       cpf: user.cpf || '',
       data_nascimento: user.data_nascimento || '',
-      funcao: user.funcao || 'Ajudante de Armazém',
+      funcao: FUNCAO_DB_TO_UI[user.funcao || ''] || user.funcao || 'Ajudante de Armazém',
       tipo_usuario: user.tipo_usuario || (user.role === 'admin' ? 'administrador' : 'colaborador'),
       status_usuario: user.status_usuario || (user.is_active ? 'ativo' : 'inativo'),
       email: user.email || '',
       telefone: user.telefone || '',
       data_admissao: user.data_admissao || '',
-      turno: user.turno || 'Manhã',
+      turno: TURNO_DB_TO_UI[user.turno || ''] || user.turno || 'Manhã',
       observacoes: user.observacoes || ''
     });
     setEditingUser(user);
@@ -222,13 +219,13 @@ export default function CadastroUsuarios() {
         nome: formData.nome.trim(),
         cpf: formData.cpf,
         data_nascimento: formData.data_nascimento,
-        funcao: formData.funcao,
+        funcao: FUNCAO_UI_TO_DB[formData.funcao] || formData.funcao,
         tipo_usuario: formData.tipo_usuario,
         status_usuario: formData.status_usuario,
         email: formData.email,
         telefone: formData.telefone,
         data_admissao: formData.data_admissao,
-        turno: formData.turno,
+        turno: TURNO_UI_TO_DB[formData.turno] || formData.turno,
         observacoes: formData.observacoes
       };
 

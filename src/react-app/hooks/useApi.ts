@@ -297,17 +297,18 @@ export function useAvailableKPIs() {
       setLoading(true);
       setError(null);
       
-      const { data, error } = await supabase
-        .from('kpis')
-        .select('*')
-        .eq('funcao_kpi', funcao)
-        .in('turno_kpi', [turno, 'Geral'])
-        .eq('status_ativo', true)
-        .order('nome_kpi', { ascending: true });
+      // Use the API endpoint that already works correctly
+      const response = await fetch(`${API_BASE}/kpis/available?funcao=${encodeURIComponent(funcao)}&turno=${encodeURIComponent(turno)}`);
       
-      if (error) throw error;
-      setKpis(data || []);
-      return data || [];
+      if (!response.ok) {
+        throw new Error(`Failed to fetch KPIs: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const kpisData = data.kpisAtingidos || [];
+      
+      setKpis(kpisData);
+      return kpisData;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setKpis([]);

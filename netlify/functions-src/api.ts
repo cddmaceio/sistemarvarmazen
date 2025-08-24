@@ -69,16 +69,16 @@ const handler = async (event: any, context: any) => {
       SUPABASE_ANON_KEY: supabaseAnonKey
     };
 
-    // Import dinâmico para evitar que o TypeScript inclua arquivos fora do rootDir
-    // Importa o app Hono já compilado em JS ESM
-    const dynamicImport = new Function('p', 'return import(p)');
-    const appModule = await (dynamicImport as (p: string) => Promise<any>)(
-      '../../dist/worker/supabase-worker.js'
-    );
-    const app = appModule.default as { fetch: (req: Request, env: Env) => Promise<Response> };
+    // Import do app Hono usando import dinâmico
+        console.log('Loading app module...');
+        const appModule = await import('./src/worker/supabase-worker.js');
+        console.log('App module loaded:', !!appModule, !!appModule.default);
+        const app = appModule.default;
     
     // Call Hono app with environment
-    const response = await app.fetch(request, env);
+        console.log('Calling app.fetch with:', request.url, request.method);
+        const response = await app.fetch(request, env);
+        console.log('Response status:', response.status);
     
     // Convert Response to Netlify format
     const responseBody = await response.text();

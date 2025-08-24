@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 // Activity schema
 export const ActivitySchema = z.object({

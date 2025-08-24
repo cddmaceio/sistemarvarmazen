@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/react-app/components/Alert';
 import { useAuth } from '@/react-app/hooks/useAuth';
 import { useAvailableKPIs, useKPILimit, useCalculator } from '@/react-app/hooks/useApi';
 import { CalculatorInputType } from '@/shared/types';
+import { FUNCOES_UI_FORMAT, TURNOS_UI_FORMAT } from '@/shared/utils/encoding';
 
 interface KPICalculatorFormProps {
   onCalculate: (input: CalculatorInputType, result: any) => void;
@@ -33,15 +34,9 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
   const [canLaunchKPIs, setCanLaunchKPIs] = useState(true);
   const [showFunctionSelector, setShowFunctionSelector] = useState(false);
 
-  const funcoes = [
-    'Ajudante de Armazém',
-    'Operador de Empilhadeira',
-    'Conferente',
-    'Líder de Equipe',
-    'Supervisor'
-  ];
+  const funcoes = FUNCOES_UI_FORMAT;
 
-  const turnos: ('Manhã' | 'Tarde' | 'Noite')[] = ['Manhã', 'Tarde', 'Noite'];
+  const turnos: ('Manhã' | 'Tarde' | 'Noite')[] = TURNOS_UI_FORMAT.filter(t => t !== 'Geral') as ('Manhã' | 'Tarde' | 'Noite')[];
 
   // Check if user has a function defined
   useEffect(() => {

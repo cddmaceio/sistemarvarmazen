@@ -9,7 +9,7 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": false,
-    "outDir": "./dist/worker",
+    "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
     "noUnusedLocals": false,

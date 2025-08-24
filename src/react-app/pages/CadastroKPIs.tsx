@@ -9,6 +9,14 @@ import { Alert, AlertDescription } from '@/react-app/components/Alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/react-app/components/Table';
 import { useKPIs } from '@/react-app/hooks/useApi';
 import { KPIType } from '@/shared/types';
+import { 
+  FUNCOES_UI_FORMAT, 
+  TURNOS_UI_FORMAT, 
+  FUNCAO_UI_TO_DB, 
+  TURNO_UI_TO_DB,
+  FUNCAO_DB_TO_UI,
+  TURNO_DB_TO_UI
+} from '@/shared/utils/encoding';
 
 export default function CadastroKPIs() {
   const { kpis, loading, error, createKPI, updateKPI, deleteKPI } = useKPIs();
@@ -26,15 +34,8 @@ export default function CadastroKPIs() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const funcoes = [
-    'Ajudante de Armazém',
-    'Operador de Empilhadeira',
-    'Conferente',
-    'Líder de Equipe',
-    'Supervisor'
-  ];
-
-  const turnos = ['Manhã', 'Tarde', 'Noite', 'Geral'];
+  const funcoes = FUNCOES_UI_FORMAT;
+  const turnos = TURNOS_UI_FORMAT;
 
   const resetForm = () => {
     setFormData({
@@ -61,8 +62,8 @@ export default function CadastroKPIs() {
       descricao: (kpi as any).descricao || '',
       valor_meta_kpi: kpi.valor_meta_kpi.toString(),
       peso_kpi: kpi.peso_kpi.toString(),
-      turno_kpi: kpi.turno_kpi as any,
-      funcao_kpi: kpi.funcao_kpi,
+      turno_kpi: (TURNO_DB_TO_UI[kpi.turno_kpi] || kpi.turno_kpi) as any,
+      funcao_kpi: FUNCAO_DB_TO_UI[kpi.funcao_kpi] || kpi.funcao_kpi,
       status_ativo: (kpi as any).status_ativo !== false
     });
     setEditingKPI(kpi);
@@ -98,8 +99,8 @@ export default function CadastroKPIs() {
         descricao: formData.descricao,
         valor_meta_kpi: valor_meta,
         peso_kpi: peso,
-        turno_kpi: formData.turno_kpi,
-        funcao_kpi: formData.funcao_kpi,
+        turno_kpi: TURNO_UI_TO_DB[formData.turno_kpi] || formData.turno_kpi,
+        funcao_kpi: FUNCAO_UI_TO_DB[formData.funcao_kpi] || formData.funcao_kpi,
         status_ativo: formData.status_ativo
       };
 
