@@ -83,6 +83,7 @@ export interface LancamentoProdutividade {
   atividades_detalhes: string | null
   tarefas_validas: number | null
   valor_tarefas: number | null
+  valor_bruto_atividades: number | null
   status: string
   observacoes: string | null
   created_at: string

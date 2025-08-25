@@ -55,6 +55,10 @@ interface ActivityPerformance {
   valorTarefas?: number;
   bonusKpis?: number;
   subtotalAtividades?: number;
+  valorBrutoAtividades?: number;
+  quantidadeTotalProduzida?: number;
+  tempoTotalHoras?: number;
+  producaoHora?: number;
 }
 
 interface HistoricoAtividade {
@@ -68,6 +72,7 @@ interface HistoricoAtividade {
   valor_tarefas?: number;
   bonus_kpis?: number;
   subtotal_atividades?: number;
+  valor_bruto_atividades?: number;
 }
 
 export default function DashboardCollaborator() {
@@ -234,16 +239,19 @@ export default function DashboardCollaborator() {
                 valores: [],
                 historico: [],
                 tarefasValidas: 0,
-                valorTarefas: 0
+                valorTarefas: 0,
+                valorBrutoAtividades: 0
               };
             }
             
             // Usar o valor das tarefas (subtotal_atividades) em vez da remuneração total
             const valorTarefas = dados.subtotal_atividades || dados.valor_tarefas || 0;
+            const valorBrutoAtividade = item.valor_bruto_atividades || 0;
             acc[nomeAtividade].totalGanho += valorTarefas;
             acc[nomeAtividade].valores.push(valorTarefas);
             acc[nomeAtividade].tarefasValidas = (acc[nomeAtividade].tarefasValidas || 0) + dados.tarefas_validas;
             acc[nomeAtividade].valorTarefas = (acc[nomeAtividade].valorTarefas || 0) + valorTarefas;
+            acc[nomeAtividade].valorBrutoAtividades = (acc[nomeAtividade].valorBrutoAtividades || 0) + valorBrutoAtividade;
             acc[nomeAtividade].historico.push({
               data: dataFormatada,
               valor: valorTarefas,
@@ -290,15 +298,26 @@ export default function DashboardCollaborator() {
                   dias: 0,
                   totalGanho: 0,
                   valores: [],
-                  historico: []
+                  historico: [],
+                  valorBrutoAtividades: 0,
+                  quantidadeTotalProduzida: 0,
+                  tempoTotalHoras: 0
                 };
               }
-              const valorProporcional = item.remuneracao_total / dados.multiple_activities.length;
-              acc[subAtividade].totalGanho += valorProporcional;
-              acc[subAtividade].valores.push(valorProporcional);
+              // Usar subtotal_atividades ao invés de remuneracao_total para mostrar apenas o valor das atividades
+              const valorAtividade = (item.subtotal_atividades || 0) / dados.multiple_activities.length;
+              const valorBrutoAtividade = (item.valor_bruto_atividades || 0) / dados.multiple_activities.length;
+              const quantidade = parseFloat(activity.quantidade_produzida || '0');
+              const tempo = parseFloat(activity.tempo_horas || '0');
+              
+              acc[subAtividade].totalGanho += valorAtividade;
+              acc[subAtividade].valorBrutoAtividades += valorBrutoAtividade;
+              acc[subAtividade].quantidadeTotalProduzida += quantidade;
+              acc[subAtividade].tempoTotalHoras += tempo;
+              acc[subAtividade].valores.push(valorAtividade);
               acc[subAtividade].historico.push({
                 data: dataFormatada,
-                valor: valorProporcional,
+                valor: valorAtividade,
                 atividade: subAtividade,
                 turno: item.turno,
                 aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema'
@@ -309,7 +328,7 @@ export default function DashboardCollaborator() {
               if (item.status === 'aprovado') {
                 historicoCompleto.push({
                   data: dataFormatada,
-                  valor: valorProporcional,
+                  valor: valorAtividade,
                   atividade: subAtividade,
                   turno: item.turno,
                   aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema',
@@ -338,14 +357,26 @@ export default function DashboardCollaborator() {
                 dias: 0,
                 totalGanho: 0,
                 valores: [],
-                historico: []
+                historico: [],
+                valorBrutoAtividades: 0,
+                quantidadeTotalProduzida: 0,
+                tempoTotalHoras: 0
               };
             }
-            acc[nomeAtividade].totalGanho += item.remuneracao_total;
-            acc[nomeAtividade].valores.push(item.remuneracao_total);
+            // Para atividades, usar subtotal_atividades; para KPIs, usar bonus_kpis
+            const valorAtividade = nomeAtividade === 'KPIs Atingidos' ? (item.bonus_kpis || 0) : (item.subtotal_atividades || 0);
+            const valorBrutoAtividade = nomeAtividade === 'KPIs Atingidos' ? 0 : (item.valor_bruto_atividades || 0);
+            const quantidade = parseFloat(dados.quantidade_produzida || '0');
+            const tempo = parseFloat(dados.tempo_horas || '0');
+            
+            acc[nomeAtividade].totalGanho += valorAtividade;
+            acc[nomeAtividade].valorBrutoAtividades += valorBrutoAtividade;
+            acc[nomeAtividade].quantidadeTotalProduzida += quantidade;
+            acc[nomeAtividade].tempoTotalHoras += tempo;
+            acc[nomeAtividade].valores.push(valorAtividade);
             acc[nomeAtividade].historico.push({
               data: dataFormatada,
-              valor: item.remuneracao_total,
+              valor: valorAtividade,
               atividade: nomeAtividade,
               turno: item.turno,
               aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema'
@@ -356,7 +387,7 @@ export default function DashboardCollaborator() {
             if (item.status === 'aprovado') {
               historicoCompleto.push({
                 data: dataFormatada,
-                valor: item.remuneracao_total,
+                valor: valorAtividade,
                 atividade: nomeAtividade,
                 turno: item.turno,
                 aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema',
@@ -364,7 +395,8 @@ export default function DashboardCollaborator() {
                 tarefas_validas: item.tarefas_validas,
                 valor_tarefas: item.valor_tarefas,
                 bonus_kpis: item.bonus_kpis,
-                subtotal_atividades: item.subtotal_atividades
+                subtotal_atividades: item.subtotal_atividades,
+                valor_bruto_atividades: item.valor_bruto_atividades
               });
             }
           }
@@ -377,7 +409,8 @@ export default function DashboardCollaborator() {
         ...ativ,
         mediaDia: ativ.totalGanho / ativ.dias,
         performance: getPerformanceLevel(ativ.totalGanho / ativ.dias),
-        cor: getActivityColor(ativ.nome)
+        cor: getActivityColor(ativ.nome),
+        producaoHora: ativ.tempoTotalHoras && ativ.tempoTotalHoras > 0 ? ativ.quantidadeTotalProduzida / ativ.tempoTotalHoras : 0
       }));
 
       // Encontrar melhor dia
@@ -886,8 +919,11 @@ export default function DashboardCollaborator() {
                                   <p className="text-xs sm:text-sm text-blue-600 font-medium">
                                     📋 Total de Tarefas: {atividade.tarefasValidas} tarefas
                                   </p>
+                                  <p className="text-xs sm:text-sm text-red-600">
+                                    💰 Valor Bruto: R$ {(atividade.valorTarefas || 0).toFixed(2)}
+                                  </p>
                                   <p className="text-xs sm:text-sm text-green-600">
-                                    💰 Valor Total das Tarefas: R$ {(atividade.valorTarefas || 0).toFixed(2)}
+                                    💰 Valor Líquido (÷2): R$ {(atividade.totalGanho || 0).toFixed(2)}
                                   </p>
                                   <p className="text-xs sm:text-sm text-purple-600">
                                     📊 Média Diária: {(atividade.tarefasValidas / atividade.dias).toFixed(1)} tarefas/dia
@@ -895,6 +931,32 @@ export default function DashboardCollaborator() {
                                   <p className="text-xs sm:text-sm text-orange-600">
                                     💵 Valor por Tarefa: R$ 0,093
                                   </p>
+                                </div>
+                              )}
+                              {/* Exibir valor bruto para outras atividades de Ajudante de Armazém */}
+                              {userFunction === 'Ajudante de Armazém' && atividade.nome !== 'KPIs Atingidos' && (
+                                <div className="mt-2 space-y-1">
+                                  <p className="text-xs sm:text-sm text-red-600">
+                                    💰 Valor Bruto: R$ {(atividade.totalGanho * 2).toFixed(2)}
+                                  </p>
+                                  <p className="text-xs sm:text-sm text-green-600">
+                                    💰 Valor Líquido (÷2): R$ {atividade.totalGanho.toFixed(2)}
+                                  </p>
+                                  {atividade.quantidadeTotalProduzida !== undefined && atividade.quantidadeTotalProduzida > 0 && (
+                                    <p className="text-xs sm:text-sm text-blue-600 font-medium">
+                                      📦 Quantidade Total: {atividade.quantidadeTotalProduzida.toFixed(0)} unidades
+                                    </p>
+                                  )}
+                                  {atividade.tempoTotalHoras !== undefined && atividade.tempoTotalHoras > 0 && (
+                                    <p className="text-xs sm:text-sm text-purple-600">
+                                      ⏱️ Tempo Total: {atividade.tempoTotalHoras.toFixed(1)} horas
+                                    </p>
+                                  )}
+                                  {atividade.producaoHora !== undefined && atividade.producaoHora > 0 && (
+                                    <p className="text-xs sm:text-sm text-green-700 font-semibold">
+                                      🚀 Produção/h: {atividade.producaoHora.toFixed(1)} unidades/h
+                                    </p>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -946,6 +1008,12 @@ export default function DashboardCollaborator() {
                                 <span className="text-gray-600">📅 Dias:</span>
                                 <span className="font-medium">{atividade.dias}</span>
                               </div>
+                              {atividade.nome !== 'KPIs Atingidos' && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">💰 Valor Bruto:</span>
+                                  <span className="font-medium text-red-600">R$ {(atividade.valorBrutoAtividades || atividade.totalGanho * 2).toFixed(2)}</span>
+                                </div>
+                              )}
                               <div className="flex justify-between">
                                 <span className="text-gray-600">📈 Média/dia:</span>
                                 <span className="font-medium">R$ {atividade.mediaDia.toFixed(2)}</span>
@@ -1409,13 +1477,39 @@ export default function DashboardCollaborator() {
                               </p>
                               <p className="text-xs text-purple-600">
                                 Bruto: R$ {dashboardData.historicoCompleto ? 
-                                  dashboardData.historicoCompleto.reduce((total, item) => total + (item.valor_tarefas || 0), 0).toFixed(2) : '0.00'
+                                  dashboardData.historicoCompleto.reduce((total, item) => total + (item.valor_bruto_atividades || item.valor_tarefas || 0), 0).toFixed(2) : '0.00'
                                 } | Líquido: R$ {dashboardData.historicoCompleto ? 
-                                  (dashboardData.historicoCompleto.reduce((total, item) => total + (item.valor_tarefas || 0), 0) / 2).toFixed(2) : '0.00'
+                                  dashboardData.historicoCompleto.reduce((total, item) => total + (item.subtotal_atividades || 0), 0).toFixed(2) : '0.00'
                                 }
                               </p>
                             </div>
                             <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Valor das Atividades - Específico para Ajudante de Armazém */}
+                      {userFunction === 'Ajudante de Armazém' && (
+                        <div className="bg-white p-3 sm:p-4 rounded-lg border border-indigo-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs sm:text-sm font-medium text-indigo-600">🏃‍♂️ ATIVIDADES</p>
+                              <p className="text-lg sm:text-2xl font-bold text-indigo-900">
+                                {dashboardData.atividades.length}
+                              </p>
+                              <p className="text-xs text-indigo-600">
+                                Bruto: R$ {dashboardData.historicoCompleto ? 
+                                  dashboardData.historicoCompleto.reduce((total, item) => {
+                                    // Somar apenas atividades (não KPIs) para o valor bruto
+                                    return item.atividade !== 'KPIs Atingidos' ? total + (item.valor_bruto_atividades || item.valor * 2) : total;
+                                  }, 0).toFixed(2) : '0.00'
+                                } | Líquido: R$ {dashboardData.atividades.reduce((total, ativ) => {
+                                  // Somar apenas atividades (não KPIs)
+                                  return ativ.nome !== 'KPIs Atingidos' ? total + ativ.totalGanho : total;
+                                }, 0).toFixed(2)}
+                              </p>
+                            </div>
+                            <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-500" />
                           </div>
                         </div>
                       )}
@@ -1534,7 +1628,7 @@ export default function DashboardCollaborator() {
                                         <div className="text-xs sm:text-sm">
                                           <span className="font-medium text-orange-600">🏃‍♂️ Atividade:</span>
                                           <span className="text-gray-700 ml-1 sm:ml-2">{item.nome_atividade}</span>
-                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {((item.subtotal_atividades || 0) / 2).toFixed(2)}</span>
+                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {(item.subtotal_atividades || 0).toFixed(2)}</span>
                                         </div>
                                       )}
                                     </div>

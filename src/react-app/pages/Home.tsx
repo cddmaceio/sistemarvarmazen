@@ -159,12 +159,22 @@ export default function Home() {
         return;
       }
       
-      // Map to the expected schema format
-      submitData.multiple_activities = validActivities.map(act => ({
-        nome_atividade: act.nome_atividade,
-        quantidade_produzida: act.quantidade_produzida,
-        tempo_horas: act.tempo_horas
-      }));
+      // If only one activity, use individual fields; if multiple, use multiple_activities
+      if (validActivities.length === 1) {
+        const activity = validActivities[0];
+        submitData.nome_atividade = activity.nome_atividade;
+        submitData.quantidade_produzida = activity.quantidade_produzida;
+        submitData.tempo_horas = activity.tempo_horas;
+        console.log('📝 Using single activity fields:', activity);
+      } else {
+        // Map to the expected schema format for multiple activities
+        submitData.multiple_activities = validActivities.map(act => ({
+          nome_atividade: act.nome_atividade,
+          quantidade_produzida: act.quantidade_produzida,
+          tempo_horas: act.tempo_horas
+        }));
+        console.log('📝 Using multiple activities:', submitData.multiple_activities);
+      }
     } else if (isOperadorEmpilhadeira) {
       // For Operador de Empilhadeira, use only the valid tasks count from form data
       // Don't add existing tasks to avoid double counting
@@ -264,15 +274,34 @@ export default function Home() {
     
     setLancando(true);
     try {
+      // Prepare calculator_data based on function type
+      let calculatorData = {
+        ...formData,
+        kpis_atingidos: selectedKPIs,
+      };
+
+      if (isAjudanteArmazem) {
+        const validActivities = multipleActivities.filter(act => act.nome_atividade && act.quantidade_produzida > 0 && act.tempo_horas > 0);
+        
+        if (validActivities.length === 1) {
+          // Single activity - use individual fields
+          const activity = validActivities[0];
+          calculatorData.nome_atividade = activity.nome_atividade;
+          calculatorData.quantidade_produzida = activity.quantidade_produzida;
+          calculatorData.tempo_horas = activity.tempo_horas;
+        } else {
+          // Multiple activities - use multiple_activities array
+          calculatorData.multiple_activities = validActivities;
+        }
+      } else if (isOperadorEmpilhadeira) {
+        calculatorData.valid_tasks_count = validTasksCount;
+        calculatorData.nome_operador = formData.nome_operador;
+      }
+
       const lancamentoData: CreateLancamentoType = {
         data_lancamento: dataLancamento,
         user_id: user?.id,
-        calculator_data: {
-          ...formData,
-          kpis_atingidos: selectedKPIs,
-          ...(isAjudanteArmazem && { multiple_activities: multipleActivities.filter(act => act.nome_atividade && act.quantidade_produzida > 0 && act.tempo_horas > 0) }),
-          ...(isOperadorEmpilhadeira && { valid_tasks_count: validTasksCount, nome_operador: formData.nome_operador }),
-        },
+        calculator_data: calculatorData,
         calculator_result: result,
       };
       

@@ -566,8 +566,43 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
     let tarefas_validas: number | undefined;
     let valor_tarefas: number | undefined;
 
+    console.log('=== ACTIVITY CALCULATION DEBUG ===');
+    console.log('funcao:', funcao);
+    console.log('nome_atividade:', nome_atividade);
+    console.log('quantidade_produzida:', quantidade_produzida);
+    console.log('tempo_horas:', tempo_horas);
+    console.log('multiple_activities:', multiple_activities);
+    console.log('valid_tasks_count:', valid_tasks_count);
+    
     // Handle multiple activities for Ajudantes de Armazém
+    console.log('🔍 CHECKING CONDITIONS:');
+    console.log('🔍 - funcao === "Ajudante de Armazém":', funcao === 'Ajudante de Armazém');
+    console.log('🔍 - multiple_activities exists:', !!multiple_activities);
+    console.log('🔍 - multiple_activities.length > 0:', multiple_activities && multiple_activities.length > 0);
+    console.log('🔍 - valid_tasks_count defined:', valid_tasks_count !== undefined);
+    console.log('🔍 - nome_atividade exists:', !!nome_atividade);
+    
+    if (funcao === 'Ajudante de Armazém') {
+      console.log('🎯 INSIDE Ajudante de Armazém condition');
+      if (multiple_activities && multiple_activities.length > 0) {
+        console.log('🎯 INSIDE multiple_activities condition');
+      } else {
+        console.log('❌ multiple_activities condition NOT met');
+      }
+    } else {
+      console.log('❌ funcao condition NOT met');
+    }
+    console.log('🔍 - funcao === "Ajudante de Armazém":', funcao === 'Ajudante de Armazém');
+    console.log('🔍 - multiple_activities exists:', !!multiple_activities);
+    console.log('🔍 - multiple_activities.length > 0:', multiple_activities && multiple_activities.length > 0);
+    console.log('🔍 - valid_tasks_count defined:', valid_tasks_count !== undefined);
+    console.log('🔍 - nome_atividade exists:', !!nome_atividade);
+    console.log('🔍 - quantidade_produzida exists:', !!quantidade_produzida);
+    console.log('🔍 - tempo_horas exists:', !!tempo_horas);
+    
     if (funcao === 'Ajudante de Armazém' && multiple_activities && multiple_activities.length > 0) {
+      console.log('🔄 ===== TAKING PATH: MULTIPLE ACTIVITIES =====');
+      console.log('🔄 Processing MULTIPLE activities for Ajudante de Armazém');
       for (const activity of multiple_activities) {
         const produtividade = activity.quantidade_produzida / activity.tempo_horas;
         
@@ -615,14 +650,22 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
     }
     // Handle valid tasks for Operador de Empilhadeira
     else if (funcao === 'Operador de Empilhadeira' && valid_tasks_count !== undefined) {
+      console.log('🚛 ===== TAKING PATH: OPERADOR EMPILHADEIRA =====');
+      console.log('🚛 Processing valid tasks for Operador de Empilhadeira');
       tarefas_validas = valid_tasks_count;
       valor_tarefas = valid_tasks_count * 0.093; // R$ 0,093 per valid task
       subtotal_atividades = valor_tarefas / 2; // Apply 50% rule
     }
-    // Handle single activity for other functions
+    // Handle single activity for Ajudante de Armazém or other functions
     else if (nome_atividade && quantidade_produzida && tempo_horas) {
+      console.log('📦 ===== PROCESSING SINGLE ACTIVITY =====');
+      console.log('📦 Activity Name:', nome_atividade);
+      console.log('📦 Quantity:', quantidade_produzida);
+      console.log('📦 Time (hours):', tempo_horas);
+      
       // Calculate productivity (quantity per hour)
       produtividade_alcancada = quantidade_produzida / tempo_horas;
+      console.log('📦 Calculated Productivity:', produtividade_alcancada);
       
       // Get activities for this activity name, ordered by produtividade_minima descending
       const { data: activities, error: activitiesError } = await supabase
@@ -631,20 +674,29 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
         .eq('nome_atividade', nome_atividade)
         .order('produtividade_minima', { ascending: false });
       
+      console.log('📦 Database Query Result:');
+      console.log('📦 - Activities found:', activities?.length || 0);
+      console.log('📦 - Activities data:', activities);
+      console.log('📦 - Query error:', activitiesError);
+      
       if (activitiesError) {
         console.error('Error fetching activities:', activitiesError);
         return c.json({ error: 'Erro ao buscar atividades' }, 500);
       }
       
       if (!activities || activities.length === 0) {
+        console.log('📦 ❌ NO ACTIVITIES FOUND - Returning 404');
         return c.json({ error: 'Atividade não encontrada' }, 404);
       }
       
       // Find the appropriate level based on productivity
       let selectedActivity = null;
+      console.log('📦 Finding appropriate level:');
       for (const activity of activities) {
+        console.log(`📦 - Checking level: ${activity.nivel_atividade}, min productivity: ${activity.produtividade_minima}`);
         if (produtividade_alcancada >= activity.produtividade_minima) {
           selectedActivity = activity;
+          console.log(`📦 ✅ Selected level: ${activity.nivel_atividade}`);
           break;
         }
       }
@@ -652,11 +704,17 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
       // If no level achieved, use the lowest level
       if (!selectedActivity) {
         selectedActivity = activities[activities.length - 1];
+        console.log(`📦 ⚠️ No level achieved, using lowest: ${selectedActivity.nivel_atividade}`);
       }
       
       // Calculate subtotal from activities (applying 50% rule: atividades/2)
       const valor_bruto_atividades = quantidade_produzida * selectedActivity.valor_atividade;
       subtotal_atividades = valor_bruto_atividades / 2;
+      
+      console.log('📦 ===== CALCULATION RESULTS =====');
+      console.log('📦 Selected Activity:', selectedActivity);
+      console.log('📦 Gross Value (quantity × unit_value):', valor_bruto_atividades);
+      console.log('📦 Final Subtotal (50% rule):', subtotal_atividades);
       
       nivel_atingido = selectedActivity.nivel_atividade;
       unidade_medida = selectedActivity.unidade_medida;
@@ -745,6 +803,73 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
     console.log('- bonus_kpis:', bonus_kpis);
     console.log('- kpis_atingidos_resultado:', kpis_atingidos_resultado);
     
+    // Calculate valor_bruto_atividades based on activity level
+    let valor_bruto_atividades_calculated = null;
+    
+    // For single activities (any function including Ajudante de Armazém when not using multiple_activities)
+    if (nome_atividade && quantidade_produzida && tempo_horas && !(funcao === 'Ajudante de Armazém' && multiple_activities && multiple_activities.length > 0)) {
+      // Find the selected activity to get the unit value
+      const { data: activities } = await supabase
+        .from('activities')
+        .select('*')
+        .eq('nome_atividade', nome_atividade)
+        .order('produtividade_minima', { ascending: false });
+      
+      if (activities && activities.length > 0) {
+        const produtividade = quantidade_produzida / tempo_horas;
+        let selectedActivity = null;
+        
+        for (const activity of activities) {
+          if (produtividade >= activity.produtividade_minima) {
+            selectedActivity = activity;
+            break;
+          }
+        }
+        
+        if (!selectedActivity) {
+          selectedActivity = activities[activities.length - 1];
+        }
+        
+        valor_bruto_atividades_calculated = quantidade_produzida * selectedActivity.valor_atividade;
+      }
+    }
+    
+    // For multiple activities (Ajudante de Armazém)
+    if (multiple_activities && multiple_activities.length > 0) {
+      valor_bruto_atividades_calculated = 0;
+      
+      for (const activity of multiple_activities) {
+        const produtividade = activity.quantidade_produzida / activity.tempo_horas;
+        
+        const { data: activities } = await supabase
+          .from('activities')
+          .select('*')
+          .eq('nome_atividade', activity.nome_atividade)
+          .order('produtividade_minima', { ascending: false });
+        
+        if (activities && activities.length > 0) {
+          let selectedActivity = null;
+          
+          for (const act of activities) {
+            if (produtividade >= act.produtividade_minima) {
+              selectedActivity = act;
+              break;
+            }
+          }
+          
+          if (!selectedActivity) {
+            selectedActivity = activities[activities.length - 1];
+          }
+          
+          valor_bruto_atividades_calculated += activity.quantidade_produzida * selectedActivity.valor_atividade;
+        }
+      }
+    }
+    // For Operador de Empilhadeira
+    else if (funcao === 'Operador de Empilhadeira' && valid_tasks_count !== undefined) {
+      valor_bruto_atividades_calculated = valid_tasks_count * 0.093 * 2; // Reverse the 50% rule to get gross value
+    }
+    
     // Final calculation: atividades/2 + kpi1 + kpi2 + extras
     const atividades_extras = input_adicional || 0;
     const remuneracao_total = subtotal_atividades + bonus_kpis + atividades_extras;
@@ -763,6 +888,7 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
     if (atividades_detalhes.length > 0) result.atividades_detalhes = atividades_detalhes;
     if (tarefas_validas !== undefined) result.tarefas_validas = tarefas_validas;
     if (valor_tarefas !== undefined) result.valor_tarefas = valor_tarefas;
+    if (valor_bruto_atividades_calculated !== null) result.valor_bruto_atividades = valor_bruto_atividades_calculated;
     
     return c.json(result);
   } catch (error) {
@@ -828,6 +954,10 @@ app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (
   const supabase = getSupabase(c.env);
   const { data_lancamento, calculator_data, calculator_result, user_id } = c.req.valid('json');
   
+  console.log('=== LANÇAMENTO DEBUG START ===');
+  console.log('calculator_data:', JSON.stringify(calculator_data, null, 2));
+  console.log('calculator_result:', JSON.stringify(calculator_result, null, 2));
+  
   try {
     // Get current user by ID if provided
     let currentUser = null;
@@ -882,6 +1012,9 @@ app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (
       }
     }
   
+    // Use valor_bruto_atividades from calculator result if available
+    const valorBrutoAtividades = calculator_result.valor_bruto_atividades || null;
+
     // Insert new lancamento
     const { data: lancamento, error: insertError } = await supabase
       .from('lancamentos_produtividade')
@@ -903,6 +1036,7 @@ app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (
         subtotal_atividades: calculator_result.subtotalAtividades,
         bonus_kpis: calculator_result.bonusKpis,
         remuneracao_total: calculator_result.remuneracaoTotal,
+        valor_bruto_atividades: valorBrutoAtividades,
         produtividade_alcancada: calculator_result.produtividade_alcancada || null,
         nivel_atingido: calculator_result.nivel_atingido || null,
         unidade_medida: calculator_result.unidade_medida || null,
@@ -1120,6 +1254,7 @@ app.post('/api/lancamentos/:id/validar', zValidator('json', AdminValidationSchem
         atividades_detalhes: recalculatedData.atividades_detalhes ? JSON.stringify(recalculatedData.atividades_detalhes) : null,
         tarefas_validas: recalculatedData.tarefas_validas || null,
         valor_tarefas: recalculatedData.valor_tarefas || null,
+        valor_bruto_atividades: recalculatedData.valor_bruto_atividades || null,
         aprovado_por: adminUser.id,
         aprovado_por_nome: adminUser.nome,
         data_aprovacao: new Date().toISOString(),

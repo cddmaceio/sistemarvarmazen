@@ -88,6 +88,8 @@ export const CalculatorResultSchema = z.object({
     // Valid tasks details
     tarefas_validas: z.number().optional(),
     valor_tarefas: z.number().optional(),
+    // Gross activity value
+    valor_bruto_atividades: z.number().optional(),
 });
 // Lançamento schema
 export const LancamentoSchema = z.object({

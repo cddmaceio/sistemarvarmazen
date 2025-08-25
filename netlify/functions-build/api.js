@@ -565,11 +565,30 @@ exports.handler = async (event, context) => {
       if (method === 'POST') {
         try {
           console.log('🚀 CALCULATOR FUNCTION STARTED 🚀');
+          console.log('🔧 ARQUIVO API.JS ATUALIZADO EM 25/08/2025 00:03:39 🔧');
           const input = body;
           
           console.log('Calculator endpoint called');
           console.log('=== CALCULATOR DEBUG START ===');
           console.log('Input received:', JSON.stringify(input, null, 2));
+          
+          // 🔍 CHECKING CONDITIONS FOR DEBUGGING
+          console.log('🔍 CHECKING CONDITIONS:');
+          console.log('funcao:', input.funcao);
+          console.log('nome_atividade:', input.nome_atividade);
+          console.log('quantidade_produzida:', input.quantidade_produzida);
+          console.log('tempo_horas:', input.tempo_horas);
+          console.log('multiple_activities:', input.multiple_activities);
+          console.log('valid_tasks_count:', input.valid_tasks_count);
+          
+          if (input.funcao === 'Ajudante de Armazém' && input.multiple_activities && input.multiple_activities.length > 0) {
+            console.log('✅ CONDITIONAL DEBUG: Ajudante de Armazém with multiple_activities detected!');
+            console.log('multiple_activities.length:', input.multiple_activities.length);
+          } else if (input.funcao === 'Ajudante de Armazém') {
+            console.log('ℹ️ CONDITIONAL DEBUG: Ajudante de Armazém detected but no multiple_activities');
+            console.log('Has multiple_activities:', !!input.multiple_activities);
+            console.log('multiple_activities value:', input.multiple_activities);
+          }
           
           // Helper function to normalize strings (remove accents)
           const normalizeString = (str) => {
@@ -679,8 +698,20 @@ exports.handler = async (event, context) => {
             }, 400);
           }
 
-          // // Handle multiple activities
-          else if (input.multiple_activities && input.multiple_activities.length > 0) {
+          // 🔍 CHECKING CONDITIONS FOR DEBUGGING
+          console.log('🔍 CHECKING CONDITIONS:');
+          console.log('funcao:', input.funcao);
+          console.log('nome_atividade:', input.nome_atividade);
+          console.log('quantidade_produzida:', input.quantidade_produzida);
+          console.log('tempo_horas:', input.tempo_horas);
+          console.log('multiple_activities:', input.multiple_activities);
+          console.log('valid_tasks_count:', input.valid_tasks_count);
+          
+          // Handle multiple activities for all functions that support it
+          if (input.multiple_activities && input.multiple_activities.length > 0) {
+            console.log('✅ CONDITIONAL DEBUG: Multiple activities detected!');
+            console.log('funcao:', input.funcao);
+            console.log('multiple_activities.length:', input.multiple_activities.length);
             console.log("Using updated multiple_activities logic with input:", input);
             for (const act of input.multiple_activities) {
               console.log(`Processing activity: ${act.nome_atividade}`);
@@ -778,6 +809,104 @@ exports.handler = async (event, context) => {
               unidadeMedida = selectedActivity.unidade_medida;
             }
           }
+          // Handle single activity for other functions or when no multiple activities
+          else if (input.nome_atividade && input.quantidade_produzida && input.tempo_horas) {
+            console.log('📦 ===== PROCESSING SINGLE ACTIVITY =====');
+            console.log('📦 Activity Name:', input.nome_atividade);
+            console.log('📦 Quantity:', input.quantidade_produzida);
+            console.log('📦 Time (hours):', input.tempo_horas);
+            
+            // Calculate productivity (quantity per hour)
+            const produtividade = input.quantidade_produzida / input.tempo_horas;
+            console.log('📦 Calculated Productivity:', produtividade);
+            
+            // Try multiple variations of activity name for encoding issues
+            const activityVariations = [
+              input.nome_atividade,
+              input.nome_atividade.replace('ç', 'Ã§').replace('ã', 'Ã£').replace('é', 'Ã©'),
+              input.nome_atividade.replace('Amarração', 'AmarraÃ§Ã£o'),
+              input.nome_atividade.replace('Devolução', 'DevoluÃ§Ã£o'),
+              // More specific mappings
+              'Prod AmarraÃ§Ã£o', // Direct mapping for most common activity
+              'Prod Repack',
+              'Prod Retrabalho',
+              'Prod Retorno',
+              'Prod Refugo',
+              'Prod DevoluÃ§Ã£o',
+              'Prod Blocagem Repack'
+            ];
+            
+            let activityData = null;
+            let error = null;
+            
+            for (const variation of activityVariations) {
+              console.log(`Trying activity name variation: ${variation}`);
+              const { data: queryData, error: queryError } = await supabase
+                .from('activities')
+                .select('*')
+                .eq('nome_atividade', variation)
+                .order('produtividade_minima', { ascending: false });
+              
+              if (!queryError && queryData && queryData.length > 0) {
+                activityData = queryData;
+                console.log(`Found activity data with variation: ${variation}`);
+                break;
+              }
+            }
+            
+            console.log(`Query result for ${input.nome_atividade}:`, { error, dataLength: activityData?.length });
+            if (error) {
+              console.error(`Error querying activity ${input.nome_atividade}:`, error);
+            } else if (!activityData || activityData.length === 0) {
+              console.log(`No data found for activity: ${input.nome_atividade}`);
+            } else {
+              console.log(`Found ${activityData.length} records for ${input.nome_atividade}:`, activityData);
+              
+              let selectedActivity = null;
+              for (const a of activityData) {
+                // Convert produtividade_minima to number (handle comma decimal separator)
+                const produtividadeMinima = typeof a.produtividade_minima === 'string' 
+                  ? parseFloat(a.produtividade_minima.replace(',', '.'))
+                  : a.produtividade_minima;
+                
+                console.log(`Checking level: ${a.nivel_atividade}, min productivity: ${produtividadeMinima}`);
+                if (produtividade >= produtividadeMinima) {
+                  selectedActivity = a;
+                  console.log(`Selected activity level: ${a.nivel_atividade}`);
+                  break;
+                }
+              }
+              if (!selectedActivity) {
+                selectedActivity = activityData[activityData.length - 1];
+                console.log(`No level achieved, using lowest level: ${selectedActivity.nivel_atividade}`);
+              }
+
+              // Convert valor_atividade to number (handle comma decimal separator)
+              const valorAtividade = typeof selectedActivity.valor_atividade === 'string' 
+                ? parseFloat(selectedActivity.valor_atividade.replace(',', '.'))
+                : selectedActivity.valor_atividade;
+              
+              const valor = valorAtividade * input.quantidade_produzida;
+              subtotalAtividades = valor / 2; // Aplicar regra de 50%
+              
+              console.log(`Single activity calculation: ${valorAtividade} * ${input.quantidade_produzida} = ${valor}, subtotal after 50%: ${valor / 2}`);
+
+              atividadesDetalhes.push({
+                nome_atividade: input.nome_atividade,
+                quantidade_produzida: input.quantidade_produzida,
+                tempo_horas: input.tempo_horas,
+                valor,
+                produtividade: Math.round(produtividade * 100) / 100,
+                nivel: selectedActivity.nivel_atividade
+              });
+
+              tarefasValidas = 1;
+              valorTarefas = valor;
+              produtividadeAlcancada = produtividade;
+              nivelAtingido = selectedActivity.nivel_atividade;
+              unidadeMedida = selectedActivity.unidade_medida;
+            }
+          }
 
           // Handle KPIs with normalized data
           console.log("Processing KPIs:", input.kpis_atingidos);
@@ -829,6 +958,9 @@ exports.handler = async (event, context) => {
           console.log('Final kpisAtingidos:', kpisAtingidos);
 
           const remuneracaoTotal = subtotalAtividades + bonusKpis + (input.input_adicional || 0);
+          
+          // Calculate valor_bruto_atividades (before 50% rule)
+          const valorBrutoAtividades = valorTarefas || (subtotalAtividades * 2);
 
           return {
             statusCode: 200,
@@ -846,6 +978,7 @@ exports.handler = async (event, context) => {
               atividadesDetalhes,
               tarefasValidas,
               valorTarefas,
+              valorBrutoAtividades,
               kpisAtingidos
             })
           };
@@ -998,7 +1131,16 @@ exports.handler = async (event, context) => {
             status,
             observacoes: observacoes || null
           };
+          
+          // Se for aprovação, salvar quem aprovou e quando
+          if (acao === 'aprovar') {
+            updateData.aprovado_por = adminUser ? adminUser.id : null;
+            updateData.aprovado_por_nome = adminUser ? adminUser.nome : 'Admin';
+            updateData.data_aprovacao = new Date().toISOString();
           }
+          }
+          
+
           
           // Update the lancamento
           const { data: updatedLancamento, error: updateError } = await supabase
@@ -1480,6 +1622,101 @@ exports.handler = async (event, context) => {
           statusCode: 500,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
           body: JSON.stringify({ error: 'Internal server error' })
+        };
+      }
+    }
+
+    // Histórico de aprovações endpoint
+    if (apiPath === '/historico-aprovacoes' && method === 'GET') {
+      try {
+        const colaborador = queryParams.colaborador;
+        const admin = queryParams.admin;
+        const editado = queryParams.editado;
+        
+        console.log('=== HISTORICO APROVACOES DEBUG ===');
+        console.log('Filtros recebidos:', { colaborador, admin, editado });
+        
+        // Buscar todos os lançamentos aprovados diretamente
+        const { data: allApproved, error: allError } = await supabase
+          .from('lancamentos_produtividade')
+          .select('*')
+          .eq('status', 'aprovado')
+          .order('updated_at', { ascending: false });
+        
+        console.log('Lançamentos aprovados encontrados:', allApproved?.length || 0);
+        
+        if (allError) {
+          console.error('Erro na consulta inicial:', allError);
+          return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ error: 'Erro ao carregar histórico' })
+          };
+        }
+        
+        if (!allApproved || allApproved.length === 0) {
+          console.log('Nenhum lançamento aprovado encontrado');
+          return {
+            statusCode: 200,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify([])
+          };
+        }
+        
+        // Aplicar filtros manualmente se necessário
+        let filteredHistory = allApproved;
+        
+        if (colaborador) {
+          filteredHistory = filteredHistory.filter(item => 
+            item.user_nome?.toLowerCase().includes(colaborador.toLowerCase())
+          );
+        }
+        
+        if (admin) {
+          filteredHistory = filteredHistory.filter(item => 
+            item.aprovado_por_nome?.toLowerCase().includes(admin.toLowerCase())
+          );
+        }
+        
+        if (editado === 'true') {
+          filteredHistory = filteredHistory.filter(item => item.editado_por_admin);
+        } else if (editado === 'false') {
+          filteredHistory = filteredHistory.filter(item => !item.editado_por_admin);
+        }
+        
+        // Transform data to match expected format
+        const transformedHistory = filteredHistory.map(item => ({
+          id: item.id,
+          lancamento_id: item.id,
+          colaborador_id: item.user_id,
+          colaborador_nome: item.user_nome,
+          colaborador_cpf: item.user_cpf,
+          data_lancamento: item.data_lancamento,
+          data_aprovacao: item.data_aprovacao || item.updated_at,
+          aprovado_por: item.aprovado_por_nome || item.aprovado_por || 'N/A',
+          editado: !!item.editado_por_admin,
+          editado_por: item.editado_por_admin,
+          dados_finais: JSON.stringify(item),
+          observacoes: item.observacoes,
+          remuneracao_total: item.remuneracao_total,
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        }));
+        
+        console.log('Histórico filtrado:', transformedHistory.length, 'registros');
+        console.log('=== HISTORICO APROVACOES DEBUG END ===');
+        
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify(transformedHistory)
+        };
+      } catch (error) {
+        console.error('Erro no endpoint historico-aprovacoes:', error);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ error: 'Erro interno do servidor' })
         };
       }
     }

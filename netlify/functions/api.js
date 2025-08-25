@@ -596,6 +596,81 @@ app.post('/api/calculator', (0, zod_validator_1.zValidator)('json', types_1.Calc
         return c.json({ error: 'Calculation failed' }, 500);
     }
 });
+// Add endpoint to get approval history
+app.get('/api/historico-aprovacoes', async (c) => {
+  const supabase = getSupabase(c.env);
+  const colaborador = c.req.query('colaborador');
+  const admin = c.req.query('admin');
+  const editado = c.req.query('editado');
+  
+  try {
+    apiLogger.debug('Fetching approval history', { colaborador, admin, editado });
+    
+    // Buscar todos os lançamentos aprovados diretamente
+    const { data: allApproved, error: allError } = await supabase
+      .from('lancamentos_produtividade')
+      .select('*')
+      .eq('status', 'aprovado')
+      .order('updated_at', { ascending: false });
+    
+    if (allError) {
+      dbLogger.error('Error fetching approved lancamentos', { error: allError.message });
+      return c.json({ error: 'Erro ao carregar histórico' }, 500);
+    }
+    
+    if (!allApproved || allApproved.length === 0) {
+      apiLogger.debug('No approved lancamentos found');
+      return c.json([]);
+    }
+    
+    // Aplicar filtros manualmente se necessário
+    let filteredHistory = allApproved;
+    
+    if (colaborador) {
+      filteredHistory = filteredHistory.filter(item => 
+        item.user_nome?.toLowerCase().includes(colaborador.toLowerCase())
+      );
+    }
+    
+    if (admin) {
+      filteredHistory = filteredHistory.filter(item => 
+        item.aprovado_por_nome?.toLowerCase().includes(admin.toLowerCase())
+      );
+    }
+    
+    if (editado === 'true') {
+      filteredHistory = filteredHistory.filter(item => item.editado_por_admin);
+    } else if (editado === 'false') {
+      filteredHistory = filteredHistory.filter(item => !item.editado_por_admin);
+    }
+    
+    // Transform data to match expected format
+    const transformedHistory = filteredHistory.map(item => ({
+      id: item.id,
+      lancamento_id: item.id,
+      colaborador_id: item.user_id,
+      colaborador_nome: item.user_nome,
+      colaborador_cpf: item.user_cpf,
+      data_lancamento: item.data_lancamento,
+      data_aprovacao: item.data_aprovacao || item.updated_at,
+      aprovado_por: item.aprovado_por_nome || item.aprovado_por || 'N/A',
+      editado: !!item.editado_por_admin,
+      editado_por: item.editado_por_admin,
+      dados_finais: JSON.stringify(item),
+      observacoes: item.observacoes,
+      remuneracao_total: item.remuneracao_total,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    }));
+    
+    apiLogger.debug('Approval history fetched successfully', { count: transformedHistory.length });
+    return c.json(transformedHistory);
+  } catch (error) {
+    apiLogger.error('Error in historico-aprovacoes endpoint', { error: error.message });
+    return c.json({ error: 'Erro interno do servidor' }, 500);
+  }
+});
+
 // Health check
 app.get('/api/health', async (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });

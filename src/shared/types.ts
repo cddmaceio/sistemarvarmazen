@@ -115,6 +115,8 @@ export const CalculatorResultSchema = z.object({
   // Valid tasks details
   tarefas_validas: z.number().optional(),
   valor_tarefas: z.number().optional(),
+  // Gross activity value
+  valor_bruto_atividades: z.number().optional(),
 });
 
 export type CalculatorResultType = z.infer<typeof CalculatorResultSchema>;
@@ -149,6 +151,7 @@ export const LancamentoSchema = z.object({
   atividades_detalhes: z.string().optional(), // JSON
   tarefas_validas: z.number().optional(),
   valor_tarefas: z.number().optional(),
+  valor_bruto_atividades: z.number().optional(), // Para Ajudante de Armazém
   
   // Status
   status: z.enum(["pendente", "aprovado", "reprovado"]).default("pendente"),
