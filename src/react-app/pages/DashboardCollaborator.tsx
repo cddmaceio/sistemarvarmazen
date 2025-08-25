@@ -366,8 +366,8 @@ export default function DashboardCollaborator() {
             // Para atividades, usar subtotal_atividades; para KPIs, usar bonus_kpis
             const valorAtividade = nomeAtividade === 'KPIs Atingidos' ? (item.bonus_kpis || 0) : (item.subtotal_atividades || 0);
             const valorBrutoAtividade = nomeAtividade === 'KPIs Atingidos' ? 0 : (item.valor_bruto_atividades || 0);
-            const quantidade = parseFloat(dados.quantidade_produzida || '0');
-            const tempo = parseFloat(dados.tempo_horas || '0');
+            const quantidade = parseFloat(item.quantidade_produzida || '0');
+            const tempo = parseFloat(item.tempo_horas || '0');
             
             acc[nomeAtividade].totalGanho += valorAtividade;
             acc[nomeAtividade].valorBrutoAtividades += valorBrutoAtividade;
