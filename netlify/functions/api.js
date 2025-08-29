@@ -671,6 +671,126 @@ app.get('/api/historico-aprovacoes', async (c) => {
   }
 });
 
+// Productivity data endpoint
+app.get('/api/productivity-data', async (c) => {
+  const supabase = getSupabase(c.env);
+  
+  try {
+    console.log('Fetching productivity data...');
+    
+    // Definir as funções que queremos filtrar
+    const funcoesPermitidas = ['Ajudante de Armazém', 'Operador de Empilhadeira'];
+    console.log('Funções permitidas:', funcoesPermitidas);
+    
+    // Buscar usuários ativos apenas das funções permitidas
+    const { data: usuarios, error: usuariosError } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('status_usuario', 'ativo')
+      .in('funcao', funcoesPermitidas);
+
+    console.log('Usuários encontrados:', usuarios?.length || 0);
+    console.log('Usuários por função:', usuarios?.reduce((acc, u) => {
+      acc[u.funcao] = (acc[u.funcao] || 0) + 1;
+      return acc;
+    }, {}));
+
+    if (usuariosError) {
+      console.error('Erro ao buscar usuários:', usuariosError);
+      return c.json({ success: false, error: 'Erro ao buscar usuários' }, 500);
+    }
+
+    // Buscar lançamentos dos últimos 30 dias apenas das funções permitidas
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const dataLimite = thirtyDaysAgo.toISOString().split('T')[0];
+    console.log('Data limite para lançamentos:', dataLimite);
+    
+    const { data: lancamentos, error: lancamentosError } = await supabase
+      .from('lancamentos_produtividade')
+      .select('*')
+      .gte('data_lancamento', dataLimite)
+      .in('funcao', funcoesPermitidas);
+
+    console.log('Lançamentos encontrados:', lancamentos?.length || 0);
+    console.log('Lançamentos por função:', lancamentos?.reduce((acc, l) => {
+      acc[l.funcao] = (acc[l.funcao] || 0) + 1;
+      return acc;
+    }, {}));
+
+    if (lancamentosError) {
+      console.error('Erro ao buscar lançamentos:', lancamentosError);
+      return c.json({ success: false, error: 'Erro ao buscar lançamentos' }, 500);
+    }
+
+    // Agrupar dados por função
+    const produtividadePorFuncao = {};
+    
+    lancamentos?.forEach(lancamento => {
+      const funcao = lancamento.funcao || 'Não definido';
+      const turno = lancamento.turno || 'Geral';
+      const produtividade = parseFloat(lancamento.produtividade_alcancada) || 0;
+      const eficiencia = parseFloat(lancamento.remuneracao_total) || 0;
+      
+      if (!produtividadePorFuncao[funcao]) {
+        produtividadePorFuncao[funcao] = {
+          funcao,
+          totalProdutividade: 0,
+          totalEficiencia: 0,
+          count: 0,
+          turnos: {}
+        };
+      }
+      
+      produtividadePorFuncao[funcao].totalProdutividade += produtividade;
+      produtividadePorFuncao[funcao].totalEficiencia += eficiencia;
+      produtividadePorFuncao[funcao].count += 1;
+      
+      if (!produtividadePorFuncao[funcao].turnos[turno]) {
+        produtividadePorFuncao[funcao].turnos[turno] = {
+          produtividade: 0,
+          eficiencia: 0,
+          count: 0
+        };
+      }
+      
+      produtividadePorFuncao[funcao].turnos[turno].produtividade += produtividade;
+      produtividadePorFuncao[funcao].turnos[turno].eficiencia += eficiencia;
+      produtividadePorFuncao[funcao].turnos[turno].count += 1;
+    });
+
+    // Calcular médias e formatar dados apenas para as funções permitidas
+    const resultado = Object.values(produtividadePorFuncao)
+      .filter(item => funcoesPermitidas.includes(item.funcao))
+      .map(item => ({
+        funcao: item.funcao,
+        produtividade: item.count > 0 ? Math.round(item.totalProdutividade / item.count) : 0,
+        eficiencia: item.count > 0 ? Math.round(item.totalEficiencia / item.count) : 0,
+        colaboradores: usuarios?.filter(u => u.funcao === item.funcao).length || 0
+      }));
+    
+    // Se não há dados, retornar dados das funções permitidas com valores zero
+    if (resultado.length === 0) {
+      const resultadoVazio = funcoesPermitidas.map(funcao => ({
+        funcao,
+        produtividade: 0,
+        eficiencia: 0,
+        colaboradores: usuarios?.filter(u => u.funcao === funcao).length || 0
+      }));
+      
+      console.log(`No productivity data found, returning empty data for ${funcoesPermitidas.length} functions`);
+      return c.json({ success: true, data: resultadoVazio });
+    }
+
+    console.log(`Productivity data calculated for ${resultado.length} functions`);
+    return c.json({ success: true, data: resultado });
+    
+  } catch (error) {
+    console.error('Erro ao processar dados de produtividade:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
 // Health check
 app.get('/api/health', async (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });

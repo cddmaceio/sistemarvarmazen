@@ -32,6 +32,11 @@ export const UserSchema = z.object({
     tipo_usuario: z.string().default("colaborador"),
     status_usuario: z.string().default("ativo"),
     funcao: z.string().optional(),
+    turno: z.enum(["Manhã", "Tarde", "Noite", "Geral"]).optional(), // Opcional para administradores
+    email: z.string().optional(),
+    telefone: z.string().optional(),
+    data_admissao: z.string().optional(),
+    observacoes: z.string().optional(),
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
 });
@@ -70,10 +75,10 @@ export const CalculatorInputSchema = z.object({
 });
 // Calculator result schema
 export const CalculatorResultSchema = z.object({
-    subtotal_atividades: z.number(),
-    bonus_kpis: z.number(),
-    remuneracao_total: z.number(),
-    kpis_atingidos: z.array(z.string()),
+    subtotalAtividades: z.number(),
+    bonusKpis: z.number(),
+    remuneracaoTotal: z.number(),
+    kpisAtingidos: z.array(z.string()),
     produtividade_alcancada: z.number().optional(),
     nivel_atingido: z.string().optional(),
     unidade_medida: z.string().optional(),
@@ -88,6 +93,8 @@ export const CalculatorResultSchema = z.object({
     // Valid tasks details
     tarefas_validas: z.number().optional(),
     valor_tarefas: z.number().optional(),
+    // Gross activity value
+    valor_bruto_atividades: z.number().optional(),
 });
 // Lançamento schema
 export const LancamentoSchema = z.object({
@@ -117,6 +124,7 @@ export const LancamentoSchema = z.object({
     atividades_detalhes: z.string().optional(), // JSON
     tarefas_validas: z.number().optional(),
     valor_tarefas: z.number().optional(),
+    valor_bruto_atividades: z.number().optional(), // Para Ajudante de Armazém
     // Status
     status: z.enum(["pendente", "aprovado", "reprovado"]).default("pendente"),
     observacoes: z.string().optional(),

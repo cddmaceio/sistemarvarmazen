@@ -1,12 +1,7 @@
-"use strict";
 /**
  * Utility functions to handle character encoding issues in the database
  * The database stores characters with UTF-8 encoding that appears corrupted when displayed
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.TURNO_DB_TO_UI = exports.TURNO_UI_TO_DB = exports.FUNCAO_DB_TO_UI = exports.FUNCAO_UI_TO_DB = exports.TURNOS_UI_FORMAT = exports.TURNOS_DB_FORMAT = exports.FUNCOES_UI_FORMAT = exports.FUNCOES_DB_FORMAT = void 0;
-exports.convertToDbFormat = convertToDbFormat;
-exports.convertFromDbFormat = convertFromDbFormat;
 /**
  * Converts special characters to database-stored format
  * This is needed because the database has encoding issues where:
@@ -14,7 +9,7 @@ exports.convertFromDbFormat = convertFromDbFormat;
  * - ã becomes Ã£
  * - ç becomes Ã§
  */
-function convertToDbFormat(text) {
+export function convertToDbFormat(text) {
     return text
         .replace(/é/g, 'Ã©')
         .replace(/ã/g, 'Ã£')
@@ -30,7 +25,7 @@ function convertToDbFormat(text) {
  * Converts database format back to readable format
  * This is the reverse of convertToDbFormat
  */
-function convertFromDbFormat(text) {
+export function convertFromDbFormat(text) {
     return text
         .replace(/Ã©/g, 'é')
         .replace(/Ã£/g, 'ã')
@@ -45,7 +40,7 @@ function convertFromDbFormat(text) {
 /**
  * Standard functions list with correct encoding for database storage
  */
-exports.FUNCOES_DB_FORMAT = [
+export const FUNCOES_DB_FORMAT = [
     'Ajudante de ArmazÃ©m',
     'Operador de Empilhadeira',
     'Conferente',
@@ -55,7 +50,7 @@ exports.FUNCOES_DB_FORMAT = [
 /**
  * Standard functions list in readable format for UI
  */
-exports.FUNCOES_UI_FORMAT = [
+export const FUNCOES_UI_FORMAT = [
     'Ajudante de Armazém',
     'Operador de Empilhadeira',
     'Conferente',
@@ -65,7 +60,7 @@ exports.FUNCOES_UI_FORMAT = [
 /**
  * Standard shifts list with correct encoding for database storage
  */
-exports.TURNOS_DB_FORMAT = [
+export const TURNOS_DB_FORMAT = [
     'ManhÃ£',
     'Tarde',
     'Noite',
@@ -74,7 +69,7 @@ exports.TURNOS_DB_FORMAT = [
 /**
  * Standard shifts list in readable format for UI
  */
-exports.TURNOS_UI_FORMAT = [
+export const TURNOS_UI_FORMAT = [
     'Manhã',
     'Tarde',
     'Noite',
@@ -83,7 +78,7 @@ exports.TURNOS_UI_FORMAT = [
 /**
  * Mapping from UI format to DB format for functions
  */
-exports.FUNCAO_UI_TO_DB = {
+export const FUNCAO_UI_TO_DB = {
     'Ajudante de Armazém': 'Ajudante de ArmazÃ©m',
     'Operador de Empilhadeira': 'Operador de Empilhadeira',
     'Conferente': 'Conferente',
@@ -93,7 +88,7 @@ exports.FUNCAO_UI_TO_DB = {
 /**
  * Mapping from DB format to UI format for functions
  */
-exports.FUNCAO_DB_TO_UI = {
+export const FUNCAO_DB_TO_UI = {
     'Ajudante de ArmazÃ©m': 'Ajudante de Armazém',
     'Operador de Empilhadeira': 'Operador de Empilhadeira',
     'Conferente': 'Conferente',
@@ -103,7 +98,7 @@ exports.FUNCAO_DB_TO_UI = {
 /**
  * Mapping from UI format to DB format for shifts
  */
-exports.TURNO_UI_TO_DB = {
+export const TURNO_UI_TO_DB = {
     'Manhã': 'ManhÃ£',
     'Tarde': 'Tarde',
     'Noite': 'Noite',
@@ -112,7 +107,7 @@ exports.TURNO_UI_TO_DB = {
 /**
  * Mapping from DB format to UI format for shifts
  */
-exports.TURNO_DB_TO_UI = {
+export const TURNO_DB_TO_UI = {
     'ManhÃ£': 'Manhã',
     'Tarde': 'Tarde',
     'Noite': 'Noite',

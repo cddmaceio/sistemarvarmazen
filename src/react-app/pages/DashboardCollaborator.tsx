@@ -6,6 +6,7 @@ import { Button } from '@/react-app/components/Button';
 import AuthGuard from '@/react-app/components/AuthGuard';
 import UserMenu from '@/react-app/components/UserMenu';
 import { useAuth } from '@/react-app/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 // Função para formatar data corretamente, evitando problemas de timezone
 const formatDateSafe = (dateString: string): string => {
@@ -59,6 +60,7 @@ interface ActivityPerformance {
   quantidadeTotalProduzida?: number;
   tempoTotalHoras?: number;
   producaoHora?: number;
+  nivelAtingido?: string;
 }
 
 interface HistoricoAtividade {
@@ -73,6 +75,9 @@ interface HistoricoAtividade {
   bonus_kpis?: number;
   subtotal_atividades?: number;
   valor_bruto_atividades?: number;
+  status_edicao?: string;
+  editado_por_admin?: string;
+  data_edicao?: string;
 }
 
 export default function DashboardCollaborator() {
@@ -83,12 +88,60 @@ export default function DashboardCollaborator() {
   const [mesAtual, setMesAtual] = useState(new Date());
   const [lancamentosPendentesReprovados, setLancamentosPendentesReprovados] = useState<any[]>([]);
   const [mesInicializado, setMesInicializado] = useState(false);
+  const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchDashboardData();
+      fetchActivities();
     }
   }, [user, mesAtual]);
+
+  const fetchActivities = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('activities')
+        .select('*')
+        .order('nome_atividade')
+        .order('produtividade_minima', { ascending: false });
+      
+      if (error) {
+        console.error('Erro ao buscar atividades:', error);
+        return;
+      }
+      
+      setActivities(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar atividades:', error);
+    }
+  };
+
+  const calcularNivelAtingido = (nomeAtividade: string, producaoHora: number): string => {
+    const atividadesDoTipo = activities.filter(act => act.nome_atividade === nomeAtividade);
+    
+    if (atividadesDoTipo.length === 0) {
+      return 'Nível não encontrado';
+    }
+    
+    // Ordenar por produtividade_minima decrescente
+    const atividadesOrdenadas = atividadesDoTipo.sort((a, b) => b.produtividade_minima - a.produtividade_minima);
+    
+    // Encontrar o nível apropriado baseado na produtividade
+    let selectedActivity = null;
+    for (const activity of atividadesOrdenadas) {
+      if (producaoHora >= activity.produtividade_minima) {
+        selectedActivity = activity;
+        break;
+      }
+    }
+    
+    // Se nenhum nível foi atingido, usar o nível mais baixo
+    if (!selectedActivity) {
+      selectedActivity = atividadesOrdenadas[atividadesOrdenadas.length - 1];
+    }
+    
+    return selectedActivity.nivel_atividade || 'Nível não definido';
+  };
 
   const fetchDashboardData = async () => {
     if (!user) {
@@ -272,10 +325,13 @@ export default function DashboardCollaborator() {
               nomeAtividadePrincipal = 'Operador de Empilhadeira';
             }
             
-            // Usar a remuneração total do lançamento (que já inclui tarefas + KPIs)
+            // Calcular o valor final corretamente (subtotal_atividades + bonus_kpis)
+            const valorFinalLancamento = (dados.subtotal_atividades || dados.valor_tarefas || 0) + (dados.bonus_kpis || 0);
+            
+            // Usar o valor calculado corretamente
             historicoCompleto.push({
               data: dataFormatada,
-              valor: item.remuneracao_total || 0, // Valor total do lançamento
+              valor: valorFinalLancamento, // Valor correto calculado
               atividade: nomeAtividadePrincipal,
               turno: item.turno,
               aprovadoPor: item.aprovado_por_nome || item.aprovado_por || 'Sistema',
@@ -283,7 +339,11 @@ export default function DashboardCollaborator() {
               tarefas_validas: item.tarefas_validas,
               valor_tarefas: item.valor_tarefas,
               bonus_kpis: item.bonus_kpis,
-              subtotal_atividades: item.subtotal_atividades
+              subtotal_atividades: item.subtotal_atividades,
+              valor_bruto_atividades: item.valor_bruto_atividades,
+              status_edicao: item.status_edicao,
+              editado_por_admin: item.editado_por_admin,
+              data_edicao: item.data_edicao
             });
           }
         } else if (userFunction === 'Ajudante de Armazém') {
@@ -405,13 +465,19 @@ export default function DashboardCollaborator() {
         return acc;
       }, {});
 
-      const atividades: ActivityPerformance[] = Object.values(atividadesPorTipo).map((ativ: any) => ({
-        ...ativ,
-        mediaDia: ativ.totalGanho / ativ.dias,
-        performance: getPerformanceLevel(ativ.totalGanho / ativ.dias),
-        cor: getActivityColor(ativ.nome),
-        producaoHora: ativ.tempoTotalHoras && ativ.tempoTotalHoras > 0 ? ativ.quantidadeTotalProduzida / ativ.tempoTotalHoras : 0
-      }));
+      const atividades: ActivityPerformance[] = Object.values(atividadesPorTipo).map((ativ: any) => {
+        const producaoHora = ativ.tempoTotalHoras && ativ.tempoTotalHoras > 0 ? ativ.quantidadeTotalProduzida / ativ.tempoTotalHoras : 0;
+        const nivelAtingido = producaoHora > 0 ? calcularNivelAtingido(ativ.nome, producaoHora) : 'Sem produção';
+        
+        return {
+          ...ativ,
+          mediaDia: ativ.totalGanho / ativ.dias,
+          performance: getPerformanceLevel(ativ.totalGanho / ativ.dias),
+          cor: getActivityColor(ativ.nome),
+          producaoHora,
+          nivelAtingido
+        };
+      });
 
       // Encontrar melhor dia
       const melhorDia = dadosUsuario.reduce((melhor: any, atual: any) => {
@@ -912,7 +978,7 @@ export default function DashboardCollaborator() {
                             <div className="text-xl sm:text-2xl flex-shrink-0">{atividade.icon}</div>
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{atividade.nome}</h3>
-                              <p className="text-xs sm:text-sm text-gray-600">{atividade.dias} dias trabalhados</p>
+                              <p className="text-xs sm:text-sm text-gray-600">{atividade.dias} lançamentos</p>
                               {/* Exibir detalhes específicos para Tarefas Válidas de Operador de Empilhadeira */}
                               {userFunction === 'Operador de Empilhadeira' && atividade.nome === 'Tarefas Válidas' && atividade.tarefasValidas && (
                                 <div className="mt-2 space-y-1">
@@ -955,6 +1021,11 @@ export default function DashboardCollaborator() {
                                   {atividade.producaoHora !== undefined && atividade.producaoHora > 0 && (
                                     <p className="text-xs sm:text-sm text-green-700 font-semibold">
                                       🚀 Produção/h: {atividade.producaoHora.toFixed(1)} unidades/h
+                                    </p>
+                                  )}
+                                  {atividade.nivelAtingido && (
+                                    <p className="text-xs sm:text-sm text-orange-600 font-semibold">
+                                      🏆 Nível: {atividade.nivelAtingido}
                                     </p>
                                   )}
                                 </div>
@@ -1005,7 +1076,7 @@ export default function DashboardCollaborator() {
                             <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base truncate">{atividade.nome}</h4>
                             <div className="space-y-1 text-xs sm:text-sm">
                               <div className="flex justify-between">
-                                <span className="text-gray-600">📅 Dias:</span>
+                                <span className="text-gray-600">📅 Lançamentos:</span>
                                 <span className="font-medium">{atividade.dias}</span>
                               </div>
                               {atividade.nome !== 'KPIs Atingidos' && (
@@ -1306,10 +1377,13 @@ export default function DashboardCollaborator() {
                             console.log('Erro ao parsear dados do lançamento:', e);
                           }
                           
-                          // Calcular valor final correto (Atividades + KPIs)
+                          // Calcular valor final correto (Atividades + KPIs) - SEMPRE soma de atividades + KPIs
                           const valorAtividades = item.subtotal_atividades || item.valor_tarefas || 0;
                           const valorKpis = item.bonus_kpis || 0;
                           const valorFinal = valorAtividades + valorKpis;
+                          
+                          // Usar sempre o valor final calculado (soma de atividades + KPIs)
+                          const valorExibicao = valorFinal;
                           
                           return (
                             <div key={index} className="p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:shadow-md transition-all duration-200">
@@ -1351,35 +1425,62 @@ export default function DashboardCollaborator() {
                                           <span className="text-green-600 ml-1 sm:ml-2 font-medium">
                                             R$ {(item.subtotal_atividades || item.valor_tarefas || 0).toFixed(2)}
                                           </span>
-                                          <span className="text-gray-500 ml-1 text-xs">(Valor Bruto/Líquido)</span>
+                                          <span className="text-gray-500 ml-1 text-xs">(Valor Líquido)</span>
                                         </div>
                                       )}
                                       
-                                      {/* Atividade principal - para outras funções */}
-                                      {item.atividade && item.atividade !== 'KPIs Atingidos' && item.atividade !== 'Tarefas Válidas' && (
+                                      {/* Atividade de Produção - para outras funções que não são Operador de Empilhadeira */}
+                                      {userFunction !== 'Operador de Empilhadeira' && item.atividade && item.atividade !== 'KPIs Atingidos' && item.atividade !== 'Tarefas Válidas' && (
                                         <div className="text-xs sm:text-sm">
                                           <span className="font-medium text-orange-600">🏃‍♂️ Atividade:</span>
                                           <span className="text-gray-700 ml-1 sm:ml-2">{item.atividade}</span>
-                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {item.valor.toFixed(2)}</span>
+                                          <span className="text-green-600 ml-1 sm:ml-2 font-medium">R$ {valorAtividades.toFixed(2)}</span>
                                         </div>
                                       )}
                                     </div>
                                     
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-2 space-y-1 sm:space-y-0">
-                                      <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
-                                        ✅ Aprovado
-                                      </span>
+                                      {item.status_edicao === 'editado_admin' ? (
+                                        <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 w-fit">
+                                          ✏️ Aprovado com Edição
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
+                                          ✅ Aprovado
+                                        </span>
+                                      )}
                                       <span className="text-xs text-gray-500">
-                                        👤 Aprovado por: {item.aprovadoPor || 'Sistema'}
+                                        👤 {item.status_edicao === 'editado_admin' ? `Editado por: ${item.editado_por_admin || 'Admin'}` : `Aprovado por: ${item.aprovadoPor || 'Sistema'}`}
                                       </span>
+                                      {item.status_edicao === 'editado_admin' && item.data_edicao && (
+                                        <span className="text-xs text-gray-500">
+                                          📅 Em: {new Date(item.data_edicao).toLocaleDateString('pt-BR')}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-lg sm:text-2xl font-bold text-green-600">
-                                    + R$ {userFunction === 'Operador de Empilhadeira' ? valorFinal.toFixed(2) : item.valor.toFixed(2)}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">💰 Valor Final</p>
+                                  <div className="space-y-1">
+                                    {/* Exibir breakdown detalhado - para todas as funções */}
+                                    {((item.bonus_kpis || 0) > 0 || (item.subtotal_atividades || 0) > 0) && (
+                                      <div className="text-xs text-gray-600 space-y-0.5">
+                                        {(item.subtotal_atividades || 0) > 0 && (
+                                          <div>📋 Atividades: R$ {valorAtividades.toFixed(2)}</div>
+                                        )}
+                                        {(item.bonus_kpis || 0) > 0 && (
+                                          <div>🎯 KPIs: R$ {valorKpis.toFixed(2)}</div>
+                                        )}
+                                        <div className="border-t pt-0.5 mt-1">
+                                          <span className="font-medium">💰 Total: R$ {valorExibicao.toFixed(2)}</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    <p className="text-lg sm:text-2xl font-bold text-green-600">
+                                      + R$ {valorExibicao.toFixed(2)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">💰 Valor Final</p>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1419,11 +1520,11 @@ export default function DashboardCollaborator() {
                       <div className="bg-white p-3 sm:p-4 rounded-lg border border-blue-200">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs sm:text-sm font-medium text-blue-600">📅 DIAS TRABALHADOS</p>
+                            <p className="text-xs sm:text-sm font-medium text-blue-600">📅 LANÇAMENTOS</p>
                             <p className="text-lg sm:text-2xl font-bold text-blue-900">
                               {dashboardData.historicoCompleto ? new Set(dashboardData.historicoCompleto.map(item => item.data)).size : 0}
                             </p>
-                            <p className="text-xs text-blue-600">dias no mês</p>
+                            <p className="text-xs text-blue-600">lançamentos no mês</p>
                           </div>
                           <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
                         </div>
@@ -1520,7 +1621,13 @@ export default function DashboardCollaborator() {
                           <div>
                             <p className="text-xs sm:text-sm font-medium text-orange-600">💰 VALOR TOTAL</p>
                             <p className="text-lg sm:text-2xl font-bold text-orange-900">
-                              R$ {dashboardData.ganhoTotal.toFixed(2)}
+                              R$ {(
+                                (dashboardData.historicoCompleto ? 
+                                  dashboardData.historicoCompleto.reduce((total, item) => total + (item.bonus_kpis || 0), 0) : 0) +
+                                (dashboardData.atividades.reduce((total, ativ) => {
+                                  return ativ.nome !== 'KPIs Atingidos' ? total + ativ.totalGanho : total;
+                                }, 0))
+                              ).toFixed(2)}
                             </p>
                             <p className="text-xs text-orange-600">
                               Média: R$ {dashboardData.mediaDiaria.toFixed(2)}/dia

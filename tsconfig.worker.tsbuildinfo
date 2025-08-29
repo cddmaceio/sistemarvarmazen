@@ -1,1 +1,0 @@
-{"root":["./src/worker/debug.ts","./src/worker/index.ts","./src/worker/supabase-worker.ts","./src/worker/vite.config.ts","./src/worker/routes/wms-tasks.ts","./src/shared/types.ts","./src/shared/utils/encoding.ts","./src/shared/utils/kpi-calculator.ts"],"version":"5.8.3"}

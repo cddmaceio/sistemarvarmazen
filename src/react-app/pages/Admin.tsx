@@ -9,10 +9,10 @@ import { Input } from '@/react-app/components/Input';
 import { Select } from '@/react-app/components/Select';
 import AuthGuard from '@/react-app/components/AuthGuard';
 import AdminLayout from '@/react-app/components/AdminLayout';
-import UserManagement from '@/react-app/pages/UserManagement';
+import ProductivityDashboard from '@/react-app/components/ProductivityDashboard';
 import { useAuth } from '@/react-app/hooks/useAuth';
 import { useActivities, useKPIs } from '@/react-app/hooks/useApi';
-import { ActivityType, KPIType, UserType } from '@/shared/types';
+import { ActivityType, KPIType } from '@/shared/types';
 
 export default function Admin() {
   const { user, isAdmin } = useAuth();
@@ -21,9 +21,7 @@ export default function Admin() {
   const { activities, loading: activitiesLoading, createActivity, updateActivity, deleteActivity } = useActivities();
   const { kpis, loading: kpisLoading, createKPI, updateKPI, deleteKPI } = useKPIs();
   
-  // User management state
-  const [users, setUsers] = useState<UserType[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
+
 
   // WMS Users state
   const [wmsUsers, setWmsUsers] = useState<any[]>([]);
@@ -40,8 +38,8 @@ export default function Admin() {
   // Sync activeTab with URL parameters
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['activities', 'kpis', 'users', 'wms'].includes(tab)) {
-      setActiveTab(tab as 'activities' | 'kpis' | 'users' | 'wms');
+    if (tab && ['activities', 'kpis', 'wms', 'productivity'].includes(tab)) {
+      setActiveTab(tab as 'activities' | 'kpis' | 'wms' | 'productivity');
     } else if (!tab) {
       // Se não há parâmetro tab, mostra o dashboard
       setActiveTab('dashboard');
@@ -61,82 +59,12 @@ export default function Admin() {
 
   // Load users when tab is selected
   useEffect(() => {
-    if (activeTab === 'users') {
-      loadUsers();
-    } else if (activeTab === 'wms') {
+    if (activeTab === 'wms') {
       loadWmsUsers();
     }
   }, [activeTab]);
 
-  const loadUsers = async () => {
-    try {
-      setUsersLoading(true);
-      const response = await fetch('/api/usuarios');
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      }
-    } catch (error) {
-      console.error('Error loading users:', error);
-    } finally {
-      setUsersLoading(false);
-    }
-  };
 
-  const createUser = async (userData: Omit<UserType, 'id' | 'created_at' | 'updated_at'>) => {
-    const response = await fetch('/api/usuarios', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
-    });
-    if (response.ok) {
-      const newUser = await response.json();
-      setUsers(prev => [newUser, ...prev]);
-    } else {
-      throw new Error('Failed to create user');
-    }
-  };
-
-  const updateUser = async (id: number, userData: Partial<UserType>) => {
-    try {
-      console.log('Updating user:', { id, userData });
-      const response = await fetch(`/api/usuarios/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      });
-      
-      console.log('Response status:', response.status);
-      
-      if (response.ok) {
-        const updatedUser = await response.json();
-        console.log('User updated successfully:', updatedUser);
-        setUsers(prev => prev.map(user => user.id === id ? updatedUser : user));
-      } else {
-        const errorText = await response.text();
-        console.error('Update failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText
-        });
-        throw new Error(`Failed to update user: ${response.status} - ${errorText}`);
-      }
-    } catch (error) {
-      console.error('Error in updateUser:', error);
-      throw error;
-    }
-  };
-
-  const deleteUser = async (id: number) => {
-    const response = await fetch(`/api/usuarios/${id}`, {
-      method: 'DELETE'
-    });
-    if (response.ok) {
-      setUsers(prev => prev.filter(user => user.id !== id));
-    } else {
-      throw new Error('Failed to delete user');
-    }
-  };
 
   // WMS Users functions
   const loadWmsUsers = async () => {
@@ -403,7 +331,7 @@ export default function Admin() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-purple-600">Total de Usuários</p>
-                      <p className="text-2xl font-bold text-purple-900">{users.length}</p>
+                      <p className="text-2xl font-bold text-purple-900">{wmsUsers.length}</p>
                     </div>
                     <Users className="h-8 w-8 text-purple-500" />
                   </div>
@@ -456,14 +384,6 @@ export default function Admin() {
               </CardContent>
             </Card>
           </div>
-        ) : activeTab === 'users' ? (
-          <UserManagement
-            users={users}
-            onAddUser={createUser}
-            onUpdateUser={updateUser}
-            onDeleteUser={deleteUser}
-            loading={usersLoading}
-          />
         ) : activeTab === 'wms' ? (
             <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader>
@@ -550,6 +470,10 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
+          ) : activeTab === 'productivity' ? (
+            <div className="space-y-6">
+              <ProductivityDashboard />
+            </div>
           ) : (
             <div className="space-y-8">
               {/* Activities Section */}

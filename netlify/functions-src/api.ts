@@ -71,7 +71,7 @@ const handler = async (event: any, context: any) => {
 
     // Import do app Hono usando import dinâmico
         console.log('Loading app module...');
-        const appModule = await import('./src/worker/supabase-worker.js');
+        const appModule = await import('../../src/worker/supabase-worker.js');
         console.log('App module loaded:', !!appModule, !!appModule.default);
         const app = appModule.default;
     

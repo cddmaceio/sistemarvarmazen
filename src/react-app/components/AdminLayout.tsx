@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router';
 import {
-  Users,
   Activity,
   BarChart3,
   Settings,
   Home,
-  Database
+  Database,
+  TrendingUp
 } from 'lucide-react';
 import {
   Sidebar,
@@ -40,6 +40,12 @@ const menuItems = [
     url: '/admin'
   },
   {
+    id: 'productivity',
+    title: 'Dashboard de Produtividade',
+    icon: TrendingUp,
+    url: '/admin?tab=productivity'
+  },
+  {
     id: 'activities',
     title: 'Cadastro de Atividades',
     icon: Activity,
@@ -50,12 +56,6 @@ const menuItems = [
     title: 'Cadastro de KPIs',
     icon: BarChart3,
     url: '/admin?tab=kpis'
-  },
-  {
-    id: 'users',
-    title: 'Cadastro de Usuários',
-    icon: Users,
-    url: '/admin?tab=users'
   },
   {
     id: 'wms',

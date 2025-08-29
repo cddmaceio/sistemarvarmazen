@@ -1,18 +1,11 @@
-"use strict";
 // Utilitário para calcular valor dinâmico dos KPIs baseado nos dias úteis do mês
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.calcularDiasUteisMes = calcularDiasUteisMes;
-exports.calcularValorKpiDinamico = calcularValorKpiDinamico;
-exports.calcularInfoKpiMes = calcularInfoKpiMes;
-exports.calcularValorKpiMesAtual = calcularValorKpiMesAtual;
-exports.exemploCalculos = exemploCalculos;
 /**
  * Calcula o número de dias úteis (segunda a sábado) em um mês específico
  * @param year Ano (ex: 2025)
  * @param month Mês (1-12)
  * @returns Número de dias úteis no mês
  */
-function calcularDiasUteisMes(year, month) {
+export function calcularDiasUteisMes(year, month) {
     const diasUteis = [];
     const ultimoDia = new Date(year, month, 0).getDate();
     for (let dia = 1; dia <= ultimoDia; dia++) {
@@ -33,7 +26,7 @@ function calcularDiasUteisMes(year, month) {
  * @param maxKpisPorDia Máximo de KPIs por dia (padrão: 2)
  * @returns Valor por KPI em reais
  */
-function calcularValorKpiDinamico(year, month, orcamentoMensal = 150.00, maxKpisPorDia = 2) {
+export function calcularValorKpiDinamico(year, month, orcamentoMensal = 150.00, maxKpisPorDia = 2) {
     const diasUteis = calcularDiasUteisMes(year, month);
     const totalKpisMes = diasUteis * maxKpisPorDia;
     const valorPorKpi = orcamentoMensal / totalKpisMes;
@@ -48,7 +41,7 @@ function calcularValorKpiDinamico(year, month, orcamentoMensal = 150.00, maxKpis
  * @param maxKpisPorDia Máximo de KPIs por dia (padrão: 2)
  * @returns Objeto com informações detalhadas
  */
-function calcularInfoKpiMes(year, month, orcamentoMensal = 150.00, maxKpisPorDia = 2) {
+export function calcularInfoKpiMes(year, month, orcamentoMensal = 150.00, maxKpisPorDia = 2) {
     const diasUteis = calcularDiasUteisMes(year, month);
     const totalKpisMes = diasUteis * maxKpisPorDia;
     const valorPorKpi = calcularValorKpiDinamico(year, month, orcamentoMensal, maxKpisPorDia);
@@ -70,14 +63,14 @@ function calcularInfoKpiMes(year, month, orcamentoMensal = 150.00, maxKpisPorDia
  * @param maxKpisPorDia Máximo de KPIs por dia (padrão: 2)
  * @returns Valor por KPI em reais
  */
-function calcularValorKpiMesAtual(orcamentoMensal = 150.00, maxKpisPorDia = 2) {
+export function calcularValorKpiMesAtual(orcamentoMensal = 150.00, maxKpisPorDia = 2) {
     const agora = new Date();
     return calcularValorKpiDinamico(agora.getFullYear(), agora.getMonth() + 1, orcamentoMensal, maxKpisPorDia);
 }
 /**
  * Exemplos de uso e testes
  */
-function exemploCalculos() {
+export function exemploCalculos() {
     console.log('📊 Exemplos de Cálculo de KPIs Dinâmicos\n');
     // Agosto 2025 (26 dias úteis)
     const agosto2025 = calcularInfoKpiMes(2025, 8);

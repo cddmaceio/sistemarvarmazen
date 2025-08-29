@@ -1,9 +1,4 @@
-"use strict";
 // Debug utility specifically for Node.js worker environment
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createApiLogger = createApiLogger;
-exports.createDbLogger = createDbLogger;
-exports.createWorkerLogger = createWorkerLogger;
 class WorkerLogger {
     context;
     isDev;
@@ -63,12 +58,12 @@ class WorkerLogger {
     }
 }
 // Factory functions for different contexts
-function createApiLogger(endpoint) {
+export function createApiLogger(endpoint) {
     return new WorkerLogger(`API${endpoint ? `:${endpoint}` : ''}`);
 }
-function createDbLogger(table) {
+export function createDbLogger(table) {
     return new WorkerLogger(`DB${table ? `:${table}` : ''}`);
 }
-function createWorkerLogger(context) {
+export function createWorkerLogger(context) {
     return new WorkerLogger(context);
 }

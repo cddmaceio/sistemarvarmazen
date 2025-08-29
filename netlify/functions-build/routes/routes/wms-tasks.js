@@ -1,40 +1,38 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const hono_1 = require("hono");
-const supabase_js_1 = require("@supabase/supabase-js");
-const zod_1 = require("zod");
-const zod_validator_1 = require("@hono/zod-validator");
+import { Hono } from 'hono';
+import { createClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
 // Schema para validação de tarefas WMS
-const WMSTaskSchema = zod_1.z.object({
-    armazem_mapa: zod_1.z.string().optional(),
-    tarefa: zod_1.z.string().min(1, 'Tarefa é obrigatória'),
-    placa_cavalo: zod_1.z.string().optional(),
-    placa_carreta: zod_1.z.string().optional(),
-    origem: zod_1.z.string().optional(),
-    destino: zod_1.z.string().optional(),
-    palete: zod_1.z.string().optional(),
-    prioridade: zod_1.z.string().optional(),
-    status: zod_1.z.string().optional(),
-    tipo: zod_1.z.string().min(1, 'Tipo é obrigatório'),
-    usuario: zod_1.z.string().min(1, 'Usuário é obrigatório'),
-    user_id: zod_1.z.string().optional(),
-    data_criacao: zod_1.z.string().optional(),
-    data_ultima_associacao: zod_1.z.string().optional(),
-    data_alteracao: zod_1.z.string().optional(),
-    data_liberacao: zod_1.z.string().optional(),
-    concluida_task: zod_1.z.boolean().default(false),
-    tempo_execucao: zod_1.z.number().min(0).default(0)
+const WMSTaskSchema = z.object({
+    armazem_mapa: z.string().optional(),
+    tarefa: z.string().min(1, 'Tarefa é obrigatória'),
+    placa_cavalo: z.string().optional(),
+    placa_carreta: z.string().optional(),
+    origem: z.string().optional(),
+    destino: z.string().optional(),
+    palete: z.string().optional(),
+    prioridade: z.string().optional(),
+    status: z.string().optional(),
+    tipo: z.string().min(1, 'Tipo é obrigatório'),
+    usuario: z.string().min(1, 'Usuário é obrigatório'),
+    user_id: z.string().optional(),
+    data_criacao: z.string().optional(),
+    data_ultima_associacao: z.string().optional(),
+    data_alteracao: z.string().optional(),
+    data_liberacao: z.string().optional(),
+    concluida_task: z.boolean().default(false),
+    tempo_execucao: z.number().min(0).default(0)
 });
 const WMSTaskUpdateSchema = WMSTaskSchema.partial();
-const WMSTaskBulkSchema = zod_1.z.object({
-    nome_operador: zod_1.z.string().min(1, 'Nome do operador é obrigatório'),
-    tarefas: zod_1.z.array(zod_1.z.any()).min(1, 'Pelo menos uma tarefa é obrigatória')
+const WMSTaskBulkSchema = z.object({
+    nome_operador: z.string().min(1, 'Nome do operador é obrigatório'),
+    tarefas: z.array(z.any()).min(1, 'Pelo menos uma tarefa é obrigatória')
 });
 // Helper para criar cliente Supabase
 function getSupabase(env) {
-    return (0, supabase_js_1.createClient)(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+    return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 }
-const wmsTasksRouter = new hono_1.Hono();
+const wmsTasksRouter = new Hono();
 // ===== CRUD ENDPOINTS =====
 // GET /api/wms-tasks - Listar todas as tarefas com filtros
 wmsTasksRouter.get('/', async (c) => {
@@ -116,7 +114,7 @@ wmsTasksRouter.get('/:id', async (c) => {
     }
 });
 // POST /api/wms-tasks - Criar nova tarefa
-wmsTasksRouter.post('/', (0, zod_validator_1.zValidator)('json', WMSTaskSchema), async (c) => {
+wmsTasksRouter.post('/', zValidator('json', WMSTaskSchema), async (c) => {
     try {
         const supabase = getSupabase(c.env);
         const data = c.req.valid('json');
@@ -201,7 +199,7 @@ wmsTasksRouter.post('/bulk', async (c) => {
     }
 });
 // POST /api/wms-tasks/bulk-json - Importação em lote via JSON (endpoint existente)
-wmsTasksRouter.post('/bulk-json', (0, zod_validator_1.zValidator)('json', WMSTaskBulkSchema), async (c) => {
+wmsTasksRouter.post('/bulk-json', zValidator('json', WMSTaskBulkSchema), async (c) => {
     try {
         const supabase = getSupabase(c.env);
         const { nome_operador, tarefas } = c.req.valid('json');
@@ -302,7 +300,7 @@ wmsTasksRouter.post('/bulk-json', (0, zod_validator_1.zValidator)('json', WMSTas
     }
 });
 // PUT /api/wms-tasks/:id - Atualizar tarefa
-wmsTasksRouter.put('/:id', (0, zod_validator_1.zValidator)('json', WMSTaskUpdateSchema), async (c) => {
+wmsTasksRouter.put('/:id', zValidator('json', WMSTaskUpdateSchema), async (c) => {
     try {
         const supabase = getSupabase(c.env);
         const id = parseInt(c.req.param('id'));
@@ -1172,4 +1170,4 @@ function parseCSVStreaming(content) {
     console.log(`Performance streaming: ${(processedLines / (streamDuration / 1000)).toFixed(2)} linhas/segundo`);
     return tasks;
 }
-exports.default = wmsTasksRouter;
+export default wmsTasksRouter;

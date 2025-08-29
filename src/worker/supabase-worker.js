@@ -3,8 +3,22 @@ import { zValidator } from "@hono/zod-validator";
 import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema } from "../shared/types";
 import { cors } from 'hono/cors';
 import { createClient } from '@supabase/supabase-js';
+import { createApiLogger, createDbLogger } from './debug';
 const app = new Hono();
+const apiLogger = createApiLogger();
+const dbLogger = createDbLogger();
 app.use('*', cors());
+// Middleware para log de todas as requisições
+app.use('*', async (c, next) => {
+    const startTime = Date.now();
+    const method = c.req.method;
+    const url = c.req.url;
+    apiLogger.info(`${method} ${url} - Request started`);
+    await next();
+    const duration = Date.now() - startTime;
+    const status = c.res.status;
+    apiLogger.info(`${method} ${url} - Response ${status} (${duration}ms)`);
+});
 // Helper function to get Supabase client
 const getSupabase = (env) => {
     return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
@@ -13,6 +27,7 @@ const getSupabase = (env) => {
 app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
     const supabase = getSupabase(c.env);
     const { cpf, data_nascimento } = c.req.valid('json');
+    apiLogger.debug('Login attempt', { cpf: cpf.substring(0, 3) + '***', data_nascimento });
     const { data: user, error } = await supabase
         .from('usuarios')
         .select('*')
@@ -20,9 +35,15 @@ app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
         .eq('data_nascimento', data_nascimento)
         .eq('is_active', true)
         .single();
-    if (error || !user) {
+    if (error) {
+        dbLogger.error('Login database error', { error: error.message, code: error.code });
         return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
     }
+    if (!user) {
+        apiLogger.warn('Login failed - user not found', { cpf: cpf.substring(0, 3) + '***' });
+        return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
+    }
+    apiLogger.info('Login successful', { userId: user.id, nome: user.nome });
     return c.json(user);
 });
 app.post('/api/auth/logout', async (c) => {
@@ -31,18 +52,31 @@ app.post('/api/auth/logout', async (c) => {
 // User management endpoints
 app.get('/api/usuarios', async (c) => {
     const supabase = getSupabase(c.env);
+    apiLogger.debug('Fetching all users');
     const { data: users, error } = await supabase
         .from('usuarios')
         .select('*')
         .order('created_at', { ascending: false });
     if (error) {
+        dbLogger.error('Error fetching users', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
         return c.json({ error: error.message }, 500);
     }
+    apiLogger.debug('Users fetched successfully', { count: users?.length || 0 });
     return c.json(users || []);
 });
 app.post('/api/usuarios', zValidator('json', UserSchema), async (c) => {
     const supabase = getSupabase(c.env);
     const data = c.req.valid('json');
+    apiLogger.debug('Creating new user', {
+        nome: data.nome,
+        cpf: data.cpf?.substring(0, 3) + '***',
+        tipo_usuario: data.tipo_usuario
+    });
     const { data: user, error } = await supabase
         .from('usuarios')
         .insert({
@@ -56,26 +90,66 @@ app.post('/api/usuarios', zValidator('json', UserSchema), async (c) => {
         .select()
         .single();
     if (error) {
+        dbLogger.error('Error creating user', {
+            error: error.message,
+            code: error.code,
+            details: error.details
+        });
         return c.json({ error: error.message }, 500);
     }
+    apiLogger.info('User created successfully', { userId: user.id, nome: user.nome });
     return c.json(user);
 });
 app.put('/api/usuarios/:id', zValidator('json', UserSchema.partial()), async (c) => {
     const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const data = c.req.valid('json');
+    apiLogger.debug('Updating user', {
+        userId: id,
+        fields: Object.keys(data)
+    });
+    // Create a mutable copy of the data to clean
+    const dataToUpdate = { ...data };
+    // List of fields that should be converted to null if they are empty strings
+    const fieldsToNullify = [
+        'data_admissao',
+        'data_nascimento',
+        'email',
+        'telefone',
+        'observacoes',
+    ];
+    fieldsToNullify.forEach((field) => {
+        if (dataToUpdate[field] === '') {
+            apiLogger.debug(`Field '${field}' is an empty string, converting to null.`, { userId: id });
+            dataToUpdate[field] = null;
+        }
+    });
+    dbLogger.debug('Executing user update query with cleaned data', {
+        userId: id,
+        cleanData: { ...dataToUpdate, updated_at: 'ISO_STRING' }
+    });
     const { data: user, error } = await supabase
         .from('usuarios')
         .update({
-        ...data,
+        ...dataToUpdate,
         updated_at: new Date().toISOString()
     })
         .eq('id', id)
         .select()
         .single();
     if (error) {
+        dbLogger.error('Error updating user', {
+            userId: id,
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            originalData: data,
+            cleanData: dataToUpdate
+        });
         return c.json({ error: error.message }, 500);
     }
+    apiLogger.info('User updated successfully', { userId: id, nome: user?.nome });
     return c.json(user);
 });
 app.delete('/api/usuarios/:id', async (c) => {
@@ -266,6 +340,12 @@ app.get('/api/kpis/available', async (c) => {
     console.log(`Query 1 (${dbTurno}):`, kpis1?.length || 0, 'results');
     console.log(`Query 2 (Geral):`, kpis2?.length || 0, 'results');
     if (error) {
+        console.error('Error fetching available KPIs:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
         return c.json({ error: error.message }, 500);
     }
     return c.json({ kpisAtingidos: kpis || [] });
@@ -273,15 +353,50 @@ app.get('/api/kpis/available', async (c) => {
 // Lançamentos endpoints
 app.get('/api/lancamentos', async (c) => {
     const supabase = getSupabase(c.env);
-    const { data: lancamentos, error } = await supabase
+    const userId = c.req.query('user_id');
+    const status = c.req.query('status');
+    
+    let query = supabase
         .from('lancamentos_produtividade')
         .select('*')
         .order('created_at', { ascending: false });
+    
+    if (userId) {
+        query = query.eq('user_id', parseInt(userId));
+    }
+    
+    if (status) {
+        query = query.eq('status', status);
+    }
+    
+    const { data: lancamentos, error } = await query;
     if (error) {
         return c.json({ error: error.message }, 500);
     }
     return c.json(lancamentos || []);
 });
+
+// Endpoint para buscar todos os lançamentos (incluindo pendentes e reprovados)
+app.get('/api/lancamentos/todos', async (c) => {
+    const supabase = getSupabase(c.env);
+    const userId = c.req.query('user_id');
+    
+    let query = supabase
+        .from('lancamentos_produtividade')
+        .select('*')
+        .order('created_at', { ascending: false });
+    
+    if (userId) {
+        query = query.eq('user_id', parseInt(userId));
+    }
+    
+    const { data: lancamentos, error } = await query;
+    if (error) {
+        return c.json({ error: error.message }, 500);
+    }
+    return c.json(lancamentos || []);
+});
+
 app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (c) => {
     const supabase = getSupabase(c.env);
     const data = c.req.valid('json');
@@ -443,47 +558,37 @@ app.post('/api/calculator', zValidator('json', CalculatorInputSchema), async (c)
         function calcularDiasUteisMes(year, month) {
             const diasUteis = [];
             const ultimoDia = new Date(year, month, 0).getDate();
-            
             for (let dia = 1; dia <= ultimoDia; dia++) {
                 const data = new Date(year, month - 1, dia);
                 const diaSemana = data.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
-                
                 // Incluir segunda (1) a sábado (6), excluir domingo (0)
                 if (diaSemana >= 1 && diaSemana <= 6) {
                     diasUteis.push(dia);
                 }
             }
-            
             return diasUteis.length;
         }
-
         function calcularValorKpiDinamico(year, month, orcamentoMensal = 150.00, maxKpisPorDia = 2) {
             const diasUteis = calcularDiasUteisMes(year, month);
             const totalKpisMes = diasUteis * maxKpisPorDia;
             const valorPorKpi = orcamentoMensal / totalKpisMes;
-            
             // Arredondar para 2 casas decimais
             return Math.round(valorPorKpi * 100) / 100;
         }
-
         // Handle KPIs with normalized data
         console.log("Processing KPIs:", input.kpis_atingidos);
         console.log("Available KPIs from query:", kpis);
-        
-        // Calcular valor dinâmico baseado no mês da data de lançamento
-        const dataLancamento = new Date(input.data_lancamento || new Date());
+        // Calcular valor dinâmico baseado no mês atual
+        const dataLancamento = new Date();
         const anoLancamento = dataLancamento.getFullYear();
         const mesLancamento = dataLancamento.getMonth() + 1;
-        
         const valorKpiDinamico = calcularValorKpiDinamico(anoLancamento, mesLancamento);
         const diasUteis = calcularDiasUteisMes(anoLancamento, mesLancamento);
-        
         console.log('📅 Cálculo Dinâmico de KPIs:');
-        console.log(`- Data lançamento: ${input.data_lancamento}`);
+        console.log(`- Data atual: ${dataLancamento.toISOString()}`);
         console.log(`- Mês/Ano: ${mesLancamento}/${anoLancamento}`);
         console.log(`- Dias úteis no mês: ${diasUteis}`);
         console.log(`- Valor dinâmico por KPI: R$ ${valorKpiDinamico}`);
-        
         if (input.kpis_atingidos && input.kpis_atingidos.length > 0 && kpis && kpis.length > 0) {
             for (const kpiName of input.kpis_atingidos) {
                 const matchingKpi = kpis.find(k => k.nome_kpi === kpiName);
@@ -520,6 +625,269 @@ app.post('/api/calculator', zValidator('json', CalculatorInputSchema), async (c)
     }
 });
 // Health check
+// Endpoint para dados de produtividade
+app.get('/api/productivity-data', async (c) => {
+    const supabase = getSupabase(c.env);
+    apiLogger.debug('Fetching productivity data');
+    
+    try {
+        // Buscar lançamentos aprovados com dados de produtividade
+        const { data: lancamentos, error } = await supabase
+            .from('lancamentos_produtividade')
+            .select('*')
+            .eq('status', 'aprovado')
+            .order('data_lancamento', { ascending: false });
+        
+        if (error) {
+            dbLogger.error('Error fetching productivity data', { error: error.message });
+            return c.json({ success: false, error: error.message }, 500);
+        }
+        
+        if (!lancamentos || lancamentos.length === 0) {
+            return c.json({ success: true, data: [] });
+        }
+        
+        // Agregar dados por turno e função
+        const productivityData = [];
+        const groupedData = {};
+        
+        lancamentos.forEach(lancamento => {
+            const key = `${lancamento.turno}-${lancamento.funcao}`;
+            if (!groupedData[key]) {
+                groupedData[key] = {
+                    turno: lancamento.turno,
+                    funcao: lancamento.funcao,
+                    produtividades: [],
+                    colaboradores: new Set(),
+                    meta: 85 // Meta padrão
+                };
+            }
+            
+            if (lancamento.produtividade_alcancada) {
+                groupedData[key].produtividades.push(lancamento.produtividade_alcancada);
+            }
+            groupedData[key].colaboradores.add(lancamento.user_id);
+        });
+        
+        // Calcular médias e eficiência
+        Object.values(groupedData).forEach(group => {
+            const produtividadeMedia = group.produtividades.length > 0 
+                ? group.produtividades.reduce((a, b) => a + b, 0) / group.produtividades.length
+                : 0;
+            
+            productivityData.push({
+                turno: group.turno,
+                funcao: group.funcao,
+                produtividade: Math.round(produtividadeMedia),
+                meta: group.meta,
+                colaboradores: group.colaboradores.size,
+                eficiencia: Math.round((produtividadeMedia / group.meta) * 100)
+            });
+        });
+        
+        apiLogger.info('Productivity data fetched successfully', { count: productivityData.length });
+        return c.json({ success: true, data: productivityData });
+        
+    } catch (error) {
+        apiLogger.error('Error in productivity-data endpoint', { error: error.message });
+        return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+    }
+});
+
+// Endpoint para ganhos mensais por colaborador
+app.get('/api/monthly-earnings', async (c) => {
+    const supabase = getSupabase(c.env);
+    const funcao = c.req.query('funcao');
+    const mesAno = c.req.query('mesAno');
+    
+    apiLogger.debug('Fetching monthly earnings', { funcao, mesAno });
+    
+    try {
+        let query = supabase
+            .from('lancamentos_produtividade')
+            .select('*')
+            .eq('status', 'aprovado')
+            .order('data_lancamento', { ascending: false });
+        
+        // Filtrar por função se especificado
+        if (funcao && funcao !== 'todas') {
+            query = query.eq('funcao', funcao);
+        }
+        
+        // Filtrar por mês/ano se especificado
+        if (mesAno && mesAno !== 'todos') {
+            const [ano, mes] = mesAno.split('-');
+            const startDate = `${ano}-${mes.padStart(2, '0')}-01`;
+            const endDate = new Date(parseInt(ano), parseInt(mes), 0).toISOString().split('T')[0];
+            query = query.gte('data_lancamento', startDate).lte('data_lancamento', endDate);
+        }
+        
+        const { data: lancamentos, error } = await query;
+        
+        if (error) {
+            dbLogger.error('Error fetching monthly earnings', { error: error.message });
+            return c.json({ success: false, error: error.message }, 500);
+        }
+        
+        if (!lancamentos || lancamentos.length === 0) {
+            return c.json({ success: true, data: [] });
+        }
+        
+        // Agrupar por colaborador
+        const colaboradoresMap = {};
+        
+        lancamentos.forEach(lancamento => {
+            const userId = lancamento.user_id;
+            if (!colaboradoresMap[userId]) {
+                colaboradoresMap[userId] = {
+                    id: userId,
+                    nome: lancamento.user_nome,
+                    cpf: lancamento.user_cpf,
+                    funcao: lancamento.funcao,
+                    ganhoTotal: 0,
+                    totalLancamentos: 0,
+                    detalhes: []
+                };
+            }
+            
+            colaboradoresMap[userId].ganhoTotal += lancamento.remuneracao_total || 0;
+            colaboradoresMap[userId].totalLancamentos += 1;
+            colaboradoresMap[userId].detalhes.push({
+                data: lancamento.data_lancamento,
+                atividade: lancamento.nome_atividade || 'N/A',
+                turno: lancamento.turno,
+                remuneracao: lancamento.remuneracao_total || 0,
+                produtividade: lancamento.produtividade_alcancada || 0,
+                bonusKpis: lancamento.bonus_kpis || 0
+            });
+        });
+        
+        // Calcular média de ganho por lançamento
+        const monthlyEarningsData = Object.values(colaboradoresMap).map(colaborador => ({
+            ...colaborador,
+            mediaGanho: colaborador.totalLancamentos > 0 
+                ? colaborador.ganhoTotal / colaborador.totalLancamentos 
+                : 0
+        }));
+        
+        apiLogger.info('Monthly earnings data fetched successfully', { count: monthlyEarningsData.length });
+        return c.json({ success: true, data: monthlyEarningsData });
+        
+    } catch (error) {
+        apiLogger.error('Error in monthly-earnings endpoint', { error: error.message });
+        return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+    }
+});
+
+// Endpoint para validação de lançamentos
+app.post('/api/lancamentos/:id/validar', async (c) => {
+    const supabase = getSupabase(c.env);
+    const lancamentoId = parseInt(c.req.param('id'));
+    const body = await c.req.json();
+    const { acao, observacoes, admin_user_id } = body;
+    
+    apiLogger.debug('Validating lancamento', { lancamentoId, acao, admin_user_id });
+    
+    if (!['aprovar', 'reprovar'].includes(acao)) {
+        return c.json({ error: 'Ação inválida. Use "aprovar" ou "reprovar"' }, 400);
+    }
+    
+    try {
+        // Buscar o lançamento
+        const { data: lancamento, error: fetchError } = await supabase
+            .from('lancamentos_produtividade')
+            .select('*')
+            .eq('id', lancamentoId)
+            .single();
+        
+        if (fetchError || !lancamento) {
+            dbLogger.error('Lancamento not found', { lancamentoId, error: fetchError?.message });
+            return c.json({ error: 'Lançamento não encontrado' }, 404);
+        }
+        
+        if (lancamento.status !== 'pendente') {
+            return c.json({ error: 'Lançamento já foi processado' }, 400);
+        }
+        
+        // Buscar dados do admin
+        let adminNome = 'Sistema';
+        if (admin_user_id) {
+            const { data: admin } = await supabase
+                .from('usuarios')
+                .select('nome')
+                .eq('id', admin_user_id)
+                .single();
+            if (admin) adminNome = admin.nome;
+        }
+        
+        // Atualizar status do lançamento
+        const { data: updatedLancamento, error: updateError } = await supabase
+            .from('lancamentos_produtividade')
+            .update({
+                status: acao === 'aprovar' ? 'aprovado' : 'reprovado',
+                observacoes: observacoes,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', lancamentoId)
+            .select()
+            .single();
+        
+        if (updateError) {
+            dbLogger.error('Error updating lancamento status', { 
+                lancamentoId, 
+                error: updateError.message 
+            });
+            return c.json({ error: 'Erro ao atualizar status do lançamento' }, 500);
+        }
+        
+        // Registrar no histórico de aprovações (se aprovado)
+        if (acao === 'aprovar') {
+            const { error: historyError } = await supabase
+                .from('historico_lancamentos_aprovados')
+                .insert({
+                    lancamento_id: lancamentoId,
+                    colaborador_id: lancamento.user_id,
+                    colaborador_nome: lancamento.user_nome,
+                    colaborador_cpf: lancamento.user_cpf,
+                    data_lancamento: lancamento.data_lancamento,
+                    data_aprovacao: new Date().toISOString(),
+                    aprovado_por: adminNome,
+                    editado: false,
+                    dados_finais: JSON.stringify(lancamento),
+                    observacoes: observacoes,
+                    remuneracao_total: lancamento.remuneracao_total || 0
+                });
+            
+            if (historyError) {
+                dbLogger.warn('Error saving approval history', { 
+                    lancamentoId, 
+                    error: historyError.message 
+                });
+                // Não falha a operação por erro no histórico
+            }
+        }
+        
+        apiLogger.info('Lancamento validation completed', { 
+            lancamentoId, 
+            acao, 
+            adminNome 
+        });
+        
+        return c.json({ 
+            success: true, 
+            message: `Lançamento ${acao === 'aprovar' ? 'aprovado' : 'reprovado'} com sucesso`,
+            status: acao === 'aprovar' ? 'aprovado' : 'reprovado'
+        });
+        
+    } catch (error) {
+        apiLogger.error('Error in lancamento validation', { 
+            lancamentoId, 
+            error: error.message 
+        });
+        return c.json({ error: 'Erro interno do servidor' }, 500);
+    }
+});
+
 app.get('/api/health', async (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
