@@ -26,8 +26,8 @@ app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
             .from('usuarios')
             .select('*')
             .eq('cpf', cpf)
-            .eq('data_nascimento', data_nascimento)
-            .eq('is_active', true)
+            .eq('status_usuario', 'ativo')
+            .filter('data_nascimento::date', 'eq', data_nascimento)
             .single();
         if (error || !user) {
             console.error('Login error:', error);
@@ -1387,10 +1387,10 @@ async function generateExportData(supabase, filtros) {
           cpf,
           nome,
           funcao,
-          is_active
+          status_usuario
         )
       `)
-            .eq('usuarios.is_active', true);
+            .eq('usuarios.status_usuario', 'ativo');
         // Apply filters
         if (filtros.periodo_inicio) {
             query = query.gte('data_lancamento', filtros.periodo_inicio);
@@ -1821,8 +1821,8 @@ app.get('/api/productivity-data', async (c) => {
         // Buscar dados de usuários com suas funções e turnos
         const { data: usuarios, error: usuariosError } = await supabase
             .from('usuarios')
-            .select('id, nome, funcao, turno, is_active')
-            .eq('is_active', true);
+            .select('id, nome, funcao, turno, status_usuario')
+            .eq('status_usuario', 'ativo');
         if (usuariosError) {
             console.error('Erro ao buscar usuários:', usuariosError);
             return c.json({ success: false, error: 'Erro ao buscar dados de usuários' }, 500);

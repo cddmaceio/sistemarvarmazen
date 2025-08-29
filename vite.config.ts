@@ -1,27 +1,34 @@
-import path from "path";
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import { mochaPlugins } from "@getmocha/vite-plugins";
+import { defineConfig } from 'vite'
+import path from 'path'
 
 export default defineConfig({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  plugins: [...mochaPlugins(process.env as any), react()],
+  esbuild: {
+    jsx: 'automatic',
+    jsxImportSource: 'react'
+  },
   server: {
-    allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8888',
+        target: 'http://localhost:8888/.netlify/functions',
         changeOrigin: true,
-        secure: false,
-      },
-    },
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   },
   build: {
-    chunkSizeWarningLimit: 5000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-});
+      '@': path.resolve(__dirname, './src')
+    }
+  }
+})

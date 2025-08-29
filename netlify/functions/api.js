@@ -30,17 +30,23 @@ app.post('/api/auth/login', (0, zod_validator_1.zValidator)('json', types_1.Logi
     const supabase = getSupabase(c.env);
     const { cpf, data_nascimento } = c.req.valid('json');
     apiLogger.debug('Login attempt', { cpf: cpf.substring(0, 3) + '***', data_nascimento });
-    const { data: user, error } = await supabase
+    // Primeiro, vamos buscar todos os usuários com o CPF e status ativo
+    const { data: users, error } = await supabase
         .from('usuarios')
         .select('*')
         .eq('cpf', cpf)
-        .eq('data_nascimento', data_nascimento)
-        .eq('is_active', true)
-        .single();
+        .eq('status_usuario', 'ativo');
+    
     if (error) {
         dbLogger.error('Login database error', { error: error.message, code: error.code });
         return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
     }
+    
+    // Filtrar pelo data de nascimento no JavaScript
+     const user = users?.find(u => {
+         const dbDate = new Date(u.data_nascimento).toISOString().split('T')[0];
+         return dbDate === data_nascimento;
+     });
     if (!user) {
         apiLogger.warn('Login failed - user not found', { cpf: cpf.substring(0, 3) + '***' });
         return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
@@ -159,7 +165,7 @@ app.delete('/api/usuarios/:id', async (c) => {
     const id = parseInt(c.req.param('id'));
     const { error } = await supabase
         .from('usuarios')
-        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .update({ status_usuario: 'inativo', updated_at: new Date().toISOString() })
         .eq('id', id);
     if (error) {
         return c.json({ error: error.message }, 500);
@@ -791,8 +797,538 @@ app.get('/api/productivity-data', async (c) => {
   }
 });
 
+// ===== WMS ENDPOINTS =====
+
+// WMS Users Management
+app.get('/api/wms-users', async (c) => {
+  try {
+    const supabase = getSupabase(c.env);
+    const { data: users, error } = await supabase
+      .from('cadastro_wms')
+      .select('id, nome, cpf, login_wms, nome_wms, created_at, updated_at')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Erro na consulta de usuários WMS:', error);
+      return c.json({ success: false, error: 'Erro ao buscar usuários WMS' }, 500);
+    }
+    
+    return c.json({ success: true, users: users || [] });
+  } catch (error) {
+    console.error('Erro ao buscar usuários WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+app.post('/api/wms-users', async (c) => {
+  try {
+    const { nome, cpf, login_wms, nome_wms } = await c.req.json();
+    const supabase = getSupabase(c.env);
+    
+    // Verificar se já existe
+    const { data: existing } = await supabase
+      .from('cadastro_wms')
+      .select('id')
+      .or(`cpf.eq.${cpf},login_wms.eq.${login_wms}`);
+    
+    if (existing && existing.length > 0) {
+      return c.json({ success: false, error: 'CPF ou Login WMS já cadastrado' }, 400);
+    }
+    
+    const { data, error: insertError } = await supabase
+      .from('cadastro_wms')
+      .insert({
+        nome,
+        cpf,
+        login_wms,
+        nome_wms
+      })
+      .select();
+    
+    if (insertError) {
+      console.error('Erro ao inserir usuário WMS:', insertError);
+      return c.json({ success: false, error: 'Erro ao criar usuário WMS' }, 500);
+    }
+    
+    return c.json({ success: true, user: data[0] });
+  } catch (error) {
+    console.error('Erro ao criar usuário WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+app.put('/api/wms-users/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const { nome, cpf, login_wms, nome_wms } = await c.req.json();
+    const supabase = getSupabase(c.env);
+    
+    // Verificar se já existe outro usuário com mesmo CPF ou login
+    const { data: existing, error: existingError } = await supabase
+      .from('cadastro_wms')
+      .select('id')
+      .or(`cpf.eq.${cpf},login_wms.eq.${login_wms}`)
+      .neq('id', id);
+    
+    if (existingError) {
+      console.error('Erro ao verificar usuário WMS existente:', existingError);
+      return c.json({ success: false, error: 'Erro ao verificar dados' }, 500);
+    }
+    
+    if (existing && existing.length > 0) {
+      return c.json({ success: false, error: 'CPF ou Login WMS já cadastrado' }, 400);
+    }
+    
+    const { data, error } = await supabase
+      .from('cadastro_wms')
+      .update({ nome, cpf, login_wms, nome_wms })
+      .eq('id', id)
+      .select();
+    
+    if (error) {
+      console.error('Erro ao atualizar usuário WMS:', error);
+      return c.json({ success: false, error: 'Erro ao atualizar usuário WMS' }, 500);
+    }
+    
+    if (!data || data.length === 0) {
+      return c.json({ success: false, error: 'Usuário WMS não encontrado' }, 404);
+    }
+    
+    return c.json({ success: true, user: data[0] });
+  } catch (error) {
+    console.error('Erro ao atualizar usuário WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+app.delete('/api/wms-users/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const supabase = getSupabase(c.env);
+    
+    const { data, error } = await supabase
+      .from('cadastro_wms')
+      .delete()
+      .eq('id', id)
+      .select();
+    
+    if (error) {
+      console.error('Erro ao deletar usuário WMS:', error);
+      return c.json({ success: false, error: 'Erro ao deletar usuário WMS' }, 500);
+    }
+    
+    if (!data || data.length === 0) {
+      return c.json({ success: false, error: 'Usuário WMS não encontrado' }, 404);
+    }
+    
+    return c.json({ success: true, message: 'Usuário WMS deletado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao deletar usuário WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+// WMS Tasks Management
+app.get('/api/wms-tasks', async (c) => {
+  try {
+    const supabase = getSupabase(c.env);
+    const url = c.req.url;
+    const searchParams = new URL(url).searchParams;
+    
+    let query = supabase
+      .from('tarefas_wms')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    // Filtros
+    const usuario = searchParams.get('usuario');
+    const tipo = searchParams.get('tipo');
+    const status = searchParams.get('status');
+    const dataInicio = searchParams.get('data_inicio');
+    const dataFim = searchParams.get('data_fim');
+    
+    if (usuario) {
+      query = query.eq('usuario', usuario);
+    }
+    if (tipo) {
+      query = query.eq('tipo', tipo);
+    }
+    if (status) {
+      query = query.eq('status', status);
+    }
+    if (dataInicio) {
+      query = query.gte('created_at', dataInicio);
+    }
+    if (dataFim) {
+      query = query.lte('created_at', dataFim);
+    }
+    
+    // Paginação
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const offset = (page - 1) * limit;
+    
+    query = query.range(offset, offset + limit - 1);
+    
+    const { data: tasks, error, count } = await query;
+    
+    if (error) {
+      console.error('Erro na consulta de tarefas WMS:', error);
+      return c.json({ success: false, error: 'Erro ao buscar tarefas WMS' }, 500);
+    }
+    
+    return c.json({ 
+      success: true, 
+      tasks: tasks || [], 
+      pagination: {
+        page,
+        limit,
+        total: count || 0
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao buscar tarefas WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+app.get('/api/wms-tasks/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const supabase = getSupabase(c.env);
+    
+    const { data: task, error } = await supabase
+      .from('tarefas_wms')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Erro na consulta de tarefa WMS:', error);
+      return c.json({ success: false, error: 'Erro ao buscar tarefa WMS' }, 500);
+    }
+    
+    if (!task) {
+      return c.json({ success: false, error: 'Tarefa WMS não encontrada' }, 404);
+    }
+    
+    return c.json({ success: true, task });
+  } catch (error) {
+    console.error('Erro ao buscar tarefa WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+app.post('/api/wms-tasks', async (c) => {
+  try {
+    const taskData = await c.req.json();
+    const supabase = getSupabase(c.env);
+    
+    const { data, error } = await supabase
+      .from('tarefas_wms')
+      .insert(taskData)
+      .select();
+    
+    if (error) {
+      console.error('Erro ao inserir tarefa WMS:', error);
+      return c.json({ success: false, error: 'Erro ao criar tarefa WMS' }, 500);
+    }
+    
+    return c.json({ success: true, task: data[0] });
+  } catch (error) {
+    console.error('Erro ao criar tarefa WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+app.post('/api/wms-tasks/bulk', async (c) => {
+  try {
+    const { tasks } = await c.req.json();
+    const supabase = getSupabase(c.env);
+    
+    if (!Array.isArray(tasks) || tasks.length === 0) {
+      return c.json({ success: false, error: 'Lista de tarefas inválida' }, 400);
+    }
+    
+    const { data, error } = await supabase
+      .from('tarefas_wms')
+      .insert(tasks)
+      .select();
+    
+    if (error) {
+      console.error('Erro ao inserir tarefas WMS em lote:', error);
+      return c.json({ success: false, error: 'Erro ao criar tarefas WMS' }, 500);
+    }
+    
+    return c.json({ success: true, tasks: data, count: data.length });
+  } catch (error) {
+    console.error('Erro ao criar tarefas WMS em lote:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+app.put('/api/wms-tasks/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const updateData = await c.req.json();
+    const supabase = getSupabase(c.env);
+    
+    const { data, error } = await supabase
+      .from('tarefas_wms')
+      .update(updateData)
+      .eq('id', id)
+      .select();
+    
+    if (error) {
+      console.error('Erro ao atualizar tarefa WMS:', error);
+      return c.json({ success: false, error: 'Erro ao atualizar tarefa WMS' }, 500);
+    }
+    
+    if (!data || data.length === 0) {
+      return c.json({ success: false, error: 'Tarefa WMS não encontrada' }, 404);
+    }
+    
+    return c.json({ success: true, task: data[0] });
+  } catch (error) {
+    console.error('Erro ao atualizar tarefa WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+app.delete('/api/wms-tasks/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const supabase = getSupabase(c.env);
+    
+    const { data, error } = await supabase
+      .from('tarefas_wms')
+      .delete()
+      .eq('id', id)
+      .select();
+    
+    if (error) {
+      console.error('Erro ao deletar tarefa WMS:', error);
+      return c.json({ success: false, error: 'Erro ao deletar tarefa WMS' }, 500);
+    }
+    
+    if (!data || data.length === 0) {
+      return c.json({ success: false, error: 'Tarefa WMS não encontrada' }, 404);
+    }
+    
+    return c.json({ success: true, message: 'Tarefa WMS deletada com sucesso' });
+  } catch (error) {
+    console.error('Erro ao deletar tarefa WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+// WMS Statistics
+app.get('/api/wms-tasks/stats/operator', async (c) => {
+  try {
+    const supabase = getSupabase(c.env);
+    const url = c.req.url;
+    const searchParams = new URL(url).searchParams;
+    
+    const usuario = searchParams.get('usuario');
+    const dataInicio = searchParams.get('data_inicio');
+    const dataFim = searchParams.get('data_fim');
+    
+    if (!usuario) {
+      return c.json({ success: false, error: 'Parâmetro usuario é obrigatório' }, 400);
+    }
+    
+    let query = supabase
+      .from('tarefas_wms')
+      .select('*')
+      .eq('usuario', usuario);
+    
+    if (dataInicio) {
+      query = query.gte('created_at', dataInicio);
+    }
+    if (dataFim) {
+      query = query.lte('created_at', dataFim);
+    }
+    
+    const { data: tasks, error } = await query;
+    
+    if (error) {
+      console.error('Erro na consulta de estatísticas WMS:', error);
+      return c.json({ success: false, error: 'Erro ao buscar estatísticas WMS' }, 500);
+    }
+    
+    // Calcular estatísticas
+    const stats = {
+      total_tasks: tasks.length,
+      completed_tasks: tasks.filter(t => t.status === 'completed').length,
+      pending_tasks: tasks.filter(t => t.status === 'pending').length,
+      in_progress_tasks: tasks.filter(t => t.status === 'in_progress').length,
+      tasks_by_type: {},
+      tasks_by_date: {}
+    };
+    
+    // Agrupar por tipo
+    tasks.forEach(task => {
+      if (task.tipo) {
+        stats.tasks_by_type[task.tipo] = (stats.tasks_by_type[task.tipo] || 0) + 1;
+      }
+    });
+    
+    // Agrupar por data
+    tasks.forEach(task => {
+      if (task.created_at) {
+        const date = task.created_at.split('T')[0];
+        stats.tasks_by_date[date] = (stats.tasks_by_date[date] || 0) + 1;
+      }
+    });
+    
+    return c.json({ success: true, stats });
+  } catch (error) {
+    console.error('Erro ao buscar estatísticas WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+// WMS Task Types
+app.get('/api/wms-task-types', async (c) => {
+  try {
+    const supabase = getSupabase(c.env);
+    const SUPABASE_URL = c.env.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = c.env.SUPABASE_ANON_KEY;
+    
+    const url = `${SUPABASE_URL}/rest/v1/tarefas_wms?select=tipo&order=tipo`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const uniqueTypes = [...new Set(data.map(item => item.tipo))]
+      .filter(tipo => tipo && tipo.trim() !== '')
+      .sort();
+    
+    return c.json({ success: true, types: uniqueTypes });
+  } catch (error) {
+    console.error('Erro ao buscar tipos de tarefa WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
+// WMS Operators
+app.get('/api/wms-operators', async (c) => {
+  try {
+    const supabase = getSupabase(c.env);
+    const SUPABASE_URL = c.env.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = c.env.SUPABASE_ANON_KEY;
+    
+    const url = `${SUPABASE_URL}/rest/v1/tarefas_wms?select=usuario&order=usuario`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const uniqueOperators = [...new Set(data.map(item => item.usuario))]
+      .filter(usuario => usuario && usuario.trim() !== '')
+      .sort();
+    
+    return c.json({ success: true, operators: uniqueOperators });
+  } catch (error) {
+    console.error('Erro ao buscar operadores WMS:', error);
+    return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
+  }
+});
+
 // Health check
 app.get('/api/health', async (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-exports.default = app;
+// Netlify Function handler for Hono app
+const handler = async (event, context) => {
+  try {
+    console.log('Event path:', event.path);
+    console.log('Event method:', event.httpMethod);
+    
+    // Verificar variáveis de ambiente do Supabase
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase environment variables: SUPABASE_URL and SUPABASE_ANON_KEY');
+      console.error('Please configure these in your Netlify site settings.');
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          error: 'Server configuration error', 
+          message: 'Missing Supabase environment variables' 
+        }),
+      };
+    }
+    
+    // Remove the /.netlify/functions prefix from the path
+    const cleanPath = event.path?.replace('/.netlify/functions', '') || '/';
+    console.log('Clean path:', cleanPath);
+    
+    // Create a proper Request object from Netlify event
+    const url = new URL(cleanPath, `https://${event.headers?.host || 'localhost'}`);
+    
+    // Add query parameters
+    if (event.queryStringParameters) {
+      Object.entries(event.queryStringParameters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && typeof value === 'string') {
+          url.searchParams.append(key, value);
+        }
+      });
+    }
+    
+    console.log('Final URL:', url.toString());
+    
+    // Create Request object
+    const request = new Request(url.toString(), {
+      method: event.httpMethod,
+      headers: event.headers || {},
+      body: event.body || undefined,
+    });
+    
+    // Process with Hono app
+    const response = await app.fetch(request);
+    console.log('Response status:', response.status);
+    
+    // Convert Response to Netlify format
+    const responseBody = await response.text();
+    
+    return {
+      statusCode: response.status,
+      headers: Object.fromEntries(response.headers.entries()),
+      body: responseBody,
+    };
+  } catch (error) {
+    console.error('Handler error:', error);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        error: 'Internal server error', 
+        message: error instanceof Error ? error.message : 'Unknown error' 
+      }),
+    }
+  }
+};
+
+exports.handler = handler;

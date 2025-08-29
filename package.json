@@ -12,6 +12,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@supabase/supabase-js": "^2.55.0",
     "@types/papaparse": "^5.3.16",
+    "@vitejs/plugin-react": "^4.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.1",
@@ -29,7 +30,8 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.9.6",
+    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-typescript": "^7.27.1",
     "@eslint/js": "9.25.1",
     "@getmocha/users-service": "^0.0.4",
     "@getmocha/vite-plugins": "latest",
@@ -37,8 +39,6 @@
     "@types/node": "22.14.1",
     "@types/react": "19.0.10",
     "@types/react-dom": "19.0.4",
-    "@vercel/node": "^3.2.23",
-    "@vitejs/plugin-react": "4.4.1",
     "autoprefixer": "^10.4.21",
     "eslint": "9.25.1",
     "eslint-plugin-react-hooks": "5.2.0",
@@ -50,17 +50,14 @@
     "tailwindcss": "^3.4.17",
     "typescript": "5.8.3",
     "typescript-eslint": "8.31.0",
-    "vite": "6.3.2",
-    "wrangler": "^4.25.0"
+    "vite": "6.3.2"
   },
   "scripts": {
     "build": "tsc -b && vite build",
-    "build:netlify": "npm run build:worker && npm run build:functions && npm run build",
-    "build:functions": "echo \"Functions build: using pre-built api.mjs\"",
-    "build:worker": "tsc --project tsconfig.worker.json",
-    "cf-typegen": "wrangler types",
-    "check": "tsc && vite build && wrangler deploy --dry-run",
-    "dev": "vite",
+    "build:netlify": "npm run build:functions && npm run build",
+    "build:functions": "tsc -p netlify/functions-src/tsconfig.json",
+    "dev": "netlify dev",
+    "dev:vite": "vite",
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy:netlify": "netlify deploy --prod"

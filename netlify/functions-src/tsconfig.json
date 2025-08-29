@@ -9,10 +9,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "../functions-build",
-    "rootDir": ".",
+    "rootDir": "../..",
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["**/*"],
-  "exclude": ["node_modules", "../functions-build"]
+  "include": ["**/*", "../../src/worker/**/*", "../../src/shared/**/*"],
+  "exclude": ["node_modules", "../functions-build", "../../src/react-app/**/*", "../../vite.config.ts", "../../*.config.ts"]
 }

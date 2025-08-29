@@ -407,8 +407,8 @@ export const supabaseQueries = {
         .from('usuarios')
         .select('*')
         .eq('cpf', formattedCPF)
-        .eq('data_nascimento', isoDate)
         .eq('status_usuario', 'ativo')
+        .filter('data_nascimento::date', 'eq', isoDate)
         .single()
 
       if (error) {

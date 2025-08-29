@@ -20,7 +20,7 @@ app.post('/api/auth/login', (0, zod_validator_1.zValidator)('json', types_1.Logi
         .select('*')
         .eq('cpf', cpf)
         .eq('data_nascimento', data_nascimento)
-        .eq('is_active', true)
+        .eq('status_usuario', 'ativo')
         .single();
     if (error || !user) {
         return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
@@ -85,7 +85,7 @@ app.delete('/api/usuarios/:id', async (c) => {
     const id = parseInt(c.req.param('id'));
     const { error } = await supabase
         .from('usuarios')
-        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .update({ status_usuario: 'inativo', updated_at: new Date().toISOString() })
         .eq('id', id);
     if (error) {
         return c.json({ error: error.message }, 500);

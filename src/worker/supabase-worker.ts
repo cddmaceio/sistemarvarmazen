@@ -1,265 +1,181 @@
-import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema } from "../shared/types";
-import { cors } from 'hono/cors';
-import { createClient } from '@supabase/supabase-js';
-import { createApiLogger, createDbLogger } from './debug';
+import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { ActivitySchema, KPISchema, CalculatorInputSchema, UserSchema, LoginSchema, CreateLancamentoSchema } from '../shared/types'
+import { cors } from 'hono/cors'
+import { createClient } from '@supabase/supabase-js'
 
-// Supabase Environment type
-type Env = {
-  SUPABASE_URL: string;
-  SUPABASE_ANON_KEY: string;
-};
+// Environment interface
+interface Env {
+  SUPABASE_URL: string
+  SUPABASE_ANON_KEY: string
+}
 
-const app = new Hono<{ Bindings: Env }>();
-const apiLogger = createApiLogger();
-const dbLogger = createDbLogger();
+const app = new Hono<{ Bindings: Env }>()
 
-app.use('*', cors());
-
-// Middleware para log de todas as requisições
-app.use('*', async (c, next) => {
-  const startTime = Date.now();
-  const method = c.req.method;
-  const url = c.req.url;
-  
-  apiLogger.info(`${method} ${url} - Request started`);
-  
-  await next();
-  
-  const duration = Date.now() - startTime;
-  const status = c.res.status;
-  apiLogger.info(`${method} ${url} - Response ${status} (${duration}ms)`);
-});
+app.use('*', cors())
 
 // Helper function to get Supabase client
 const getSupabase = (env: Env) => {
-  return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-};
+  return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY)
+}
 
 // Authentication endpoints
 app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
-  const supabase = getSupabase(c.env);
-  const { cpf, data_nascimento } = c.req.valid('json');
-  
-  apiLogger.debug('Login attempt', { cpf: cpf.substring(0, 3) + '***', data_nascimento });
-  
+  const supabase = getSupabase(c.env)
+  const { cpf, data_nascimento } = c.req.valid('json')
+
   const { data: user, error } = await supabase
     .from('usuarios')
     .select('*')
     .eq('cpf', cpf)
     .eq('data_nascimento', data_nascimento)
     .eq('is_active', true)
-    .single();
-  
-  if (error) {
-    dbLogger.error('Login database error', { error: error.message, code: error.code });
-    return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
+    .single()
+
+  if (error || !user) {
+    return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401)
   }
-  
-  if (!user) {
-    apiLogger.warn('Login failed - user not found', { cpf: cpf.substring(0, 3) + '***' });
-    return c.json({ message: 'CPF ou data de nascimento incorretos' }, 401);
-  }
-  
-  apiLogger.info('Login successful', { userId: user.id, nome: user.nome });
-  return c.json(user);
-});
+
+  return c.json(user)
+})
 
 app.post('/api/auth/logout', async (c) => {
-  return c.json({ success: true, message: 'Logged out successfully' });
-});
+  return c.json({ success: true, message: 'Logged out successfully' })
+})
 
 // User management endpoints
 app.get('/api/usuarios', async (c) => {
-  const supabase = getSupabase(c.env);
-  
-  apiLogger.debug('Fetching all users');
+  const supabase = getSupabase(c.env)
   
   const { data: users, error } = await supabase
     .from('usuarios')
     .select('*')
-    .order('created_at', { ascending: false });
-  
+    .order('created_at', { ascending: false })
+
   if (error) {
-    dbLogger.error('Error fetching users', {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    });
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  apiLogger.debug('Users fetched successfully', { count: users?.length || 0 });
-  return c.json(users || []);
-});
+
+  return c.json(users || [])
+})
 
 app.post('/api/usuarios', zValidator('json', UserSchema), async (c) => {
-  const supabase = getSupabase(c.env);
-  const data = c.req.valid('json');
-  
-  apiLogger.debug('Creating new user', { 
-    nome: data.nome, 
-    cpf: data.cpf?.substring(0, 3) + '***',
-    tipo_usuario: data.tipo_usuario 
-  });
-  
+  const supabase = getSupabase(c.env)
+  const data = c.req.valid('json')
+
   const { data: user, error } = await supabase
     .from('usuarios')
     .insert({
-      cpf: data.cpf,
-      data_nascimento: data.data_nascimento,
-      nome: data.nome,
-      tipo_usuario: data.tipo_usuario,
-      status_usuario: data.status_usuario,
-      funcao: data.funcao
+      ...data,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     })
     .select()
-    .single();
-  
+    .single()
+
   if (error) {
-    dbLogger.error('Error creating user', { 
-      error: error.message, 
-      code: error.code,
-      details: error.details 
-    });
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  apiLogger.info('User created successfully', { userId: user.id, nome: user.nome });
-  return c.json(user);
-});
+
+  return c.json(user)
+})
 
 app.put('/api/usuarios/:id', zValidator('json', UserSchema.partial()), async (c) => {
-  const supabase = getSupabase(c.env);
-  const id = parseInt(c.req.param('id'));
-  const data = c.req.valid('json');
-  
-  apiLogger.debug('Updating user', { 
-    userId: id, 
-    fields: Object.keys(data)
-  });
-  
-  // Create a mutable copy of the data to clean
-  const dataToUpdate = { ...data } as any;
+  const supabase = getSupabase(c.env)
+  const id = parseInt(c.req.param('id'))
+  const data = c.req.valid('json')
 
-  // List of fields that should be converted to null if they are empty strings
-  const fieldsToNullify = [
-    'data_admissao',
-    'data_nascimento',
-    'email',
-    'telefone',
-    'observacoes',
-  ];
-
-  fieldsToNullify.forEach((field) => {
-    if (dataToUpdate[field] === '') {
-      apiLogger.debug(`Field '${field}' is an empty string, converting to null.`, { userId: id });
-      dataToUpdate[field] = null;
-    }
-  });
-  
-  dbLogger.debug('Executing user update query with cleaned data', { 
-    userId: id, 
-    cleanData: { ...dataToUpdate, updated_at: 'ISO_STRING' } 
-  });
-  
   const { data: user, error } = await supabase
     .from('usuarios')
     .update({
-      ...dataToUpdate,
+      ...data,
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
     .select()
-    .single();
-  
+    .single()
+
   if (error) {
-    dbLogger.error('Error updating user', {
-      userId: id,
-      error: error.message,
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      originalData: data,
-      cleanData: dataToUpdate
-    });
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  apiLogger.info('User updated successfully', { userId: id, nome: user?.nome });
-  return c.json(user);
-});
+
+  return c.json(user)
+})
 
 app.delete('/api/usuarios/:id', async (c) => {
-  const supabase = getSupabase(c.env);
-  const id = parseInt(c.req.param('id'));
-  
+  const supabase = getSupabase(c.env)
+  const id = parseInt(c.req.param('id'))
+
   const { error } = await supabase
     .from('usuarios')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq('id', id);
-  
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-  
-  return c.json({ success: true });
-});
+    .delete()
+    .eq('id', id)
 
-// Activities endpoints
+  if (error) {
+    return c.json({ error: error.message }, 500)
+  }
+
+  return c.json({ success: true })
+})
+
+// Activity management endpoints
 app.get('/api/activities', async (c) => {
-  const supabase = getSupabase(c.env);
+  const supabase = getSupabase(c.env)
+  
   const { data: activities, error } = await supabase
     .from('activities')
     .select('*')
-    .order('nome_atividade', { ascending: true });
-  
+    .order('nome_atividade', { ascending: true })
+
   if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  return c.json(activities || []);
-});
+
+  return c.json(activities || [])
+})
 
 app.get('/api/activity-names', async (c) => {
-  const supabase = getSupabase(c.env);
+  const supabase = getSupabase(c.env)
+  
   const { data: activities, error } = await supabase
     .from('activities')
     .select('nome_atividade')
-    .order('nome_atividade', { ascending: true });
-  
+    .order('nome_atividade', { ascending: true })
+
   if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  const uniqueNames = [...new Set(activities?.map(a => a.nome_atividade) || [])];
-  return c.json(uniqueNames);
-});
+
+  const names = activities?.map(a => a.nome_atividade) || []
+  return c.json(names)
+})
 
 app.post('/api/activities', zValidator('json', ActivitySchema), async (c) => {
-  const supabase = getSupabase(c.env);
-  const data = c.req.valid('json');
-  
+  const supabase = getSupabase(c.env)
+  const data = c.req.valid('json')
+
   const { data: activity, error } = await supabase
     .from('activities')
-    .insert(data)
+    .insert({
+      ...data,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
     .select()
-    .single();
-  
+    .single()
+
   if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  return c.json(activity);
-});
+
+  return c.json(activity)
+})
 
 app.put('/api/activities/:id', zValidator('json', ActivitySchema.partial()), async (c) => {
-  const supabase = getSupabase(c.env);
-  const id = parseInt(c.req.param('id'));
-  const data = c.req.valid('json');
-  
+  const supabase = getSupabase(c.env)
+  const id = parseInt(c.req.param('id'))
+  const data = c.req.valid('json')
+
   const { data: activity, error } = await supabase
     .from('activities')
     .update({
@@ -268,83 +184,85 @@ app.put('/api/activities/:id', zValidator('json', ActivitySchema.partial()), asy
     })
     .eq('id', id)
     .select()
-    .single();
-  
+    .single()
+
   if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  return c.json(activity);
-});
+
+  return c.json(activity)
+})
 
 app.delete('/api/activities/:id', async (c) => {
-  const supabase = getSupabase(c.env);
-  const id = parseInt(c.req.param('id'));
-  
+  const supabase = getSupabase(c.env)
+  const id = parseInt(c.req.param('id'))
+
   const { error } = await supabase
     .from('activities')
     .delete()
-    .eq('id', id);
-  
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-  
-  return c.json({ success: true });
-});
+    .eq('id', id)
 
-// KPIs endpoints
+  if (error) {
+    return c.json({ error: error.message }, 500)
+  }
+
+  return c.json({ success: true })
+})
+
+// KPI management endpoints
 app.get('/api/kpis', async (c) => {
-  const supabase = getSupabase(c.env);
+  const supabase = getSupabase(c.env)
+  
   const { data: kpis, error } = await supabase
     .from('kpis')
     .select('*')
-    .order('nome_kpi', { ascending: true });
-  
+    .order('nome_kpi', { ascending: true })
+
   if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  return c.json(kpis || []);
-});
+
+  return c.json(kpis || [])
+})
 
 app.get('/api/functions', async (c) => {
-  const supabase = getSupabase(c.env);
+  const supabase = getSupabase(c.env)
+  
   const { data: kpis, error } = await supabase
     .from('kpis')
     .select('funcao_kpi')
-    .order('funcao_kpi', { ascending: true });
-  
+    .order('funcao_kpi', { ascending: true })
+
   if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  const uniqueFunctions = [...new Set(kpis?.map(k => k.funcao_kpi) || [])];
-  return c.json(uniqueFunctions);
-});
+
+  const uniqueFunctions = [...new Set(kpis?.map(k => k.funcao_kpi) || [])]
+  return c.json(uniqueFunctions)
+})
 
 app.post('/api/kpis', zValidator('json', KPISchema), async (c) => {
-  const supabase = getSupabase(c.env);
-  const data = c.req.valid('json');
-  
+  const supabase = getSupabase(c.env)
+  const data = c.req.valid('json')
+
   const { data: kpi, error } = await supabase
     .from('kpis')
     .insert(data)
     .select()
-    .single();
-  
+    .single()
+
   if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  return c.json(kpi);
-});
+
+  return c.json(kpi)
+})
 
 app.put('/api/kpis/:id', zValidator('json', KPISchema.partial()), async (c) => {
-  const supabase = getSupabase(c.env);
-  const id = parseInt(c.req.param('id'));
-  const data = c.req.valid('json');
-  
+  const supabase = getSupabase(c.env)
+  const id = parseInt(c.req.param('id'))
+  const data = c.req.valid('json')
+
   const { data: kpi, error } = await supabase
     .from('kpis')
     .update({
@@ -353,172 +271,30 @@ app.put('/api/kpis/:id', zValidator('json', KPISchema.partial()), async (c) => {
     })
     .eq('id', id)
     .select()
-    .single();
-  
+    .single()
+
   if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  return c.json(kpi);
-});
+
+  return c.json(kpi)
+})
 
 app.delete('/api/kpis/:id', async (c) => {
-  const supabase = getSupabase(c.env);
-  const id = parseInt(c.req.param('id'));
-  
+  const supabase = getSupabase(c.env)
+  const id = parseInt(c.req.param('id'))
+
   const { error } = await supabase
     .from('kpis')
     .delete()
-    .eq('id', id);
-  
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-  
-  return c.json({ success: true });
-});
-
-// KPI available endpoint
-app.get('/api/kpis/available', async (c) => {
-  const supabase = getSupabase(c.env);
-  const funcao = c.req.query('funcao');
-  const turno = c.req.query('turno');
-  
-  if (!funcao || !turno) {
-    return c.json({ error: 'Função e turno são obrigatórios' }, 400);
-  }
-  
-  // Apply encoding mapping like in worker function
-  const funcaoMap: { [key: string]: string } = {
-    'Ajudante de Armazém': 'Ajudante de ArmazÃ©m',
-    'Operador de Empilhadeira': 'Operador de Empilhadeira',
-    'Conferente': 'Conferente',
-    'Líder de Turno': 'LÃ­der de Turno'
-  };
-  
-  const turnoMap: { [key: string]: string } = {
-    'Manha': 'ManhÃ£',
-    'Tarde': 'Tarde',
-    'Noite': 'Noite'
-  };
-  
-  const dbFuncao = funcaoMap[funcao] || funcao;
-  const dbTurno = turnoMap[turno] || turno;
-  
-  console.log(`Searching for KPIs with funcao: ${dbFuncao}, turno: [${dbTurno}, 'Geral']`);
-  
-  // Try two separate queries and combine results
-  const { data: kpis1, error: error1 } = await supabase
-    .from('kpis')
-    .select('*')
-    .eq('funcao_kpi', dbFuncao)
-    .eq('turno_kpi', dbTurno)
-    .eq('status_ativo', true);
-    
-  const { data: kpis2, error: error2 } = await supabase
-    .from('kpis')
-    .select('*')
-    .eq('funcao_kpi', dbFuncao)
-    .eq('turno_kpi', 'Geral')
-    .eq('status_ativo', true);
-    
-  const kpis = [...(kpis1 || []), ...(kpis2 || [])];
-  const error = error1 || error2;
-  
-  console.log(`KPI query result:`, { data: kpis, error, count: kpis?.length || 0 });
-  console.log(`Query 1 (${dbTurno}):`, kpis1?.length || 0, 'results');
-  console.log(`Query 2 (Geral):`, kpis2?.length || 0, 'results');
-  
-  if (error) {
-    console.error('Error fetching available KPIs:', {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    });
-    return c.json({ error: error.message }, 500);
-  }
-  
-  return c.json({ kpisAtingidos: kpis || [] });
-});
-
-// Lançamentos endpoints
-app.get('/api/lancamentos', async (c) => {
-  const supabase = getSupabase(c.env);
-  const userId = c.req.query('user_id');
-  
-  let query = supabase
-    .from('lancamentos_produtividade')
-    .select('*')
-    .order('created_at', { ascending: false });
-  
-  if (userId) {
-    query = query.eq('user_id', parseInt(userId));
-  }
-  
-  const { data: lancamentos, error } = await query;
-  
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-  
-  return c.json(lancamentos || []);
-});
-
-app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (c) => {
-  const supabase = getSupabase(c.env);
-  const data = c.req.valid('json');
-  
-  const { data: lancamento, error } = await supabase
-    .from('lancamentos_produtividade')
-    .insert(data)
-    .select()
-    .single();
-  
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-  
-  return c.json(lancamento);
-});
-
-app.put('/api/lancamentos/:id', async (c) => {
-  const supabase = getSupabase(c.env);
-  const id = parseInt(c.req.param('id'));
-  const data = await c.req.json();
-  
-  const { data: lancamento, error } = await supabase
-    .from('lancamentos_produtividade')
-    .update({
-      ...data,
-      updated_at: new Date().toISOString()
-    })
     .eq('id', id)
-    .select()
-    .single();
-  
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-  
-  return c.json(lancamento);
-});
 
-app.delete('/api/lancamentos/:id', async (c) => {
-  const supabase = getSupabase(c.env);
-  const id = parseInt(c.req.param('id'));
-  
-  const { error } = await supabase
-    .from('lancamentos_produtividade')
-    .delete()
-    .eq('id', id);
-  
   if (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, 500)
   }
-  
-  return c.json({ success: true });
-});
+
+  return c.json({ success: true })
+})
 
 // Helper function to normalize strings (remove accents)
 const normalizeString = (str: string): string => {
@@ -526,220 +302,244 @@ const normalizeString = (str: string): string => {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ç/g, 'c')
-    .replace(/Ç/g, 'C');
-};
+    .replace(/Ç/g, 'C')
+}
 
 // Calculator endpoint
-app.post('/api/calculator', zValidator('json', CalculatorInputSchema), async (c) => {
-  console.log('🚀 CALCULATOR FUNCTION STARTED 🚀');
-  const supabase = getSupabase(c.env);
-  const input = c.req.valid('json');
-  
+app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) => {
+  const supabase = getSupabase(c.env)
+  const input = c.req.valid('json')
+
   try {
-    console.log('Calculator endpoint called');
-    console.log('=== CALCULATOR DEBUG START ===');
-    console.log('Input received:', JSON.stringify(input, null, 2));
-    console.log('🔥 UNIQUE DEBUG MARKER 12345 🔥');
+    console.log('Calculator endpoint called')
+    console.log('Input received:', JSON.stringify(input, null, 2))
+
     // Normalize input strings
-    const normalizedFuncao = normalizeString(input.funcao);
-    const normalizedTurno = normalizeString(input.turno);
+    const normalizedFuncao = normalizeString(input.funcao)
+    const normalizedTurno = normalizeString(input.turno)
     
-    console.log('Original input:', { funcao: input.funcao, turno: input.turno });
-    console.log('Normalized input:', { funcao: normalizedFuncao, turno: normalizedTurno });
-    
-    // Activities will be fetched as needed during calculation
-    
-    // Get KPIs for calculation - search with original strings (database has encoding issues)
+    console.log('Original input:', { funcao: input.funcao, turno: input.turno })
+    console.log('Normalized input:', { funcao: normalizedFuncao, turno: normalizedTurno })
+
     // Map input to database values
-    const dbFuncao = input.funcao === 'Ajudante de Armazém' ? 'Ajudante de ArmazÃ©m' : input.funcao;
-    const dbTurno = input.turno === 'Manha' ? 'ManhÃ£' : input.turno;
+    const dbFuncao = input.funcao === 'Ajudante de Armazém' ? 'Ajudante de ArmazÃ©m' : input.funcao
+    const dbTurno = input.turno === 'Manha' ? 'ManhÃ£' : input.turno
     
-    console.log('Database search values:', { dbFuncao, dbTurno });
-    console.log('Searching for KPIs with:', { funcao_kpi: dbFuncao, turno_kpi_in: [dbTurno, 'Geral'] });
-    
-    // Use two separate queries and combine results
-    const { data: kpis1, error: kpisError1 } = await supabase
-      .from('kpis')
-      .select('*')
-      .eq('funcao_kpi', dbFuncao)
-      .eq('turno_kpi', dbTurno)
-      .eq('status_ativo', true);
-      
-    const { data: kpis2, error: kpisError2 } = await supabase
-      .from('kpis')
-      .select('*')
-      .eq('funcao_kpi', dbFuncao)
-      .eq('turno_kpi', 'Geral')
-      .eq('status_ativo', true);
-      
-    const kpis = [...(kpis1 || []), ...(kpis2 || [])];
-    const kpisError = kpisError1 || kpisError2;
-      
-    console.log('KPI query result:', { data: kpis, error: kpisError, count: kpis?.length || 0 });
-    console.log(`Query 1 (${dbTurno}):`, kpis1?.length || 0, 'results');
-    console.log(`Query 2 (Geral):`, kpis2?.length || 0, 'results');
-    
-    if (kpisError) {
-      return c.json({ error: kpisError.message }, 500);
+    console.log('Database search values:', { dbFuncao, dbTurno })
+    console.log('Searching for KPIs with:', { funcao_kpi: dbFuncao, turno_kpi_in: [dbTurno, 'Geral'] })
+
+    let subtotal_atividades = 0
+    let bonus_kpis = 0
+    let produtividade_alcancada: number | undefined
+    let nivel_atingido: string | undefined
+    let unidade_medida: string | undefined
+    let atividades_detalhes: string[] = []
+    let tarefas_validas: number | undefined
+    let valor_tarefas: number | undefined
+    const kpis_atingidos_resultado: string[] = []
+
+    // Calculate activities
+    if (input.nome_atividade && input.quantidade_produzida && input.tempo_horas) {
+      const { data: activity, error: activityError } = await supabase
+        .from('activities')
+        .select('*')
+        .eq('nome_atividade', input.nome_atividade)
+        .single()
+
+      if (activityError) {
+        console.error('Activity error:', activityError)
+        return c.json({ error: 'Atividade não encontrada' }, 400)
+      }
+
+      if (activity) {
+        produtividade_alcancada = input.quantidade_produzida / input.tempo_horas
+        unidade_medida = activity.unidade_medida
+        
+        if (produtividade_alcancada >= activity.produtividade_minima) {
+          nivel_atingido = activity.nivel_atividade
+          subtotal_atividades = activity.valor_atividade
+          atividades_detalhes.push(`${activity.nome_atividade}: ${input.quantidade_produzida} ${activity.unidade_medida} em ${input.tempo_horas}h`)
+        }
+      }
     }
-    
-    console.log('Found KPIs:', kpis);
-    
-    // Calculate productivity (complete logic)
-    let subtotalAtividades = 0;
-    let bonusKpis = 0;
-    let kpisAtingidos = [];
-    let atividadesDetalhes = [];
-    let produtividadeAlcancada = 0;
-    let nivelAtingido = "Nenhum";
-    let unidadeMedida = "";
-    let tarefasValidas = 0;
-    let valorTarefas = 0;
 
     // Handle multiple activities
-    console.log("Using updated multiple_activities logic with input:", input);
-    if (input.multiple_activities && input.multiple_activities.length > 0) {
-      for (const act of input.multiple_activities) {
-        console.log(`Processing activity: ${act.nome_atividade}`);
-        const { data: activityData, error } = await supabase
-          .from('activities')
-          .select('*')
-          .eq('nome_atividade', act.nome_atividade)
-          .order('produtividade_minima', { ascending: false });
+    if (input.multiple_activities) {
+      try {
+        const activities = input.multiple_activities
+        for (const act of activities) {
+          if (act.nome_atividade && act.quantidade_produzida && act.tempo_horas) {
+            const { data: activity, error: activityError } = await supabase
+              .from('activities')
+              .select('*')
+              .eq('nome_atividade', act.nome_atividade)
+              .single()
 
-        console.log(`Query result for ${act.nome_atividade}:`, { error, dataLength: activityData?.length });
-        if (error) {
-          console.error(`Error querying activity ${act.nome_atividade}:`, error);
-          continue;
-        }
-        if (!activityData || activityData.length === 0) {
-          console.log(`No data found for activity: ${act.nome_atividade}`);
-          continue;
-        }
-
-        console.log(`Found ${activityData.length} records for ${act.nome_atividade}:`, activityData);
-        const produtividade = act.quantidade_produzida / act.tempo_horas;
-        console.log(`Calculated productivity: ${produtividade} for ${act.nome_atividade}`);
-        
-        let selectedActivity = null;
-        for (const a of activityData) {
-          console.log(`Checking level: ${a.nivel_atividade}, min productivity: ${a.produtividade_minima}`);
-          if (produtividade >= a.produtividade_minima) {
-            selectedActivity = a;
-            console.log(`Selected activity level: ${a.nivel_atividade}`);
-            break;
+            if (!activityError && activity) {
+              const prod = act.quantidade_produzida / act.tempo_horas
+              if (prod >= activity.produtividade_minima) {
+                subtotal_atividades += activity.valor_atividade
+                atividades_detalhes.push(`${activity.nome_atividade}: ${act.quantidade_produzida} ${activity.unidade_medida} em ${act.tempo_horas}h`)
+              }
+            }
           }
         }
-        if (!selectedActivity) {
-          selectedActivity = activityData[activityData.length - 1];
-          console.log(`No level achieved, using lowest level: ${selectedActivity.nivel_atividade}`);
-        }
-
-        const valor = selectedActivity.valor_atividade * act.quantidade_produzida;
-        subtotalAtividades += valor / 2; // Aplicar regra de 50%
-
-        atividadesDetalhes.push({
-          nome_atividade: act.nome_atividade,
-          quantidade_produzida: act.quantidade_produzida,
-          tempo_horas: act.tempo_horas,
-          valor,
-          produtividade: Math.round(produtividade * 100) / 100,
-          nivel: selectedActivity.nivel_atividade
-        });
-
-        tarefasValidas++;
-        valorTarefas += valor;
-        produtividadeAlcancada = Math.max(produtividadeAlcancada, produtividade);
-        nivelAtingido = selectedActivity.nivel_atividade; // Atualizar com o nível mais recente ou lógica desejada
-        unidadeMedida = selectedActivity.unidade_medida;
+      } catch (e) {
+        console.error('Error parsing multiple activities:', e)
       }
     }
 
-    // Função para calcular valor dinâmico dos KPIs baseado no mês
-    function calcularDiasUteisMes(year: number, month: number): number {
-      const diasUteis = [];
-      const ultimoDia = new Date(year, month, 0).getDate();
-      
-      for (let dia = 1; dia <= ultimoDia; dia++) {
-        const data = new Date(year, month - 1, dia);
-        const diaSemana = data.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
-        
-        // Incluir segunda (1) a sábado (6), excluir domingo (0)
-        if (diaSemana >= 1 && diaSemana <= 6) {
-          diasUteis.push(dia);
-        }
+    // Handle WMS tasks for Operador de Empilhadeira
+    if (input.funcao === 'Operador de Empilhadeira' && input.nome_operador && input.data_lancamento) {
+      const { data: tarefas, error: tarefasError } = await supabase
+        .from('tarefas_wms')
+        .select('*')
+        .eq('usuario', input.nome_operador)
+        .eq('data_alteracao', input.data_lancamento)
+        .eq('status', 'Concluído')
+
+      if (!tarefasError && tarefas) {
+        tarefas_validas = tarefas.length
+        valor_tarefas = tarefas_validas * 2.5
+        subtotal_atividades = valor_tarefas
+        atividades_detalhes.push(`Tarefas WMS: ${tarefas_validas} tarefas concluídas`)
       }
-      
-      return diasUteis.length;
     }
 
-    function calcularValorKpiDinamico(year: number, month: number, orcamentoMensal: number = 150.00, maxKpisPorDia: number = 2): number {
-      const diasUteis = calcularDiasUteisMes(year, month);
-      const totalKpisMes = diasUteis * maxKpisPorDia;
-      const valorPorKpi = orcamentoMensal / totalKpisMes;
+    // Calculate KPIs
+    if (input.kpis_atingidos && input.kpis_atingidos.length > 0) {
+      const { data: kpis, error: kpisError } = await supabase
+        .from('kpis')
+        .select('*')
+        .eq('funcao_kpi', dbFuncao)
+        .in('turno_kpi', [dbTurno, 'Geral'])
+        .in('nome_kpi', input.kpis_atingidos)
       
-      // Arredondar para 2 casas decimais
-      return Math.round(valorPorKpi * 100) / 100;
-    }
-
-    // Handle KPIs with normalized data
-    console.log("Processing KPIs:", input.kpis_atingidos);
-    console.log("Available KPIs from query:", kpis);
-    
-    // Calcular valor dinâmico baseado no mês atual
-    const dataLancamento = new Date();
-    const anoLancamento = dataLancamento.getFullYear();
-    const mesLancamento = dataLancamento.getMonth() + 1;
-    
-    const valorKpiDinamico = calcularValorKpiDinamico(anoLancamento, mesLancamento);
-    const diasUteis = calcularDiasUteisMes(anoLancamento, mesLancamento);
-    
-    console.log('📅 Cálculo Dinâmico de KPIs:');
-    console.log(`- Data atual: ${dataLancamento.toISOString()}`);
-    console.log(`- Mês/Ano: ${mesLancamento}/${anoLancamento}`);
-    console.log(`- Dias úteis no mês: ${diasUteis}`);
-    console.log(`- Valor dinâmico por KPI: R$ ${valorKpiDinamico}`);
-    
-    if (input.kpis_atingidos && input.kpis_atingidos.length > 0 && kpis && kpis.length > 0) {
-      for (const kpiName of input.kpis_atingidos) {
-        const matchingKpi = kpis.find(k => k.nome_kpi === kpiName);
-        if (matchingKpi) {
-          // Usar valor dinâmico para Operador de Empilhadeira, valor fixo para outras funções
-          const valorKpi = input.funcao === 'Operador de Empilhadeira' ? valorKpiDinamico : (parseFloat(matchingKpi.peso_kpi) || 0);
-          bonusKpis += valorKpi;
-          kpisAtingidos.push(matchingKpi.nome_kpi);
-          console.log(`Added KPI: ${matchingKpi.nome_kpi}, Weight: R$ ${valorKpi} (${input.funcao === 'Operador de Empilhadeira' ? 'dinâmico' : 'fixo'})`);
-        } else {
-          console.log(`KPI not found: ${kpiName}`);
+      if (kpis) {
+        for (const kpi of kpis) {
+          bonus_kpis += kpi.peso_kpi
+          kpis_atingidos_resultado.push(kpi.nome_kpi)
         }
       }
     }
     
-    console.log('Final bonusKpis:', bonusKpis);
-    console.log('Final kpisAtingidos:', kpisAtingidos);
+    // Final calculation
+    const atividades_extras = input.input_adicional || 0
+    const remuneracao_total = subtotal_atividades + bonus_kpis + atividades_extras
+    
+    const result: any = {
+      subtotal_atividades,
+      bonus_kpis,
+      remuneracao_total,
+      kpis_atingidos: kpis_atingidos_resultado,
+    }
 
-    const remuneracaoTotal = subtotalAtividades + bonusKpis + (input.input_adicional || 0);
-
-    return c.json({
-      subtotalAtividades,
-      bonusKpis,
-      remuneracaoTotal,
-      produtividadeAlcancada: Math.round(produtividadeAlcancada * 100) / 100,
-      nivelAtingido,
-      unidadeMedida,
-      atividadesDetalhes,
-      tarefasValidas,
-      valorTarefas,
-      kpisAtingidos
-    });
+    // Add optional fields only if they exist
+    if (produtividade_alcancada !== undefined) result.produtividade_alcancada = produtividade_alcancada
+    if (nivel_atingido !== undefined) result.nivel_atingido = nivel_atingido
+    if (unidade_medida !== undefined) result.unidade_medida = unidade_medida
+    if (atividades_detalhes.length > 0) result.atividades_detalhes = atividades_detalhes
+    if (tarefas_validas !== undefined) result.tarefas_validas = tarefas_validas
+    if (valor_tarefas !== undefined) result.valor_tarefas = valor_tarefas
+    
+    return c.json({ data: result, error: null })
   } catch (error) {
-    return c.json({ error: 'Calculation failed' }, 500);
+    console.error('Calculator error:', error)
+    return c.json({ error: 'Erro no cálculo' }, 500)
   }
-});
+})
 
-// Health check
-app.get('/api/health', async (c) => {
-  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Lancamentos endpoints
+app.get('/api/lancamentos', async (c) => {
+  const supabase = getSupabase(c.env)
+  
+  const { data: lancamentos, error } = await supabase
+    .from('lancamentos_produtividade')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-export default app;
+  if (error) {
+    return c.json({ error: error.message }, 500)
+  }
+
+  return c.json(lancamentos || [])
+})
+
+app.post('/api/lancamentos', zValidator('json', CreateLancamentoSchema), async (c) => {
+  const supabase = getSupabase(c.env)
+  const data = c.req.valid('json')
+
+  const { data: lancamento, error } = await supabase
+    .from('lancamentos_produtividade')
+    .insert({
+      ...data,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .select()
+    .single()
+
+  if (error) {
+    return c.json({ error: error.message }, 500)
+  }
+
+  return c.json(lancamento)
+})
+
+app.put('/api/lancamentos/:id', async (c) => {
+  const supabase = getSupabase(c.env)
+  const id = parseInt(c.req.param('id'))
+  const { status, observacoes } = await c.req.json()
+
+  const { data: lancamento, error } = await supabase
+    .from('lancamentos_produtividade')
+    .update({
+      status,
+      observacoes,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    return c.json({ error: error.message }, 500)
+  }
+
+  return c.json(lancamento)
+})
+
+app.delete('/api/lancamentos/:id', async (c) => {
+  const supabase = getSupabase(c.env)
+  const id = parseInt(c.req.param('id'))
+
+  const { error } = await supabase
+    .from('lancamentos_produtividade')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    return c.json({ error: error.message }, 500)
+  }
+
+  return c.json({ success: true })
+})
+
+// Export preview endpoint
+app.get('/api/export-preview', async (c) => {
+  const supabase = getSupabase(c.env)
+  
+  const { data: lancamentos, error } = await supabase
+    .from('lancamentos_produtividade')
+    .select('*')
+    .eq('status', 'aprovado')
+    .order('data_lancamento', { ascending: true })
+
+  if (error) {
+    return c.json({ error: error.message }, 500)
+  }
+
+  return c.json(lancamentos || [])
+})
+
+export default app

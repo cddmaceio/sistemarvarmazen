@@ -91,6 +91,7 @@ export const CalculatorInputSchema = z.object({
   // Valid tasks for Operador de Empilhadeira
   nome_operador: z.string().optional(),
   valid_tasks_count: z.number().optional(),
+  data_lancamento: z.string().optional(),
 });
 
 export type CalculatorInputType = z.infer<typeof CalculatorInputSchema>;
