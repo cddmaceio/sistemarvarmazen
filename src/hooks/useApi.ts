@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ActivityType, KPIType, CalculatorInputType, CalculatorResultType } from '@/shared/types';
 
 const API_BASE = '/api';
@@ -183,8 +183,8 @@ export function useFunctions() {
         }
         
         const data = await response.json();
-        // API returns { results: string[] }, format as expected
-        const uniqueFunctions = data.results || [];
+        // API returns string[], format as expected
+        const uniqueFunctions = data || [];
         setFunctions(uniqueFunctions.map((funcao: string) => ({ funcao })));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -215,9 +215,9 @@ export function useActivityNames() {
         }
         
         const data = await response.json();
-        // API returns { results: string[] }, format as expected
+        // API returns { results: array }, format as expected
         const uniqueNames = data.results || [];
-        setActivityNames(uniqueNames.map((nome_atividade: string) => ({ nome_atividade })));
+        setActivityNames(uniqueNames);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -313,11 +313,14 @@ export function useKPILimit() {
       }
       
       const data = await response.json();
-      const limitReached = data.limitReached || false;
-      
+      const canLaunch = data.can_launch ?? true; // Use the correct field name from backend
+
       const limitData = {
-        limitReached,
-        canLaunch: !limitReached
+        limitReached: !canLaunch,
+        canLaunch: canLaunch,
+        currentCount: data.current_count || 0,
+        remainingLaunches: data.remaining_launches || 0,
+        dailyLimit: data.daily_limit || 1
       };
       
       setLimitInfo(limitData);

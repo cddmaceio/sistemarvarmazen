@@ -195,9 +195,22 @@ export default function Home() {
     calculate(submitData);
   };
 
+  // Function to get current date in Brazil timezone (GMT-3)
+  const getBrazilDate = () => {
+    const now = new Date();
+    // Convert to Brazil timezone (GMT-3)
+    const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+    return brazilTime.toISOString().split('T')[0];
+  };
+
+  // Function to get max date (today in Brazil timezone)
+  const getMaxDate = () => {
+    return getBrazilDate();
+  };
+
   const checkKPILimit = async (date: string) => {
     if (!user?.id || !selectedKPIs.length) return true; // No KPIs selected, no need to check
-    
+
     try {
       const response = await fetch('/api/kpis/check-limit', {
         method: 'POST',
@@ -207,11 +220,11 @@ export default function Home() {
           data_lancamento: date
         }),
       });
-      
+
       if (!response.ok) return true; // If check fails, allow the attempt
-      
+
       const data = await response.json();
-      return data.canLaunch;
+      return data.can_launch ?? true; // Use the correct field name from backend
     } catch (err) {
       console.error('Erro ao verificar limite de KPIs:', err);
       return true; // If check fails, allow the attempt
@@ -222,56 +235,45 @@ export default function Home() {
     console.log('🚀 Home - Open Lançamento triggered');
     console.log('📊 Result exists:', !!result);
     console.log('🎯 Selected KPIs:', selectedKPIs);
-    
+
     if (!result) {
       console.log('❌ No calculation result available');
       alert('Por favor, calcule a remuneração antes de fazer o lançamento.');
       return;
     }
-    
+
     // Get the launch date first
     let launchDate = dataLancamento;
-    
-    // For forklift operators, use the WMS reference date
+
+    // For forklift operators, use the WMS reference date if available
     if (isOperadorEmpilhadeira && wmsReferenceDate) {
       launchDate = wmsReferenceDate;
+      setDataLancamento(launchDate);
     } else if (!launchDate) {
-      // Default to today's date if no date is set
-      launchDate = new Date().toISOString().split('T')[0];
+      // Don't set a default date - let user choose
+      launchDate = '';
+      setDataLancamento('');
     }
-    
-    // If user has selected KPIs, check if they can launch more for the selected date
-    if (selectedKPIs.length > 0) {
-      console.log('🔍 Checking KPI limit for date:', launchDate);
-      const canLaunch = await checkKPILimit(launchDate);
-      
-      if (!canLaunch) {
-        console.log('❌ KPI limit reached for selected date');
-        alert(`❌ Limite diário de KPIs atingido!\n\n💡 Você já possui 1 lançamento de KPI para a data ${launchDate}.\n\nPara lançar novos KPIs:\n• Remova os KPIs do cálculo atual, ou\n• Escolha uma data diferente no modal de lançamento`);
-        return;
-      }
-    }
-    
-    // Set the calculated launch date
-    console.log('📅 Setting launch date:', launchDate);
-    setDataLancamento(launchDate);
-    
+
     console.log('✅ Opening lançamento modal');
     setShowLancamento(true);
   };
 
   const handleLancarProdutividade = async () => {
     if (!result || !dataLancamento) return;
-    
-    // Check KPI limit again before launching if KPIs are selected
+
+    // Use Brazil date normalization (ensure date string is in YYYY-MM-DD)
+    const selectedDate = dataLancamento;
+
+    // Check KPI limit only now, when user confirms
     if (selectedKPIs.length > 0) {
-      const canLaunch = await checkKPILimit(dataLancamento);
+      const canLaunch = await checkKPILimit(selectedDate);
       if (!canLaunch) {
         alert('❌ Limite diário de KPIs atingido!\n\n💡 Você já possui lançamentos de KPIs para esta data.\n\nPara lançar novos KPIs:\n• Remova os KPIs do cálculo atual, ou\n• Escolha uma data diferente');
         return;
       }
     }
-    
+
     setLancando(true);
     try {
       // Prepare calculator_data based on function type
@@ -282,7 +284,7 @@ export default function Home() {
 
       if (isAjudanteArmazem) {
         const validActivities = multipleActivities.filter(act => act.nome_atividade && act.quantidade_produzida > 0 && act.tempo_horas > 0);
-        
+
         if (validActivities.length === 1) {
           // Single activity - use individual fields
           const activity = validActivities[0];
@@ -299,35 +301,35 @@ export default function Home() {
       }
 
       const lancamentoData: CreateLancamentoType = {
-        data_lancamento: dataLancamento,
+        data_lancamento: selectedDate,
         user_id: user?.id,
         calculator_data: calculatorData,
         calculator_result: result,
       };
-      
+
       const response = await fetch('/api/lancamentos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(lancamentoData),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        
+
         // Handle specific KPI limit error
         if (errorData.error === 'Limite diário de KPIs atingido') {
           alert(`❌ ${errorData.message}\n\n💡 Para lançar novos KPIs:\n• Remova os KPIs do cálculo atual, ou\n• Escolha uma data diferente\n\nLançamentos atuais: ${errorData.current_count}/${errorData.daily_limit}`);
           return;
         }
-        
+
         throw new Error(errorData.message || 'Falha ao lançar produtividade');
       }
-      
+
       // Success - reset form and show success message
       setShowLancamento(false);
       setDataLancamento('');
       alert('Produtividade lançada com sucesso! Aguarde a validação do administrador.');
-      
+
     } catch (err) {
       console.error('Erro ao lançar produtividade:', err);
       alert('Erro ao lançar produtividade. Tente novamente.');
@@ -419,9 +421,8 @@ export default function Home() {
 
 
 
-  // Redirect admins to admin panel - admins don't use calculator
   if (isAdmin) {
-    return <Navigate to="/admin-redirect" replace />;
+    return <Navigate to="/admin/validacao" replace />;
   }
 
   return (
@@ -485,15 +486,15 @@ export default function Home() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Função</label>
                       <Select
+                        id="funcao"
                         value={formData.funcao}
                         onChange={(e) => handleInputChange('funcao', e.target.value)}
-                        placeholder="Função definida pelo usuário"
-                        disabled={true}
+                        required
+                        disabled={!isAdmin}
                       >
+                        <option value="" disabled>Selecione a função</option>
                         {functions.map((func) => (
-                          <option key={func.funcao} value={func.funcao}>
-                            {func.funcao}
-                          </option>
+                          <option key={func.funcao} value={func.funcao}>{func.funcao}</option>
                         ))}
                       </Select>
                       <p className="text-xs text-gray-500">🔒 Função travada baseada no seu perfil de usuário</p>
@@ -897,25 +898,25 @@ export default function Home() {
                           <Input
                             type="date"
                             value={dataLancamento}
-                            onChange={async (e) => {
+                            onChange={(e) => {
                               const newDate = e.target.value;
                               setDataLancamento(newDate);
-                              
-                              // Check KPI limit for the new date if KPIs are selected
-                              if (selectedKPIs.length > 0 && newDate) {
-                                const canLaunch = await checkKPILimit(newDate);
-                                if (!canLaunch) {
-                                  alert('⚠️ Atenção: Você já possui 1 lançamento de KPI para esta data.\n\nPara prosseguir:\n• Remova os KPIs do cálculo atual, ou\n• Escolha uma data diferente');
-                                }
-                              }
+
+                              // Removed immediate KPI limit check to allow user to select date without interruptions.
                             }}
-                            max={new Date().toISOString().split('T')[0]}
+                            max={getMaxDate()}
                             disabled={isOperadorEmpilhadeira}
                             className={isOperadorEmpilhadeira ? 'bg-gray-100 cursor-not-allowed' : ''}
+                            placeholder="Selecione a data do lançamento"
                           />
                           {isOperadorEmpilhadeira && !wmsReferenceDate && (
                             <p className="text-xs text-amber-600 mt-1">
                               ⚠️ Selecione uma data de referência no analisador de tarefas WMS primeiro
+                            </p>
+                          )}
+                          {!dataLancamento && !isOperadorEmpilhadeira && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              💡 Selecione a data para o lançamento da produtividade
                             </p>
                           )}
                         </div>

@@ -6,7 +6,16 @@ import { createClient } from '@supabase/supabase-js';
 import wmsTasksRouter from './routes/wms-tasks';
 // Supabase client helper
 function getSupabase(env) {
-    return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+    return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+        db: {
+            schema: 'public'
+        },
+        global: {
+            headers: {
+                'Content-Type': 'application/json; charset=utf-8'
+            }
+        }
+    });
 }
 const app = new Hono();
 app.use('*', cors());
@@ -790,14 +799,22 @@ app.get('/api/activity-names', async (c) => {
             .from('activities')
             .select('nome_atividade')
             .order('nome_atividade');
+        
         if (error) {
             console.error('Error fetching activity names:', error);
             return c.json({ error: 'Erro ao buscar nomes de atividades' }, 500);
         }
+        
         // Get unique activity names
         const uniqueActivities = [...new Set(activities?.map(item => item.nome_atividade) || [])]
+            .filter(nome => nome && nome.trim() !== '')
             .map(nome_atividade => ({ nome_atividade }));
-        return c.json({ results: uniqueActivities });
+        
+        // Force UTF-8 encoding in response
+        const response = c.json({ results: uniqueActivities });
+        response.headers.set('Content-Type', 'application/json; charset=utf-8');
+        response.headers.set('Cache-Control', 'no-cache');
+        return response;
     }
     catch (error) {
         console.error('Error fetching activity names:', error);

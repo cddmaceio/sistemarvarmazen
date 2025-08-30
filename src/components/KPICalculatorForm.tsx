@@ -28,10 +28,12 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
   });
   
   const [limitInfo, setLimitInfo] = useState<any>(null);
-  const [dataLancamento, setDataLancamento] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [dataLancamento, setDataLancamento] = useState('');
   const [canLaunchKPIs, setCanLaunchKPIs] = useState(true);
+
+  const isSubmitDisabled = () => {
+    return disabled || calculating || !dataLancamento || !canLaunchKPIs || !formData.kpis_atingidos || formData.kpis_atingidos.length === 0;
+  };
   const [showFunctionSelector, setShowFunctionSelector] = useState(false);
 
   const funcoes = FUNCOES_UI_FORMAT;
@@ -104,7 +106,7 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
     try {
       const limit = await checkLimit(user.id, dataLancamento);
       setLimitInfo(limit);
-      setCanLaunchKPIs(limit?.canLaunch || false);
+      setCanLaunchKPIs(limit?.canLaunch ?? true);
     } catch (error) {
       console.error('Error checking KPI limit:', error);
     }

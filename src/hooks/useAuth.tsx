@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, createContext } from 'react';
+import { useNavigate } from 'react-router';
 import type { ReactNode } from 'react';
 import { UserType } from '@/shared/types';
 import { FUNCAO_DB_TO_UI } from '@/shared/utils/encoding';
@@ -26,8 +27,9 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const isAdmin = user?.funcao === 'admin';
+  const isAdmin = user?.funcao?.toLowerCase() === 'admin';
   const isCollaborator = user?.funcao === 'colaborador';
   const userFunction = user?.funcao ? FUNCAO_DB_TO_UI[user.funcao] || user.funcao : '';
   const userTurno = user?.turno || null;
@@ -73,6 +75,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const userData = await response.json();
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
+
+      // Redirecionar administradores para a página de validação após um pequeno delay
+      if (userData.funcao?.toLowerCase() === 'admin') {
+        setTimeout(() => {
+          navigate('/admin/validacao');
+        }, 100);
+      }
     } catch (error) {
       console.error('Erro no login:', error);
       throw error;
