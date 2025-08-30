@@ -38,7 +38,7 @@ kpiRoutes.get('/kpis/available', async (c) => {
     }
     // Map input to database values
     const dbFuncao = funcao === 'Ajudante de Armazém' ? 'Ajudante de ArmazÃ©m' : funcao;
-    const dbTurno = turno === 'Manha' ? 'ManhÃ£' : turno;
+    const dbTurno = turno === 'Manha' ? 'Manha' : turno;
     const { data: kpis, error } = await supabase
         .from('kpis')
         .select('nome_kpi')

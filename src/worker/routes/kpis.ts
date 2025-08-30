@@ -49,8 +49,8 @@ kpiRoutes.get('/kpis/available', async (c) => {
   }
 
   // Map input to database values
-  const dbFuncao = funcao === 'Ajudante de Armazém' ? 'Ajudante de ArmazÃ©m' : funcao;
-  const dbTurno = turno === 'Manha' ? 'ManhÃ£' : turno;
+  const dbFuncao = funcao; // Use correct encoding
+    const dbTurno = turno === 'Manha' ? 'Manhã' : turno; // Map to correct turno with accent
 
   const { data: kpis, error } = await supabase
     .from('kpis')

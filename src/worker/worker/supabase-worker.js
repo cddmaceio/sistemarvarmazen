@@ -254,8 +254,8 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
         console.log('Original input:', { funcao: input.funcao, turno: input.turno });
         console.log('Normalized input:', { funcao: normalizedFuncao, turno: normalizedTurno });
         // Map input to database values
-        const dbFuncao = input.funcao === 'Ajudante de Armazém' ? 'Ajudante de ArmazÃ©m' : input.funcao;
-        const dbTurno = input.turno === 'Manha' ? 'ManhÃ£' : input.turno;
+        const dbFuncao = input.funcao; // Use correct encoding
+        const dbTurno = input.turno === 'Manha' ? 'Manhã' : input.turno; // Map to correct turno with accent
         console.log('Database search values:', { dbFuncao, dbTurno });
         console.log('Searching for KPIs with:', { funcao_kpi: dbFuncao, turno_kpi_in: [dbTurno, 'Geral'] });
         let subtotal_atividades = 0;

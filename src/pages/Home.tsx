@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, TrendingUp, CheckCircle, Plus, Trash2, Send } from 'lucide-react';
-import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -14,7 +14,7 @@ import WMSTaskManager from '@/components/WMSTaskManager';
 import { useAuth } from '@/hooks/useAuth';
 import { useActivityNames, useFunctions, useCalculator } from '@/hooks/useApi';
 import { CalculatorInputType, KPIType, MultipleActivityType, CreateLancamentoType } from '@/shared/types';
-import { FUNCAO_DB_TO_UI } from '@/shared/utils/encoding';
+import { FUNCAO_DB_TO_UI, TURNO_UI_TO_DB } from '@/shared/utils/encoding';
 
 
 export default function Home() {
@@ -49,12 +49,12 @@ export default function Home() {
         converted: convertedFunction 
       });
       
-      setFormData(prev => ({
-        ...prev,
-        funcao: convertedFunction
-      }));
+      // Use handleInputChange to properly handle function changes
+      if (formData.funcao !== convertedFunction) {
+        handleInputChange('funcao', convertedFunction);
+      }
     }
-  }, [user?.funcao]);
+  }, [user?.funcao, formData.funcao]);
 
   // Set user's turno automatically when user is loaded
   useEffect(() => {
@@ -191,8 +191,18 @@ export default function Home() {
       }
     }
 
-    console.log('✅ Calling calculate with data:', submitData);
-    calculate(submitData);
+    // Convert turno from UI format to DB format before sending to API
+    const calculationData = {
+      ...submitData,
+      turno: (TURNO_UI_TO_DB[submitData.turno] || submitData.turno) as "Manhã" | "Tarde" | "Noite" | "Manha"
+    };
+    
+    console.log('🔄 Home - Converting turno for API:', {
+      original: submitData.turno,
+      converted: calculationData.turno
+    });
+    console.log('✅ Calling calculate with data:', calculationData);
+    calculate(calculationData);
   };
 
   // Function to get current date in Brazil timezone (GMT-3)
@@ -344,11 +354,23 @@ export default function Home() {
       [field]: value
     }));
     
-    // Reset KPIs and activities when function or shift changes
+    // Reset KPIs when function or shift changes
     if (field === 'funcao' || field === 'turno') {
       setSelectedKPIs([]);
       if (field === 'funcao') {
-        setMultipleActivities([{ nome_atividade: '', quantidade_produzida: 0, tempo_horas: 0 }]);
+        // Only reset multiple activities if they are empty or if switching from/to a different function type
+        const currentIsAjudante = formData.funcao === 'Ajudante de Armazém';
+        const newIsAjudante = value === 'Ajudante de Armazém';
+        
+        // Only reset if switching between different function types or if activities are empty
+        const hasValidActivities = multipleActivities.some(
+          act => act.nome_atividade && act.quantidade_produzida > 0 && act.tempo_horas > 0
+        );
+        
+        if (currentIsAjudante !== newIsAjudante || !hasValidActivities) {
+          setMultipleActivities([{ nome_atividade: '', quantidade_produzida: 0, tempo_horas: 0 }]);
+        }
+        
         setValidTasksCount(0);
       }
     }
@@ -664,10 +686,16 @@ export default function Home() {
                         // Calcular automaticamente a produtividade
                         const calculatorData: CalculatorInputType = {
                           ...formData,
+                          turno: (TURNO_UI_TO_DB[formData.turno] || formData.turno) as "Manhã" | "Tarde" | "Noite" | "Manha",
                           nome_operador: data.nome_operador,
                           valid_tasks_count: data.valid_tasks_count,
                           kpis_atingidos: selectedKPIs
                         };
+                        
+                        console.log('🔄 Home WMS - Converting turno for API:', {
+                          original: formData.turno,
+                          converted: calculatorData.turno
+                        });
                         
                         calculate(calculatorData);
                       }}
@@ -730,68 +758,104 @@ export default function Home() {
 
                 {/* Results */}
                 {result && (
-                  <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultado do Cálculo</h3>
-                    <div className="space-y-3">
-                      
-                      {/* Multiple activities details */}
-                      {result?.atividades_detalhes && result.atividades_detalhes.length > 0 && (
-                        <div className="mb-4">
-                          <h4 className="font-medium text-gray-800 mb-2">Detalhes das Atividades:</h4>
-                          <div className="space-y-2">
-                            {result?.atividades_detalhes?.map((atividade, index) => (
-                              <div key={index} className="bg-white/70 p-3 rounded-lg border">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                  <div>
-                                    <p className="text-gray-600">Atividade:</p>
-                                    <p className="font-medium">{atividade.nome}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-600">Produtividade:</p>
-                                    <p className="font-medium">{atividade.produtividade.toFixed(2)} {atividade.unidade}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-600">Nível:</p>
-                                    <p className="font-medium text-blue-600">{atividade.nivel}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-600">Valor:</p>
-                                    <p className="font-medium text-green-600">R$ {atividade.valor_total.toFixed(2)}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                  <div className="mt-6 space-y-6">
+                    {/* Activity Details Section - Unified for all types of activities */}
+                    {((result?.produtividadeAlcancada && result?.nivelAtingido) || result?.tarefasValidas !== undefined || (result?.atividadesDetalhes && result.atividadesDetalhes.length > 0)) ? (
+                      <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Detalhes da Atividade</h3>
+                        
 
-                      {/* Single activity details */}
-                      {result?.produtividade_alcancada && result?.nivel_atingido && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div className="bg-white/70 p-3 rounded-lg">
-                            <p className="text-sm text-gray-600">Produtividade Alcançada</p>
-                            <p className="text-lg font-semibold text-purple-600">
-                              {result?.produtividade_alcancada?.toFixed(2)} {result?.unidade_medida}
-                            </p>
-                          </div>
-                          <div className="bg-white/70 p-3 rounded-lg">
-                            <p className="text-sm text-gray-600">Nível Atingido</p>
-                            <p className="text-lg font-semibold text-blue-600">
-                              {result?.nivel_atingido}
-                            </p>
+                        
+                        {/* Single activity details - for normal activities and WMS tasks */}
+                        {((result?.produtividadeAlcancada && result?.nivelAtingido) || result?.tarefasValidas !== undefined || (result?.atividadesDetalhes && result.atividadesDetalhes.length > 0)) && (
+                        <div className="bg-white/80 p-4 rounded-lg border border-blue-100">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <p className="text-sm text-gray-600">Atividade:</p>
+                              <p className="font-semibold text-gray-800">
+                                {result?.tarefasValidas !== undefined 
+                                  ? 'Operador de Empilhadeira' 
+                                  : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
+                                    ? (() => {
+                                        const firstActivity = result.atividadesDetalhes[0];
+                                        if (firstActivity?.includes('Repack')) return 'Prod Repack';
+                                        if (firstActivity?.includes('Picking')) return 'Picking';
+                                        if (firstActivity?.includes('Conferência')) return 'Conferência';
+                                        return 'Múltiplas Atividades';
+                                      })()
+                                    : formData.nome_atividade
+                                }
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Quantidade Lançada:</p>
+                              <p className="font-semibold text-blue-600">
+                                {result?.tarefasValidas !== undefined 
+                                  ? `${result?.tarefasValidas} tarefas` 
+                                  : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
+                                    ? (() => {
+                                        const firstActivity = result.atividadesDetalhes[0];
+                                        // Extract quantity from "Prod Repack: 150 cxs/h em 6h"
+                                        const match = firstActivity?.match(/(\d+(?:\.\d+)?)\s+(\w+)\/h/);
+                                        return match ? `${match[1]} ${match[2]}` : 'N/A';
+                                      })()
+                                    : `${formData.quantidade_produzida} ${result?.unidadeMedida}`
+                                }
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Tempo:</p>
+                              <p className="font-semibold text-purple-600">
+                                {result?.tarefasValidas !== undefined 
+                                  ? '0h' 
+                                  : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
+                                    ? (() => {
+                                        const firstActivity = result.atividadesDetalhes[0];
+                                        // Extract time from "Prod Repack: 150 cxs/h em 6h"
+                                        const match = firstActivity?.match(/em\s+(\d+(?:\.\d+)?)h/);
+                                        return match ? `${match[1]}h` : 'N/A';
+                                      })()
+                                    : `${formData.tempo_horas}h`
+                                }
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Produtividade Alcançada:</p>
+                              <p className="font-medium text-purple-600">
+                                {result?.tarefasValidas !== undefined 
+                                  ? `${((result?.tarefasValidas || 0) / 8).toFixed(2)} tarefas/h`
+                                  : `${result?.produtividadeAlcancada?.toFixed(2)} ${result?.unidadeMedida}/h`
+                                }
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Nível Atingido:</p>
+                              <p className="font-medium text-blue-600">
+                                {result?.tarefasValidas !== undefined 
+                                  ? `Nível 2 (${((result?.tarefasValidas || 0) / 8).toFixed(1)} tarefas/h)`
+                                  : result?.nivelAtingido
+                                }
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Valor Bruto:</p>
+                              <p className="font-medium text-green-600">
+                                R$ {result?.tarefasValidas !== undefined 
+                                  ? ((result?.tarefasValidas || 0) * 0.093 * 2).toFixed(2)
+                                  : ((result?.subtotalAtividades || 0) * 2).toFixed(2)
+                                }
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      )}
+                        )}
+                      </div>
+                    ) : null}
 
-                      {/* Valid tasks details */}
-                      {result?.tarefas_validas !== undefined && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-700">Tarefas Válidas ({result?.tarefas_validas}):</span>
-                          <span className="font-semibold text-purple-600">
-                            R$ {result?.valor_tarefas?.toFixed(2) || '0.00'}
-                          </span>
-                        </div>
-                      )}
+                    {/* Calculation Results Section - Shown AFTER activity details */}
+                    <div className="p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultado do Cálculo</h3>
+                      <div className="space-y-3">
 
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Valor Bruto Atividades:</span>
@@ -871,6 +935,7 @@ export default function Home() {
                         Lançar Produtividade
                       </Button>
                     </div>
+                  </div>
                   </div>
                 )}
 

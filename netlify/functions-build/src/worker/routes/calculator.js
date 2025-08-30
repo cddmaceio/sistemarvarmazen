@@ -25,7 +25,7 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
         console.log('Normalized input:', { funcao: normalizedFuncao, turno: normalizedTurno });
         // Map input to database values
         const dbFuncao = input.funcao === 'Ajudante de Armazém' ? 'Ajudante de ArmazÃ©m' : input.funcao;
-        const dbTurno = input.turno === 'Manha' ? 'ManhÃ£' : input.turno;
+        const dbTurno = input.turno === 'Manha' ? 'Manha' : input.turno;
         console.log('Database search values:', { dbFuncao, dbTurno });
         console.log('Searching for KPIs with:', { funcao_kpi: dbFuncao, turno_kpi_in: [dbTurno, 'Geral'] });
         let subtotal_atividades = 0;
@@ -39,23 +39,29 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
         const kpis_atingidos_resultado = [];
         // Calculate activities
         if (input.nome_atividade && input.quantidade_produzida && input.tempo_horas) {
-            const { data: activity, error: activityError } = await supabase
+            const { data: activities, error: activityError } = await supabase
                 .from('activities')
                 .select('*')
                 .eq('nome_atividade', input.nome_atividade)
-                .single();
-            if (activityError) {
+                .order('produtividade_minima', { ascending: false });
+            if (activityError || !activities || activities.length === 0) {
                 console.error('Activity error:', activityError);
                 return c.json({ error: 'Atividade não encontrada' }, 400);
             }
-            if (activity) {
+            if (activities.length > 0) {
                 produtividade_alcancada = input.quantidade_produzida / input.tempo_horas;
-                unidade_medida = activity.unidade_medida;
-                if (produtividade_alcancada >= activity.produtividade_minima) {
-                    nivel_atingido = activity.nivel_atividade;
-                    subtotal_atividades = activity.valor_atividade;
-                    atividades_detalhes.push(`${activity.nome_atividade}: ${input.quantidade_produzida} ${activity.unidade_medida} em ${input.tempo_horas}h`);
+                unidade_medida = activities[0].unidade_medida;
+                // Find the highest level achieved based on productivity
+                let selectedActivity = activities[activities.length - 1]; // Default to lowest level
+                for (const activity of activities) {
+                    if (produtividade_alcancada >= parseFloat(activity.produtividade_minima)) {
+                        selectedActivity = activity;
+                        break;
+                    }
                 }
+                nivel_atingido = selectedActivity.nivel_atividade;
+                subtotal_atividades = parseFloat(selectedActivity.valor_atividade);
+                atividades_detalhes.push(`${selectedActivity.nome_atividade}: ${input.quantidade_produzida} ${selectedActivity.unidade_medida} em ${input.tempo_horas}h (${selectedActivity.nivel_atividade})`);
             }
         }
         // Handle multiple activities
@@ -64,17 +70,23 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
                 const activities = input.multiple_activities;
                 for (const act of activities) {
                     if (act.nome_atividade && act.quantidade_produzida && act.tempo_horas) {
-                        const { data: activity, error: activityError } = await supabase
+                        const { data: activityLevels, error: activityError } = await supabase
                             .from('activities')
                             .select('*')
                             .eq('nome_atividade', act.nome_atividade)
-                            .single();
-                        if (!activityError && activity) {
+                            .order('produtividade_minima', { ascending: false });
+                        if (!activityError && activityLevels && activityLevels.length > 0) {
                             const prod = act.quantidade_produzida / act.tempo_horas;
-                            if (prod >= activity.produtividade_minima) {
-                                subtotal_atividades += activity.valor_atividade;
-                                atividades_detalhes.push(`${activity.nome_atividade}: ${act.quantidade_produzida} ${activity.unidade_medida} em ${act.tempo_horas}h`);
+                            // Find the highest level achieved based on productivity
+                            let selectedActivity = activityLevels[activityLevels.length - 1]; // Default to lowest level
+                            for (const activityLevel of activityLevels) {
+                                if (prod >= parseFloat(activityLevel.produtividade_minima)) {
+                                    selectedActivity = activityLevel;
+                                    break;
+                                }
                             }
+                            subtotal_atividades += parseFloat(selectedActivity.valor_atividade);
+                            atividades_detalhes.push(`${selectedActivity.nome_atividade}: ${act.quantidade_produzida} ${selectedActivity.unidade_medida} em ${act.tempo_horas}h (${selectedActivity.nivel_atividade})`);
                         }
                     }
                 }
@@ -108,7 +120,7 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
                 .in('nome_kpi', input.kpis_atingidos);
             if (kpis) {
                 for (const kpi of kpis) {
-                    bonus_kpis += kpi.peso_kpi;
+                    bonus_kpis += parseFloat(kpi.peso_kpi);
                     kpis_atingidos_resultado.push(kpi.nome_kpi);
                 }
             }
@@ -117,24 +129,24 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
         const atividades_extras = input.input_adicional || 0;
         const remuneracao_total = subtotal_atividades + bonus_kpis + atividades_extras;
         const result = {
-            subtotal_atividades,
-            bonus_kpis,
-            remuneracao_total,
-            kpis_atingidos: kpis_atingidos_resultado,
+            subtotalAtividades: subtotal_atividades,
+            bonusKpis: bonus_kpis,
+            remuneracaoTotal: remuneracao_total,
+            kpisAtingidos: kpis_atingidos_resultado,
         };
         // Add optional fields only if they exist
         if (produtividade_alcancada !== undefined)
-            result.produtividade_alcancada = produtividade_alcancada;
+            result.produtividadeAlcancada = produtividade_alcancada;
         if (nivel_atingido !== undefined)
-            result.nivel_atingido = nivel_atingido;
+            result.nivelAtingido = nivel_atingido;
         if (unidade_medida !== undefined)
-            result.unidade_medida = unidade_medida;
+            result.unidadeMedida = unidade_medida;
         if (atividades_detalhes.length > 0)
-            result.atividades_detalhes = atividades_detalhes;
+            result.atividadesDetalhes = atividades_detalhes;
         if (tarefas_validas !== undefined)
-            result.tarefas_validas = tarefas_validas;
+            result.tarefasValidas = tarefas_validas;
         if (valor_tarefas !== undefined)
-            result.valor_tarefas = valor_tarefas;
+            result.valorTarefas = valor_tarefas;
         return c.json({ data: result, error: null });
     }
     catch (error) {

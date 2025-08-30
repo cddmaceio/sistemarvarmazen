@@ -261,16 +261,16 @@ export function useCalculator() {
         throw new Error(`Failed to calculate: ${response.status} - ${errorText}`);
       }
       
-      const data = await response.json();
-      console.log('✅ API Response data:', data);
+      const response_data = await response.json();
+      console.log('✅ API Response data:', response_data);
       console.log('💰 Breakdown:');
-      console.log('  - subtotalAtividades:', data.subtotalAtividades);
-      console.log('  - bonusKpis:', data.bonusKpis);
-      console.log('  - remuneracaoTotal:', data.remuneracaoTotal);
-      console.log('  - atividadesDetalhes:', data.atividadesDetalhes);
-      console.log('  - kpisAtingidos:', data.kpisAtingidos);
+      console.log('  - subtotalAtividades:', response_data.data?.subtotalAtividades);
+      console.log('  - bonusKpis:', response_data.data?.bonusKpis);
+      console.log('  - remuneracaoTotal:', response_data.data?.remuneracaoTotal);
+      console.log('  - atividadesDetalhes:', response_data.data?.atividadesDetalhes);
+      console.log('  - kpisAtingidos:', response_data.data?.kpisAtingidos);
       
-      setResult(data);
+      setResult(response_data.data);
       setLastCalculationSuccess(true);
       console.log('✅ Calculation completed successfully');
     } catch (err) {

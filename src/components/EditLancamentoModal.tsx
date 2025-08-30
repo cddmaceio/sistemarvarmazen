@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, FileText, Save, X } from 'lucide-react';
+import { Clock, FileText, Save, Plus, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/Dialog';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/Card';
 import { LancamentoType, CalculatorInputType, CalculatorResultType } from '@/shared/types';
 import { useKPIs, useActivityNames, useFunctions, useCalculator } from '@/hooks/useApi';
 import { useAuth } from '@/hooks/useAuth';
+import { TURNO_UI_TO_DB } from '@/shared/utils/encoding';
 
 interface EditLancamentoModalProps {
   open: boolean;
@@ -39,27 +40,38 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
   const [multipleActivities, setMultipleActivities] = useState<{ nome_atividade: string; quantidade_produzida: number; tempo_horas: number; }[]>([]);
   const [editObservacoes, setEditObservacoes] = useState('');
   const [hasCalculated, setHasCalculated] = useState(false);
+  const [hasMultipleActivities, setHasMultipleActivities] = useState(false);
 
   useEffect(() => {
     if (lancamento && open) {
       // Parse JSON fields safely
       const kpisAtingidos = lancamento.kpis_atingidos ? JSON.parse(lancamento.kpis_atingidos) : [];
       const multipleActivitiesData = lancamento.multiple_activities ? JSON.parse(lancamento.multiple_activities) : [];
+      
+      // Detectar se há múltiplas atividades
+      // Se há mais de uma atividade no array OU se há dados no campo multiple_activities mas não há atividade única
+      const hasMultiple = multipleActivitiesData.length > 1 || 
+                         (multipleActivitiesData.length > 0 && !lancamento.nome_atividade);
+       
+      setHasMultipleActivities(hasMultiple);
+      
+      // Usar os dados de múltiplas atividades se existirem
+      let activitiesForEditing = multipleActivitiesData;
 
       setFormData({
-        funcao: lancamento.funcao, // Use launch user function
-        turno: lancamento.turno as 'Manhã' | 'Tarde' | 'Noite', // Use launch user shift
+        funcao: lancamento.funcao, // Use original launch user function
+        turno: lancamento.turno as 'Manhã' | 'Tarde' | 'Noite', // Use original launch user shift
         nome_atividade: lancamento.nome_atividade || '',
         quantidade_produzida: lancamento.quantidade_produzida || 0,
         tempo_horas: lancamento.tempo_horas || 0,
         input_adicional: lancamento.input_adicional || 0,
         kpis_atingidos: kpisAtingidos,
-        multiple_activities: multipleActivitiesData,
+        multiple_activities: activitiesForEditing,
         nome_operador: lancamento.nome_operador || '',
         valid_tasks_count: lancamento.valid_tasks_count || 0,
       });
 
-      setMultipleActivities(multipleActivitiesData);
+      setMultipleActivities(activitiesForEditing);
       setEditObservacoes('');
       setHasCalculated(false);
     }
@@ -83,6 +95,31 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
     setMultipleActivities(prev => [...prev, { nome_atividade: '', quantidade_produzida: 0, tempo_horas: 0 }]);
   };
 
+  const toggleMultipleActivitiesMode = () => {
+    if (!hasMultipleActivities) {
+      // Converter atividade única para múltiplas
+      const currentActivity = {
+        nome_atividade: formData.nome_atividade || '',
+        quantidade_produzida: formData.quantidade_produzida || 0,
+        tempo_horas: formData.tempo_horas || 0
+      };
+      setMultipleActivities([currentActivity]);
+      setHasMultipleActivities(true);
+    } else {
+      // Converter múltiplas para atividade única (usar a primeira)
+      if (multipleActivities.length > 0) {
+        const firstActivity = multipleActivities[0];
+        setFormData(prev => ({
+          ...prev,
+          nome_atividade: firstActivity.nome_atividade,
+          quantidade_produzida: firstActivity.quantidade_produzida,
+          tempo_horas: firstActivity.tempo_horas
+        }));
+      }
+      setHasMultipleActivities(false);
+    }
+  };
+
   const updateMultipleActivity = (index: number, field: string, value: any) => {
     setMultipleActivities(prev => {
       const updated = [...prev];
@@ -92,18 +129,30 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
   };
 
   const removeMultipleActivity = (index: number) => {
+    // Impede remover se há apenas uma atividade
+    if (multipleActivities.length <= 1) {
+      return;
+    }
     setMultipleActivities(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleCalculate = async () => {
+    const validActivities = multipleActivities.filter(act => act.nome_atividade && act.nome_atividade.trim() !== '');
     const calculatorInput = {
       ...formData,
-      multiple_activities: formData.funcao === 'Ajudante de Armazém' ? multipleActivities.map(act => ({
+      turno: (TURNO_UI_TO_DB[formData.turno] || formData.turno) as "Manhã" | "Tarde" | "Noite" | "Manha",
+      multiple_activities: hasMultipleActivities && formData.funcao !== 'Operador de Empilhadeira' ? validActivities.map(act => ({
         nome_atividade: act.nome_atividade,
         quantidade_produzida: act.quantidade_produzida,
         tempo_horas: act.tempo_horas
       })) : undefined,
     };
+    
+    console.log('🔄 EditLancamentoModal - Converting turno for API:', {
+      original: formData.turno,
+      converted: calculatorInput.turno
+    });
+    
     await calculate(calculatorInput);
     setHasCalculated(true);
   };
@@ -111,9 +160,10 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
   const handleSave = async () => {
     if (!result) return;
 
+    const validActivities = multipleActivities.filter(act => act.nome_atividade && act.nome_atividade.trim() !== '');
     const calculatorInput = {
       ...formData,
-      multiple_activities: formData.funcao === 'Ajudante de Armazém' ? multipleActivities : undefined,
+      multiple_activities: hasMultipleActivities && formData.funcao !== 'Operador de Empilhadeira' ? validActivities : undefined,
     };
 
     await onSave(calculatorInput, result);
@@ -124,7 +174,7 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <FileText className="h-5 w-5" />
@@ -227,9 +277,34 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
               </div>
             </div>
 
+            {/* Toggle Multiple Activities Mode */}
+            {userFunction !== 'Operador de Empilhadeira' && (
+              <div className="flex flex-col gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-blue-900">
+                    {hasMultipleActivities ? 'Modo: Múltiplas Atividades' : 'Modo: Atividade Única'}
+                  </p>
+                  <p className="text-xs text-blue-600 break-words">
+                    {hasMultipleActivities 
+                      ? 'Editando múltiplas atividades. Clique para alternar para atividade única.' 
+                      : 'Editando uma atividade. Clique para adicionar mais atividades.'}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleMultipleActivitiesMode}
+                  className="bg-white hover:bg-blue-100 border-blue-300 w-full max-w-xs mx-auto text-sm px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                >
+                  {hasMultipleActivities ? 'Atividade Única' : 'Múltiplas Atividades'}
+                </Button>
+              </div>
+            )}
+
             {/* Activity Fields */}
             <div className="space-y-4">
-              {(formData.funcao && formData.funcao !== 'Ajudante de Armazém' && formData.funcao !== 'Operador de Empilhadeira') && (
+              {userFunction !== 'Operador de Empilhadeira' && !hasMultipleActivities && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Atividade</label>
@@ -268,7 +343,7 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
                 </>
               )}
 
-              {(formData.funcao && formData.funcao === 'Operador de Empilhadeira') && (
+              {userFunction === 'Operador de Empilhadeira' && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Operador</label>
@@ -290,18 +365,32 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
             </div>
           </div>
 
-          {/* Multiple Activities for Ajudante de Armazém */}
-          {(formData.funcao && formData.funcao === 'Ajudante de Armazém') && (
+          {/* Multiple Activities - Para qualquer função com múltiplas atividades */}
+          {hasMultipleActivities && userFunction !== 'Operador de Empilhadeira' && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Atividades Lançadas pelo Colaborador</CardTitle>
-                <p className="text-xs text-gray-600">Edite apenas a quantidade e tempo para recálculo</p>
+                <p className="text-xs text-gray-600">Edite a quantidade e tempo para recálculo. Use o botão + para adicionar mais atividades.</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 {multipleActivities.map((activity, index) => (
-                  <div key={index} className="grid grid-cols-4 gap-4 p-4 border rounded-lg bg-gray-50">
+                  <div key={index} className="grid grid-cols-5 gap-4 p-4 border rounded-lg bg-gray-50">
                     <div className="flex items-center">
-                      <span className="text-sm font-medium text-gray-700">{activity.nome_atividade || 'Atividade não definida'}</span>
+                      <Select
+                        value={activity.nome_atividade || ''}
+                        onChange={(e) => updateMultipleActivity(index, 'nome_atividade', e.target.value)}
+                        className={`text-sm ${!activity.nome_atividade ? 'border-red-300 bg-red-50' : ''}`}
+                      >
+                        <option value="">Selecione uma atividade</option>
+                        {activityNames.map((activityName: any) => (
+                          <option key={activityName.nome_atividade} value={activityName.nome_atividade}>
+                            {activityName.nome_atividade}
+                          </option>
+                        ))}
+                      </Select>
+                      {!activity.nome_atividade && (
+                        <span className="text-xs text-red-500 ml-2">Obrigatório</span>
+                      )}
                     </div>
                     <Input
                       type="number"
@@ -319,8 +408,33 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
                     <div className="flex items-center justify-center">
                       <span className="text-xs text-gray-500">Editável</span>
                     </div>
+                    <div className="flex items-center justify-center">
+                       <Button
+                         type="button"
+                         variant="outline"
+                         size="sm"
+                         onClick={() => removeMultipleActivity(index)}
+                         disabled={multipleActivities.length <= 1}
+                         className={`${multipleActivities.length <= 1 ? 'opacity-50 cursor-not-allowed' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                         title={multipleActivities.length <= 1 ? 'Deve haver pelo menos uma atividade' : 'Remover atividade'}
+                       >
+                         <Trash2 className="h-4 w-4" />
+                       </Button>
+                     </div>
                   </div>
                 ))}
+                
+                <div className="flex justify-center pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addMultipleActivity}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Adicionar Atividade
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -345,7 +459,7 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
                         />
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900">
-                            {kpi.nome_kpi} | {kpi.tipo_kpi || 'KPI'}
+                            {kpi.nome_kpi} | {(kpi as any).tipo_kpi || 'KPI'}
                           </div>
                           <div className="text-xs text-gray-500">
                             Valor: R$ {kpi.peso_kpi.toFixed(2)} • Função: {kpi.funcao_kpi} • Turno: {kpi.turno_kpi}
@@ -409,20 +523,20 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-green-600">Nova Remuneração:</span>
-                    <p className="font-semibold text-green-900">R$ {result.remuneracaoTotal.toFixed(2)}</p>
+                    <p className="font-semibold text-green-900">R$ {(result?.remuneracaoTotal || 0).toFixed(2)}</p>
                   </div>
                   <div>
                     <span className="text-green-600">Atividades:</span>
-                    <p className="font-semibold text-green-900">R$ {result.subtotalAtividades.toFixed(2)}</p>
+                    <p className="font-semibold text-green-900">R$ {(result?.subtotalAtividades || 0).toFixed(2)}</p>
                   </div>
                   <div>
                     <span className="text-green-600">KPIs:</span>
-                    <p className="font-semibold text-green-900">R$ {result.bonusKpis.toFixed(2)}</p>
+                    <p className="font-semibold text-green-900">R$ {(result?.bonusKpis || 0).toFixed(2)}</p>
                   </div>
-                  {result.produtividade_alcancada && (
+                  {result?.produtividade_alcancada && (
                     <div>
                       <span className="text-green-600">Produtividade:</span>
-                      <p className="font-semibold text-green-900">{result.produtividade_alcancada.toFixed(2)}</p>
+                      <p className="font-semibold text-green-900">{(result.produtividade_alcancada || 0).toFixed(2)}</p>
                     </div>
                   )}
                 </div>
@@ -430,8 +544,8 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
                 {/* Difference Indicator */}
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-blue-700 text-sm font-medium">
-                    Diferença: R$ {(result.remuneracaoTotal - (lancamento.remuneracao_total || 0)).toFixed(2)}
-                    {result.remuneracaoTotal > (lancamento.remuneracao_total || 0) ? ' (aumento)' : ' (redução)'}
+                    Diferença: R$ {((result?.remuneracaoTotal || 0) - (lancamento.remuneracao_total || 0)).toFixed(2)}
+                    {(result?.remuneracaoTotal || 0) > (lancamento.remuneracao_total || 0) ? ' (aumento)' : ' (redução)'}
                   </p>
                 </div>
               </CardContent>
@@ -439,18 +553,18 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
           )}
 
           {/* Action Buttons */}
-          <div className="flex space-x-3 pt-4 border-t">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
             <Button
               variant="outline"
               onClick={onClose}
-              className="flex-1"
+              className="flex-1 w-full"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
               disabled={!result || !hasCalculated}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 w-full bg-blue-600 hover:bg-blue-700"
             >
               <Save className="h-4 w-4 mr-2" />
               Salvar Edição

@@ -61,7 +61,7 @@ export const FUNCOES_UI_FORMAT = [
  * Standard shifts list with correct encoding for database storage
  */
 export const TURNOS_DB_FORMAT = [
-    'ManhÃ£',
+    'Manha',
     'Tarde',
     'Noite',
     'Geral'
@@ -99,7 +99,7 @@ export const FUNCAO_DB_TO_UI = {
  * Mapping from UI format to DB format for shifts
  */
 export const TURNO_UI_TO_DB = {
-    'Manhã': 'ManhÃ£',
+    'Manhã': 'Manha',
     'Tarde': 'Tarde',
     'Noite': 'Noite',
     'Geral': 'Geral'
@@ -108,7 +108,7 @@ export const TURNO_UI_TO_DB = {
  * Mapping from DB format to UI format for shifts
  */
 export const TURNO_DB_TO_UI = {
-    'ManhÃ£': 'Manhã',
+    'Manha': 'Manhã',
     'Tarde': 'Tarde',
     'Noite': 'Noite',
     'Geral': 'Geral'

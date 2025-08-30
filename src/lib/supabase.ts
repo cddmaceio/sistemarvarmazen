@@ -230,7 +230,7 @@ export const supabaseQueries = {
           // Find the appropriate level based on productivity
           let selectedActivity = null
           for (const act of activities) {
-            if (produtividade >= act.produtividade_minima) {
+            if (produtividade >= parseFloat(act.produtividade_minima)) {
               selectedActivity = act
               break
             }
@@ -242,7 +242,7 @@ export const supabaseQueries = {
           }
           
           // Calculate value for this activity (applying 50% rule: atividades/2)
-          const valor_bruto = activity.quantidade_produzida * selectedActivity.valor_atividade
+          const valor_bruto = activity.quantidade_produzida * parseFloat(selectedActivity.valor_atividade)
           const valor_final = valor_bruto / 2
           subtotal_atividades += valor_final
           
@@ -281,7 +281,7 @@ export const supabaseQueries = {
       // Find the appropriate level based on productivity
       let selectedActivity = null
       for (const activity of activities) {
-        if (produtividade_alcancada >= activity.produtividade_minima) {
+        if (produtividade_alcancada >= parseFloat(activity.produtividade_minima)) {
           selectedActivity = activity
           break
         }
@@ -293,7 +293,7 @@ export const supabaseQueries = {
       }
       
       // Calculate subtotal from activities (applying 50% rule: atividades/2)
-      const valor_bruto_atividades = input.quantidade_produzida * selectedActivity.valor_atividade
+      const valor_bruto_atividades = input.quantidade_produzida * parseFloat(selectedActivity.valor_atividade)
       subtotal_atividades = valor_bruto_atividades / 2
       
       nivel_atingido = selectedActivity.nivel_atividade
@@ -314,7 +314,7 @@ export const supabaseQueries = {
       
       if (kpis) {
         for (const kpi of kpis) {
-          bonus_kpis += kpi.peso_kpi
+          bonus_kpis += parseFloat(kpi.peso_kpi)
           kpis_atingidos_resultado.push(kpi.nome_kpi)
         }
       }
@@ -325,19 +325,19 @@ export const supabaseQueries = {
     const remuneracao_total = subtotal_atividades + bonus_kpis + atividades_extras
     
     const result: any = {
-      subtotal_atividades,
-      bonus_kpis,
-      remuneracao_total,
-      kpis_atingidos: kpis_atingidos_resultado,
+      subtotalAtividades: subtotal_atividades,
+      bonusKpis: bonus_kpis,
+      remuneracaoTotal: remuneracao_total,
+      kpisAtingidos: kpis_atingidos_resultado,
     }
 
     // Add optional fields only if they exist
-    if (produtividade_alcancada !== undefined) result.produtividade_alcancada = produtividade_alcancada
-    if (nivel_atingido !== undefined) result.nivel_atingido = nivel_atingido
-    if (unidade_medida !== undefined) result.unidade_medida = unidade_medida
-    if (atividades_detalhes.length > 0) result.atividades_detalhes = atividades_detalhes
-    if (tarefas_validas !== undefined) result.tarefas_validas = tarefas_validas
-    if (valor_tarefas !== undefined) result.valor_tarefas = valor_tarefas
+    if (produtividade_alcancada !== undefined) result.produtividadeAlcancada = produtividade_alcancada
+    if (nivel_atingido !== undefined) result.nivelAtingido = nivel_atingido
+    if (unidade_medida !== undefined) result.unidadeMedida = unidade_medida
+    if (atividades_detalhes.length > 0) result.atividadesDetalhes = atividades_detalhes
+    if (tarefas_validas !== undefined) result.tarefasValidas = tarefas_validas
+    if (valor_tarefas !== undefined) result.valorTarefas = valor_tarefas
     
     return { data: result, error: null }
   },

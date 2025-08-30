@@ -11,7 +11,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8888/.netlify/functions',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        rewrite: (path) => path.replace(/^\/api/, '/api')
       }
     }
   },

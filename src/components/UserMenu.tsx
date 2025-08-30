@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { User, Settings, LogOut, Shield, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/Button';
@@ -13,13 +13,13 @@ export function UserMenu() {
     const [showProfile, setShowProfile] = useState(false);
     const [nome, setNome] = useState(user?.nome || '');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
     const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
-    const buttonRef = useRef(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
 
     const calculateMenuPosition = () => {
         if (buttonRef.current) {
-            const rect = buttonRef.current.getBoundingClientRect();
+            const rect = buttonRef.current?.getBoundingClientRect();
             setMenuPosition({
                 top: rect.bottom + 8,
                 right: window.innerWidth - rect.right
@@ -45,7 +45,7 @@ export function UserMenu() {
         return () => window.removeEventListener('resize', handleResize);
     }, [showMenu]);
 
-    const handleSaveProfile = async (e) => {
+    const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         if (!nome.trim()) {

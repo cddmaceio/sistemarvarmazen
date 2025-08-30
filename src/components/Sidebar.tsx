@@ -6,7 +6,6 @@ import {
   History,
   Download,
   BarChart2,
-  LayoutDashboard,
   UserCog,
 } from 'lucide-react';
 

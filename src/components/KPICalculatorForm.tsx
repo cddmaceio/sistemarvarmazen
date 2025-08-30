@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/Alert';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvailableKPIs, useKPILimit, useCalculator } from '@/hooks/useApi';
 import { CalculatorInputType } from '@/shared/types';
-import { FUNCOES_UI_FORMAT } from '@/shared/utils/encoding';
+import { FUNCOES_UI_FORMAT, TURNO_UI_TO_DB } from '@/shared/utils/encoding';
 
 interface KPICalculatorFormProps {
   onCalculate: (input: CalculatorInputType, result: any) => void;
@@ -141,7 +141,18 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
     }
 
     try {
-      await calculate(formData);
+      // Convert turno from UI format to DB format before sending to API
+    const calculationData = {
+      ...formData,
+      turno: (TURNO_UI_TO_DB[formData.turno] || formData.turno) as "Manhã" | "Tarde" | "Noite" | "Manha"
+    };
+      
+      console.log('🔄 Converting turno for API:', {
+        original: formData.turno,
+        converted: calculationData.turno
+      });
+      
+      await calculate(calculationData);
       // The result is now stored in the hook state
       onCalculate(formData, {});
       // Form reset and limit check are now handled by useEffect
