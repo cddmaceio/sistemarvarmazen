@@ -105,14 +105,8 @@ export const CalculatorResultSchema = z.object({
   produtividade_alcancada: z.number().optional(),
   nivel_atingido: z.string().optional(),
   unidade_medida: z.string().optional(),
-  // Multiple activities details
-  atividades_detalhes: z.array(z.object({
-    nome: z.string(),
-    produtividade: z.number(),
-    nivel: z.string(),
-    valor_total: z.number(),
-    unidade: z.string(),
-  })).optional(),
+  // Multiple activities details - array of strings with format: "Nome: quantidade unidade em tempo (nível)"
+  atividades_detalhes: z.array(z.string()).optional(),
   // Valid tasks details
   tarefas_validas: z.number().optional(),
   valor_tarefas: z.number().optional(),

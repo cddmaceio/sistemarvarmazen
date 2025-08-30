@@ -47,8 +47,52 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
     let valor_tarefas: number | undefined;
     const kpis_atingidos_resultado: string[] = [];
 
-    // Calculate activities
-    if (input.nome_atividade && input.quantidade_produzida && input.tempo_horas) {
+    // Handle multiple activities for Ajudante de Armazém
+    let valor_bruto_atividades = 0;
+    if (dbFuncao === 'Ajudante de Armazém' && input.multiple_activities && input.multiple_activities.length > 0) {
+      const activities = input.multiple_activities;
+      for (const act of activities) {
+        if (act.nome_atividade && act.quantidade_produzida && act.tempo_horas) {
+          const { data: activityLevels, error: activityError } = await supabase
+            .from('activities')
+            .select('*')
+            .eq('nome_atividade', act.nome_atividade)
+            .order('produtividade_minima', { ascending: false });
+
+          if (activityError) {
+            console.error('Error fetching activity:', act.nome_atividade, activityError);
+            continue; // Skip to next activity if an error occurs
+          }
+
+          if (activityLevels && activityLevels.length > 0) {
+            const prod = act.quantidade_produzida / act.tempo_horas;
+            
+            // Find the highest level achieved based on productivity
+            let selectedActivity = activityLevels[activityLevels.length - 1]; // Default to lowest level
+            for (const activityLevel of activityLevels) {
+              if (prod >= parseFloat(activityLevel.produtividade_minima)) {
+                selectedActivity = activityLevel;
+                break;
+              }
+            }
+            
+            // Calculate valor_bruto for this activity
+            const valor_bruto_atividade = act.quantidade_produzida * parseFloat(selectedActivity.valor_atividade);
+            valor_bruto_atividades += valor_bruto_atividade;
+            
+            // Apply 50% rule: subtotal = valor_bruto / 2
+            const valor_final = valor_bruto_atividade / 2;
+            subtotal_atividades += valor_final;
+            
+            atividades_detalhes.push(
+              `${selectedActivity.nome_atividade}: ${act.quantidade_produzida} ${selectedActivity.unidade_medida} em ${act.tempo_horas}h (${selectedActivity.nivel_atividade})`
+            );
+          }
+        }
+      }
+    }
+    // Calculate single activity if multiple are not present
+    else if (input.nome_atividade && input.quantidade_produzida && input.tempo_horas) {
       const { data: activities, error: activityError } = await supabase
         .from('activities')
         .select('*')
@@ -79,48 +123,6 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
       }
     }
 
-    // Handle multiple activities
-    if (input.multiple_activities) {
-      try {
-        const activities = input.multiple_activities;
-        for (const act of activities) {
-          if (act.nome_atividade && act.quantidade_produzida && act.tempo_horas) {
-            const { data: activityLevels, error: activityError } = await supabase
-              .from('activities')
-              .select('*')
-              .eq('nome_atividade', act.nome_atividade)
-              .order('produtividade_minima', { ascending: false });
-
-            if (!activityError && activityLevels && activityLevels.length > 0) {
-              const prod = act.quantidade_produzida / act.tempo_horas;
-              
-              // Find the highest level achieved based on productivity
-              let selectedActivity = activityLevels[activityLevels.length - 1]; // Default to lowest level
-              for (const activityLevel of activityLevels) {
-                if (prod >= parseFloat(activityLevel.produtividade_minima)) {
-                  selectedActivity = activityLevel;
-                  break;
-                }
-              }
-              
-              subtotal_atividades += parseFloat(selectedActivity.valor_atividade);
-              atividades_detalhes.push({
-                nome: selectedActivity.nome_atividade,
-                quantidade: act.quantidade_produzida,
-                unidade: selectedActivity.unidade_medida,
-                tempo: act.tempo_horas,
-                produtividade: prod,
-                nivel: selectedActivity.nivel_atividade,
-                valor_total: parseFloat(selectedActivity.valor_atividade) * 2
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Error parsing multiple activities:', e);
-      }
-    }
-
     // Handle WMS tasks for Operador de Empilhadeira
     if (input.funcao === 'Operador de Empilhadeira' && input.nome_operador && input.data_lancamento) {
       const { data: tarefas, error: tarefasError } = await supabase
@@ -133,7 +135,7 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
       if (!tarefasError && tarefas) {
         tarefas_validas = tarefas.length;
         valor_tarefas = tarefas_validas * 2.5;
-        subtotal_atividades = valor_tarefas;
+        subtotal_atividades += valor_tarefas; // Fix: changed from = to +=
         atividades_detalhes.push(`Tarefas WMS: ${tarefas_validas} tarefas concluídas`);
       }
     }
@@ -173,6 +175,7 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
     if (atividades_detalhes.length > 0) result.atividadesDetalhes = atividades_detalhes;
     if (tarefas_validas !== undefined) result.tarefasValidas = tarefas_validas;
     if (valor_tarefas !== undefined) result.valorTarefas = valor_tarefas;
+    if (valor_bruto_atividades > 0) result.valorBrutoAtividades = valor_bruto_atividades;
     
     return c.json({ data: result, error: null });
   } catch (error) {

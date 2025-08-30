@@ -1161,6 +1161,7 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
         let atividades_detalhes = [];
         let tarefas_validas;
         let valor_tarefas;
+        let valor_bruto_atividades = 0;
         const kpis_atingidos_resultado = [];
         // Calculate activities
         if (input.nome_atividade && input.quantidade_produzida && input.tempo_horas) {
@@ -1196,7 +1197,7 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
         // Handle multiple activities
         if (input.multiple_activities) {
             try {
-                const activities = JSON.parse(input.multiple_activities);
+                const activities = input.multiple_activities;
                 for (const act of activities) {
                     if (act.nome_atividade && act.quantidade_produzida && act.tempo_horas) {
                         const { data: activityLevels, error: activityError } = await supabase
@@ -1220,6 +1221,7 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
                             const valor_bruto = act.quantidade_produzida * selectedActivity.valor_atividade;
                             const valor_liquido = valor_bruto / 2;
                             subtotal_atividades += valor_liquido;
+                            valor_bruto_atividades += valor_bruto;
                             atividades_detalhes.push(`${selectedActivity.nome_atividade}: ${act.quantidade_produzida} ${selectedActivity.unidade_medida} em ${act.tempo_horas}h (${selectedActivity.nivel_atividade}) - Valor bruto: R$ ${valor_bruto.toFixed(2)}, Líquido: R$ ${valor_liquido.toFixed(2)}`);
                         }
                     }
@@ -1281,6 +1283,8 @@ app.post('/api/calculate', zValidator('json', CalculatorInputSchema), async (c) 
             result.tarefasValidas = tarefas_validas;
         if (valor_tarefas !== undefined)
             result.valorTarefas = valor_tarefas;
+        if (valor_bruto_atividades > 0)
+            result.valorBrutoAtividades = valor_bruto_atividades;
         return c.json({ data: result, error: null });
     }
     catch (error) {

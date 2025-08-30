@@ -32,6 +32,61 @@ export default function Home() {
   const [selectedOperator, setSelectedOperator] = useState<string>(user?.nome || '');
   const [wmsReferenceDate, setWmsReferenceDate] = useState<string>('');
   
+  // Lançamento states
+  const [showLancamento, setShowLancamento] = useState<boolean>(false);
+  const [dataLancamento, setDataLancamento] = useState<string>('');
+  const [lancando, setLancando] = useState<boolean>(false);
+
+  // Multiple activities for Ajudantes de Armazém
+  const [multipleActivities, setMultipleActivities] = useState<MultipleActivityType[]>([
+    { nome_atividade: '', quantidade_produzida: 0, tempo_horas: 0 }
+  ]);
+
+  const [formData, setFormData] = useState<CalculatorInputType>({
+    nome_atividade: '',
+    funcao: '',
+    turno: 'Manhã',
+    quantidade_produzida: 0,
+    tempo_horas: 0,
+    input_adicional: 0,
+    nome_operador: '',
+  });
+
+  // Handle input changes - moved here to be available for useEffects
+  const handleInputChange = (field: keyof CalculatorInputType, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Reset KPIs when function or shift changes
+    if (field === 'funcao' || field === 'turno') {
+      setSelectedKPIs([]);
+      if (field === 'funcao') {
+        // Only reset multiple activities if they are empty or if switching from/to a different function type
+        const currentIsAjudante = formData.funcao === 'Ajudante de Armazém';
+        const newIsAjudante = value === 'Ajudante de Armazém';
+        
+        // Only reset if switching between different function types or if activities are empty
+        const hasValidActivities = multipleActivities.some(
+          act => act.nome_atividade && act.quantidade_produzida > 0 && act.tempo_horas > 0
+        );
+        
+        if (currentIsAjudante !== newIsAjudante || !hasValidActivities) {
+          setMultipleActivities([
+            { nome_atividade: '', quantidade_produzida: 0, tempo_horas: 0 }
+          ]);
+        }
+        
+        setValidTasksCount(0);
+      }
+    }
+    
+    if (field === 'nome_operador') {
+      setValidTasksCount(0);
+    }
+  };
+
   // Update selectedOperator when user changes
   useEffect(() => {
     if (user?.nome) {
@@ -76,26 +131,6 @@ export default function Home() {
     }
   }, [searchParams, result]);
   
-  // Lançamento states
-  const [showLancamento, setShowLancamento] = useState<boolean>(false);
-  const [dataLancamento, setDataLancamento] = useState<string>('');
-  const [lancando, setLancando] = useState<boolean>(false);
-
-  // Multiple activities for Ajudantes de Armazém
-  const [multipleActivities, setMultipleActivities] = useState<MultipleActivityType[]>([
-    { nome_atividade: '', quantidade_produzida: 0, tempo_horas: 0 }
-  ]);
-
-  const [formData, setFormData] = useState<CalculatorInputType>({
-    nome_atividade: '',
-    funcao: '',
-    turno: 'Manhã',
-    quantidade_produzida: 0,
-    tempo_horas: 0,
-    input_adicional: 0,
-    nome_operador: '',
-  });
-
   const isAjudanteArmazem = formData.funcao === 'Ajudante de Armazém';
   const isOperadorEmpilhadeira = formData.funcao === 'Operador de Empilhadeira';
 
@@ -348,38 +383,7 @@ export default function Home() {
     }
   };
 
-  const handleInputChange = (field: keyof CalculatorInputType, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Reset KPIs when function or shift changes
-    if (field === 'funcao' || field === 'turno') {
-      setSelectedKPIs([]);
-      if (field === 'funcao') {
-        // Only reset multiple activities if they are empty or if switching from/to a different function type
-        const currentIsAjudante = formData.funcao === 'Ajudante de Armazém';
-        const newIsAjudante = value === 'Ajudante de Armazém';
-        
-        // Only reset if switching between different function types or if activities are empty
-        const hasValidActivities = multipleActivities.some(
-          act => act.nome_atividade && act.quantidade_produzida > 0 && act.tempo_horas > 0
-        );
-        
-        if (currentIsAjudante !== newIsAjudante || !hasValidActivities) {
-          setMultipleActivities([{ nome_atividade: '', quantidade_produzida: 0, tempo_horas: 0 }]);
-        }
-        
-        setValidTasksCount(0);
-      }
-    }
-    
-    // Reset valid tasks count when operator name changes
-    if (field === 'nome_operador') {
-      setValidTasksCount(0);
-    }
-  };
+
 
   const addActivity = () => {
     setMultipleActivities(prev => [
@@ -759,95 +763,138 @@ export default function Home() {
                 {/* Results */}
                 {result && (
                   <div className="mt-6 space-y-6">
+
                     {/* Activity Details Section - Unified for all types of activities */}
                     {((result?.produtividadeAlcancada && result?.nivelAtingido) || result?.tarefasValidas !== undefined || (result?.atividadesDetalhes && result.atividadesDetalhes.length > 0)) ? (
                       <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Detalhes da Atividade</h3>
                         
-
-                        
-                        {/* Single activity details - for normal activities and WMS tasks */}
-                        {((result?.produtividadeAlcancada && result?.nivelAtingido) || result?.tarefasValidas !== undefined || (result?.atividadesDetalhes && result.atividadesDetalhes.length > 0)) && (
-                        <div className="bg-white/80 p-4 rounded-lg border border-blue-100">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                              <p className="text-sm text-gray-600">Atividade:</p>
-                              <p className="font-semibold text-gray-800">
-                                {result?.tarefasValidas !== undefined 
-                                  ? 'Operador de Empilhadeira' 
-                                  : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
-                                    ? (() => {
-                                        const firstActivity = result.atividadesDetalhes[0];
-                                        if (firstActivity?.includes('Repack')) return 'Prod Repack';
-                                        if (firstActivity?.includes('Picking')) return 'Picking';
-                                        if (firstActivity?.includes('Conferência')) return 'Conferência';
-                                        return 'Múltiplas Atividades';
-                                      })()
-                                    : formData.nome_atividade
-                                }
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-600">Quantidade Lançada:</p>
-                              <p className="font-semibold text-blue-600">
-                                {result?.tarefasValidas !== undefined 
-                                  ? `${result?.tarefasValidas} tarefas` 
-                                  : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
-                                    ? (() => {
-                                        const firstActivity = result.atividadesDetalhes[0];
-                                        // Extract quantity from "Prod Repack: 150 cxs/h em 6h"
-                                        const match = firstActivity?.match(/(\d+(?:\.\d+)?)\s+(\w+)\/h/);
-                                        return match ? `${match[1]} ${match[2]}` : 'N/A';
-                                      })()
-                                    : `${formData.quantidade_produzida} ${result?.unidadeMedida}`
-                                }
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-600">Tempo:</p>
-                              <p className="font-semibold text-purple-600">
-                                {result?.tarefasValidas !== undefined 
-                                  ? '0h' 
-                                  : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
-                                    ? (() => {
-                                        const firstActivity = result.atividadesDetalhes[0];
-                                        // Extract time from "Prod Repack: 150 cxs/h em 6h"
-                                        const match = firstActivity?.match(/em\s+(\d+(?:\.\d+)?)h/);
-                                        return match ? `${match[1]}h` : 'N/A';
-                                      })()
-                                    : `${formData.tempo_horas}h`
-                                }
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-600">Produtividade Alcançada:</p>
-                              <p className="font-medium text-purple-600">
-                                {result?.tarefasValidas !== undefined 
-                                  ? `${((result?.tarefasValidas || 0) / 8).toFixed(2)} tarefas/h`
-                                  : `${result?.produtividadeAlcancada?.toFixed(2)} ${result?.unidadeMedida}/h`
-                                }
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-600">Nível Atingido:</p>
-                              <p className="font-medium text-blue-600">
-                                {result?.tarefasValidas !== undefined 
-                                  ? `Nível 2 (${((result?.tarefasValidas || 0) / 8).toFixed(1)} tarefas/h)`
-                                  : result?.nivelAtingido
-                                }
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-600">Valor Bruto:</p>
-                              <p className="font-medium text-green-600">
-                                R$ {result?.tarefasValidas !== undefined 
-                                  ? ((result?.tarefasValidas || 0) * 0.093 * 2).toFixed(2)
-                                  : ((result?.subtotalAtividades || 0) * 2).toFixed(2)
-                                }
-                              </p>
+                        {/* Multiple activities details - for Ajudante de Armazém */}
+                        {result?.atividadesDetalhes && result.atividadesDetalhes.length > 1 ? (
+                          <div className="space-y-4">
+                            {result.atividadesDetalhes.map((atividade, index) => {
+                              // Parse activity string: "Nome: quantidade unidade em tempo (nível) - Valor bruto: R$ X, Líquido: R$ Y"
+                              const match = atividade.match(/^(.+?):\s*(\d+(?:\.\d+)?)\s+(\w+\/h)\s+em\s+(\d+(?:\.\d+)?)h\s*\((.+?)\)\s*-\s*Valor bruto:\s*R\$\s*([\d,\.]+),\s*Líquido:\s*R\$\s*([\d,\.]+)$/);
+                              if (!match) return null;
+                              
+                              const [, nome, quantidade, unidade, tempo, nivel, valorBruto, valorLiquido] = match;
+                              const produtividade = (parseFloat(quantidade) / parseFloat(tempo)).toFixed(2);
+                              
+                              return (
+                                <div key={index} className="bg-white/80 p-4 rounded-lg border border-blue-100">
+                                  <h4 className="font-semibold text-gray-800 mb-3">{nome}</h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                      <p className="text-sm text-gray-600">Quantidade Lançada:</p>
+                                      <p className="font-semibold text-blue-600">{quantidade} {unidade}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-gray-600">Tempo:</p>
+                                      <p className="font-semibold text-purple-600">{tempo}h</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-gray-600">Produtividade Alcançada:</p>
+                                      <p className="font-medium text-purple-600">{produtividade} {unidade}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-gray-600">Nível Atingido:</p>
+                                      <p className="font-medium text-blue-600">{nivel}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-gray-600">Valor Bruto:</p>
+                                      <p className="font-medium text-green-600">R$ {valorBruto}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-gray-600">Valor Líquido:</p>
+                                      <p className="font-medium text-green-600">R$ {valorLiquido}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          /* Single activity details - for normal activities and WMS tasks */
+                          <div className="bg-white/80 p-4 rounded-lg border border-blue-100">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <p className="text-sm text-gray-600">Atividade:</p>
+                                <p className="font-semibold text-gray-800">
+                                  {result?.tarefasValidas !== undefined 
+                                    ? 'Operador de Empilhadeira' 
+                                    : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
+                                      ? (() => {
+                                          const firstActivity = result.atividadesDetalhes[0];
+                                          if (firstActivity?.includes('Repack')) return 'Prod Repack';
+                                          if (firstActivity?.includes('Picking')) return 'Picking';
+                                          if (firstActivity?.includes('Conferência')) return 'Conferência';
+                                          return firstActivity.split(':')[0] || 'Atividade';
+                                        })()
+                                      : formData.nome_atividade
+                                  }
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Quantidade Lançada:</p>
+                                <p className="font-semibold text-blue-600">
+                                  {result?.tarefasValidas !== undefined 
+                                    ? `${result?.tarefasValidas} tarefas` 
+                                    : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
+                                      ? (() => {
+                                          const firstActivity = result.atividadesDetalhes[0];
+                                          // Extract quantity from "Nome: quantidade unidade em tempo (nível)"
+                                          const match = firstActivity?.match(/:\s*(\d+(?:\.\d+)?)\s+(\w+)\s+em/);
+                                          return match ? `${match[1]} ${match[2]}` : 'N/A';
+                                        })()
+                                      : `${formData.quantidade_produzida} ${result?.unidadeMedida}`
+                                  }
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Tempo:</p>
+                                <p className="font-semibold text-purple-600">
+                                  {result?.tarefasValidas !== undefined 
+                                    ? '8h' 
+                                    : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
+                                      ? (() => {
+                                          const firstActivity = result.atividadesDetalhes[0];
+                                          // Extract time from "Nome: quantidade unidade em tempo (nível)"
+                                          const match = firstActivity?.match(/em\s+(\d+(?:\.\d+)?)h/);
+                                          return match ? `${match[1]}h` : 'N/A';
+                                        })()
+                                      : `${formData.tempo_horas}h`
+                                  }
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Produtividade Alcançada:</p>
+                                <p className="font-medium text-purple-600">
+                                  {result?.tarefasValidas !== undefined 
+                                    ? `${((result?.tarefasValidas || 0) / 8).toFixed(2)} tarefas/h`
+                                    : `${result?.produtividadeAlcancada?.toFixed(2)} ${result?.unidadeMedida}/h`
+                                  }
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Nível Atingido:</p>
+                                <p className="font-medium text-blue-600">
+                                  {result?.tarefasValidas !== undefined 
+                                    ? `Nível 2 (${((result?.tarefasValidas || 0) / 8).toFixed(1)} tarefas/h)`
+                                    : result?.nivelAtingido
+                                  }
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Valor Bruto:</p>
+                                <p className="font-medium text-green-600">
+                                  R$ {result?.tarefasValidas !== undefined 
+                                    ? ((result?.tarefasValidas || 0) * 0.093 * 2).toFixed(2)
+                                    : (result?.valorBrutoAtividades || (result?.subtotalAtividades || 0) * 2).toFixed(2)
+                                  }
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        </div>
                         )}
                       </div>
                     ) : null}
