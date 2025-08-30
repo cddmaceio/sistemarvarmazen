@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/Card';
 import { Alert, AlertDescription } from '@/components/Alert';
 import { AlertTriangle } from 'lucide-react';

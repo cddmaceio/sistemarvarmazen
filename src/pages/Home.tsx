@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, TrendingUp, CheckCircle, Plus, Trash2, Send } from 'lucide-react';
-import { Link, Navigate, useSearchParams } from 'react-router';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -421,9 +421,7 @@ export default function Home() {
 
 
 
-  if (isAdmin) {
-    return <Navigate to="/admin/validacao" replace />;
-  }
+  // Removed admin redirect - allow admins to access calculator too
 
   return (
     <AuthGuard>

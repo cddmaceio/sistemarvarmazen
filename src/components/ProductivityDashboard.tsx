@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/Card';
 import { Clock, Users, TrendingUp, Award } from 'lucide-react';
+import UserMenu from '@/components/UserMenu';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface ProductivityData {
@@ -253,6 +254,19 @@ const ProductivityDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header da página */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Dashboard de Produtividade
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Acompanhe métricas de performance por turno e função
+          </p>
+        </div>
+        <UserMenu />
+      </div>
+      
       {/* Header com métricas principais */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>

@@ -7,6 +7,7 @@ import { Select } from '@/components/Select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/Dialog';
 import { Alert, AlertDescription } from '@/components/Alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/Table';
+import UserMenu from '@/components/UserMenu';
 import { useKPIs } from '@/hooks/useApi';
 import { KPIType } from '@/shared/types';
 import { 
@@ -169,10 +170,13 @@ export default function CadastroKPIs() {
               Configure indicadores de performance por função e turno
             </p>
           </div>
-          <Button onClick={openAddDialog} className="flex items-center space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Novo KPI</span>
-          </Button>
+          <div className="flex items-center space-x-4">
+            <Button onClick={openAddDialog} className="flex items-center space-x-2">
+              <Plus className="h-4 w-4" />
+              <span>Novo KPI</span>
+            </Button>
+            <UserMenu />
+          </div>
         </div>
 
         {error && (

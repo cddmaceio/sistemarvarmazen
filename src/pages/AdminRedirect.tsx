@@ -1,5 +1,5 @@
-import { Navigate } from 'react-router';
-import { useAuth } from '@/hooks/useAuth';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export default function AdminRedirect() {
   const { isAdmin, isCollaborator, loading } = useAuth();
@@ -19,9 +19,9 @@ export default function AdminRedirect() {
   if (isAdmin) {
     return <Navigate to="/admin/validacao" replace />;
   } else if (isCollaborator) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/calculadora" replace />;
   } else {
-    // Fallback to login if no valid role
-    return <Navigate to="/" replace />;
+    // Fallback to calculator page for unauthenticated users
+    return <Navigate to="/calculadora" replace />;
   }
 }

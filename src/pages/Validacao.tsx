@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Edit, Clock, User, Calendar, TrendingUp, FileText, Tag } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -13,7 +14,8 @@ import { LancamentoType, CalculatorInputType, CalculatorResultType } from '@/sha
 const API_BASE = '/api';
 
 export default function Validacao() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, logout } = useAuth();
+  const navigate = useNavigate();
   const [lancamentos, setLancamentos] = useState<LancamentoType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processando, setProcessando] = useState<string | null>(null);

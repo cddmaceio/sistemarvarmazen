@@ -1,39 +1,48 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router";
-import { AuthProvider } from "@/hooks/useAuth";
-import HomePage from "@/pages/Home";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
+import Home from './pages/Home';
+import AdminRedirect from './pages/AdminRedirect';
+import RootRedirect from './pages/RootRedirect'; // Importar o novo componente
+import { AuthProvider } from './hooks/useAuth';
+import AdminLayout from './components/AdminLayout';
+import DashboardCollaborator from './pages/DashboardCollaborator';
+import Validacao from './pages/Validacao';
+import CadastroAtividades from './pages/CadastroAtividades';
+import CadastroKPIs from './pages/CadastroKPIs';
+import CadastroUsuarios from './pages/CadastroUsuarios';
+import HistoricoAprovacoes from './pages/HistoricoAprovacoes';
+import ExportacaoDados from './pages/ExportacaoDados';
+import UserManagementStandalone from './pages/UserManagementStandalone';
+import ProductivityDashboard from './components/ProductivityDashboard';
 
-import UserManagementStandalone from "@/pages/UserManagementStandalone";
-import Validacao from "@/pages/Validacao";
-import HistoricoAprovacoes from "@/pages/HistoricoAprovacoes";
-import DashboardCollaborator from "@/pages/DashboardCollaborator";
-import AdminRedirect from "@/pages/AdminRedirect";
-import Admin from "@/pages/Admin";
-import CadastroAtividades from "@/pages/CadastroAtividades";
-import CadastroUsuarios from "@/pages/CadastroUsuarios";
-import CadastroKPIsStandalone from "@/pages/CadastroKPIsStandalone";
-import ExportacaoDados from "@/pages/ExportacaoDados";
-
-export default function App() {
+function App() {
   return (
-    <div>
-      <Router>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/dashboard" element={<DashboardCollaborator />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/admin-redirect" element={<AdminRedirect />} />
-            <Route path="/admin/users" element={<UserManagementStandalone />} />
-            <Route path="/admin/atividades" element={<CadastroAtividades />} />
-            <Route path="/cadastro-atividades" element={<CadastroAtividades />} />
-            <Route path="/admin/kpis" element={<CadastroKPIsStandalone />} />
-            <Route path="/admin/cadastro-usuarios" element={<CadastroUsuarios />} />
-            <Route path="/admin/validacao" element={<Validacao />} />
-            <Route path="/admin/historico" element={<HistoricoAprovacoes />} />
-            <Route path="/admin/exportacao" element={<ExportacaoDados />} />
-          </Routes>
-        </AuthProvider>
-      </Router>
-    </div>
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/dashboard" element={<DashboardCollaborator />} />
+          <Route path="/calculadora" element={<Home />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminRedirect />} />
+            <Route path="produtividade" element={<ProductivityDashboard />} />
+            <Route path="validacao" element={<Validacao />} />
+            <Route path="atividades" element={<CadastroAtividades />} />
+            <Route path="kpis" element={<CadastroKPIs />} />
+            <Route path="cadastro-usuarios" element={<CadastroUsuarios />} />
+            <Route path="wms-users" element={<UserManagementStandalone />} />
+            <Route path="historico" element={<HistoricoAprovacoes />} />
+            <Route path="exportacao" element={<ExportacaoDados />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 }
+
+export default App;

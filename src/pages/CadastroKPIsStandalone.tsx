@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Target, Plus, Edit, Trash2, Eye, EyeOff, ArrowLeft, Settings } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';

@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, createContext } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { UserType } from '@/shared/types';
 import { FUNCAO_DB_TO_UI } from '@/shared/utils/encoding';
@@ -29,8 +29,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const isAdmin = user?.funcao?.toLowerCase() === 'admin';
-  const isCollaborator = user?.funcao === 'colaborador';
+  const isAdmin = user?.tipo_usuario?.toLowerCase() === 'administrador';
+  const isCollaborator = user?.tipo_usuario?.toLowerCase() === 'colaborador';
   const userFunction = user?.funcao ? FUNCAO_DB_TO_UI[user.funcao] || user.funcao : '';
   const userTurno = user?.turno || null;
 
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem('user', JSON.stringify(userData));
 
       // Redirecionar administradores para a página de validação após um pequeno delay
-      if (userData.funcao?.toLowerCase() === 'admin') {
+      if (userData.tipo_usuario?.toLowerCase() === 'administrador') {
         setTimeout(() => {
           navigate('/admin/validacao');
         }, 100);

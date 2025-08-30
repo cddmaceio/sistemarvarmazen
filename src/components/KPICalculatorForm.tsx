@@ -31,9 +31,6 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
   const [dataLancamento, setDataLancamento] = useState('');
   const [canLaunchKPIs, setCanLaunchKPIs] = useState(true);
 
-  const isSubmitDisabled = () => {
-    return disabled || calculating || !dataLancamento || !canLaunchKPIs || !formData.kpis_atingidos || formData.kpis_atingidos.length === 0;
-  };
   const [showFunctionSelector, setShowFunctionSelector] = useState(false);
 
   const funcoes = FUNCOES_UI_FORMAT;
