@@ -32,7 +32,7 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
 
     // Map input to database values - fix encoding issues
     const dbFuncao = input.funcao.includes('Armaz') ? 'Ajudante de Armazém' : input.funcao;
-    const dbTurno = input.turno === 'Manha' ? 'Manhã' : input.turno; // Map to correct turno with accent
+    const dbTurno = input.turno; // Use turno as is since schema now only accepts correct values
     
     console.log('Database search values:', { dbFuncao, dbTurno });
     console.log('Searching for KPIs with:', { funcao_kpi: dbFuncao, turno_kpi_in: [dbTurno, 'Geral'] });

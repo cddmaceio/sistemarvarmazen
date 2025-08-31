@@ -99,7 +99,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!user) return;
 
     try {
-      const response = await fetch(`${API_BASE}/users/${user.id}`, {
+      setLoading(true);
+      const response = await fetch(`${API_BASE}/usuarios/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -108,15 +109,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao atualizar usuário');
+        throw new Error('Failed to update user');
       }
 
       const updatedUser = await response.json();
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
     } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
+      console.error('Error updating user:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

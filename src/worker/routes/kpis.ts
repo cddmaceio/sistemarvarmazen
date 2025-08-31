@@ -18,7 +18,8 @@ kpiRoutes.get('/kpis', async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json(kpis || []);
+  const kpiNames = kpis?.map(kpi => kpi.nome_kpi) || [];
+  return c.json({ kpisAtingidos: kpiNames });
 });
 
 // GET /api/functions
@@ -54,7 +55,7 @@ kpiRoutes.get('/kpis/available', async (c) => {
 
   const { data: kpis, error } = await supabase
     .from('kpis')
-    .select('nome_kpi')
+    .select('*')
     .eq('funcao_kpi', dbFuncao)
     .in('turno_kpi', [dbTurno, 'Geral']);
 

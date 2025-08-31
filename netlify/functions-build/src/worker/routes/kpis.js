@@ -13,7 +13,8 @@ kpiRoutes.get('/kpis', async (c) => {
     if (error) {
         return c.json({ error: error.message }, 500);
     }
-    return c.json(kpis || []);
+    const kpiNames = kpis?.map(kpi => kpi.nome_kpi) || [];
+    return c.json({ kpisAtingidos: kpiNames });
 });
 // GET /api/functions
 kpiRoutes.get('/functions', async (c) => {
@@ -37,11 +38,11 @@ kpiRoutes.get('/kpis/available', async (c) => {
         return c.json({ error: 'Função e turno são obrigatórios' }, 400);
     }
     // Map input to database values
-    const dbFuncao = funcao === 'Ajudante de Armazém' ? 'Ajudante de ArmazÃ©m' : funcao;
-    const dbTurno = turno === 'Manha' ? 'Manha' : turno;
+    const dbFuncao = funcao; // Use correct encoding
+    const dbTurno = turno === 'Manha' ? 'Manhã' : turno; // Map to correct turno with accent
     const { data: kpis, error } = await supabase
         .from('kpis')
-        .select('nome_kpi')
+        .select('*')
         .eq('funcao_kpi', dbFuncao)
         .in('turno_kpi', [dbTurno, 'Geral']);
     if (error) {

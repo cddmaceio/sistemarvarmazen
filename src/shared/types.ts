@@ -124,7 +124,7 @@ export const LancamentoSchema = z.object({
   user_cpf: z.string(),
   data_lancamento: z.string(),
   funcao: z.string(),
-  turno: z.enum(["Manhã", "Tarde", "Noite"]),
+  turno: z.enum(["Manhã", "Tarde", "Noite", "Manha"]),
   
   // Calculator input data
   nome_atividade: z.string().optional(),
@@ -176,7 +176,7 @@ export type KPILimitCheckType = z.infer<typeof KPILimitCheckSchema>;
 // Lançamento creation input
 export const CreateLancamentoSchema = z.object({
   data_lancamento: z.string().min(1, "Data é obrigatória"),
-  user_id: z.number().optional(),
+  user_id: z.number(),
   calculator_data: CalculatorInputSchema,
   calculator_result: CalculatorResultSchema,
 });

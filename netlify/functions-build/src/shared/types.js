@@ -83,14 +83,8 @@ export const CalculatorResultSchema = z.object({
     produtividade_alcancada: z.number().optional(),
     nivel_atingido: z.string().optional(),
     unidade_medida: z.string().optional(),
-    // Multiple activities details
-    atividades_detalhes: z.array(z.object({
-        nome: z.string(),
-        produtividade: z.number(),
-        nivel: z.string(),
-        valor_total: z.number(),
-        unidade: z.string(),
-    })).optional(),
+    // Multiple activities details - array of strings with format: "Nome: quantidade unidade em tempo (nível)"
+    atividades_detalhes: z.array(z.string()).optional(),
     // Valid tasks details
     tarefas_validas: z.number().optional(),
     valor_tarefas: z.number().optional(),
@@ -105,7 +99,7 @@ export const LancamentoSchema = z.object({
     user_cpf: z.string(),
     data_lancamento: z.string(),
     funcao: z.string(),
-    turno: z.enum(["Manhã", "Tarde", "Noite"]),
+    turno: z.enum(["Manhã", "Tarde", "Noite", "Manha"]),
     // Calculator input data
     nome_atividade: z.string().optional(),
     quantidade_produzida: z.number().optional(),
@@ -146,7 +140,7 @@ export const KPILimitCheckSchema = z.object({
 // Lançamento creation input
 export const CreateLancamentoSchema = z.object({
     data_lancamento: z.string().min(1, "Data é obrigatória"),
-    user_id: z.number().optional(),
+    user_id: z.number(),
     calculator_data: CalculatorInputSchema,
     calculator_result: CalculatorResultSchema,
 });

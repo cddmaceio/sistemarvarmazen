@@ -82,3 +82,6 @@ temp/
 
 # Local Netlify folder
 .netlify
+
+# Netlify build outputs
+netlify/functions-build/
