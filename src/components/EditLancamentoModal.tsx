@@ -22,7 +22,7 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
   const { activityNames } = useActivityNames();
   const { kpis: availableKPIs, fetchAvailableKPIs } = useAvailableKPIs();
   const { calculate, result, loading: calculating } = useCalculator();
-  const { userFunction, userTurno } = useAuth();
+  const { userFunction } = useAuth();
   
   const [formData, setFormData] = useState<CalculatorInputType>({
     funcao: '',
@@ -535,10 +535,10 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
                     <span className="text-green-600">KPIs:</span>
                     <p className="font-semibold text-green-900">R$ {(result?.bonusKpis || 0).toFixed(2)}</p>
                   </div>
-                  {result?.produtividade_alcancada && (
+                  {result?.produtividadeAlcancada && (
                     <div>
                       <span className="text-green-600">Produtividade:</span>
-                      <p className="font-semibold text-green-900">{(result.produtividade_alcancada || 0).toFixed(2)}</p>
+                      <p className="font-semibold text-green-900">{(result.produtividadeAlcancada || 0).toFixed(2)}</p>
                     </div>
                   )}
                 </div>

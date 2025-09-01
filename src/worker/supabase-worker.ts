@@ -10,6 +10,7 @@ import kpiRoutes from './routes/kpis';
 import calculatorRoutes from './routes/calculator';
 import lancamentoRoutes from './routes/lancamentos';
 import wmsTaskRoutes from './routes/wms-tasks';
+import monthlyEarningsRoutes from './routes/monthly-earnings';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -24,6 +25,7 @@ app.route('/api', kpiRoutes);
 app.route('/api', calculatorRoutes);
 app.route('/api', lancamentoRoutes);
 app.route('/api/wms-tasks', wmsTaskRoutes);
+app.route('/api/monthly-earnings', monthlyEarningsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (c) => {

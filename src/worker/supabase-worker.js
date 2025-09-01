@@ -2053,14 +2053,14 @@ var Hono = class {
   }
   #notFoundHandler = notFoundHandler;
   errorHandler = errorHandler;
-  route(path, app2) {
+  route(path, app3) {
     const subApp = this.basePath(path);
-    app2.routes.map((r) => {
+    app3.routes.map((r) => {
       let handler;
-      if (app2.errorHandler === errorHandler) {
+      if (app3.errorHandler === errorHandler) {
         handler = r.handler;
       } else {
-        handler = async (c, next) => (await compose([], app2.errorHandler)(c, () => r.handler(c, next))).res;
+        handler = async (c, next) => (await compose([], app3.errorHandler)(c, () => r.handler(c, next))).res;
         handler[COMPOSED_HANDLER] = r.handler;
       }
       subApp.#addRoute(r.method, r.path, handler);
@@ -14634,20 +14634,56 @@ wmsTaskRoutes.post("/", zValidator("json", WMSTaskSchema), async (c) => {
 });
 var wms_tasks_default = wmsTaskRoutes;
 
-// src/worker/supabase-worker.ts
+// src/worker/routes/monthly-earnings.ts
 var app = new Hono2();
 app.use("*", cors());
-app.route("/api/auth", auth_default);
-app.route("/api/usuarios", users_default);
-app.route("/api", activities_default);
-app.route("/api", kpis_default);
-app.route("/api", calculator_default);
-app.route("/api", lancamentos_default);
-app.route("/api/wms-tasks", wms_tasks_default);
-app.get("/api/health", (c) => {
+app.get("/monthly-earnings", async (c) => {
+  const { funcao, mesAno } = c.req.query();
+  const supabaseUrl = c.env.SUPABASE_URL;
+  const supabaseAnonKey = c.env.SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return c.json({ success: false, error: "Supabase credentials not provided" }, 500);
+  }
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  try {
+    let query = supabase.from("monthly_earnings_view").select("*");
+    if (funcao) {
+      query = query.eq("funcao", funcao);
+    }
+    if (mesAno) {
+      const [year, month] = mesAno.split("-");
+      const startDate = `${year}-${month}-01T00:00:00.000Z`;
+      const endDate = new Date(parseInt(year), parseInt(month), 0);
+      const endOfMonth = `${year}-${month}-${endDate.getDate()}T23:59:59.999Z`;
+      query = query.gte("data", startDate).lte("data", endOfMonth);
+    }
+    const { data, error } = await query;
+    if (error) {
+      throw error;
+    }
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error("Error fetching monthly earnings:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+var monthly_earnings_default = app;
+
+// src/worker/supabase-worker.ts
+var app2 = new Hono2();
+app2.use("*", cors());
+app2.route("/api/auth", auth_default);
+app2.route("/api/usuarios", users_default);
+app2.route("/api", activities_default);
+app2.route("/api", kpis_default);
+app2.route("/api", calculator_default);
+app2.route("/api", lancamentos_default);
+app2.route("/api/wms-tasks", wms_tasks_default);
+app2.route("/api/monthly-earnings", monthly_earnings_default);
+app2.get("/api/health", (c) => {
   return c.json({ status: "ok", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
 });
-var supabase_worker_default = app;
+var supabase_worker_default = app2;
 export {
   supabase_worker_default as default
 };

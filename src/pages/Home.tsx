@@ -765,14 +765,14 @@ export default function Home() {
                   <div className="mt-6 space-y-6">
 
                     {/* Activity Details Section - Unified for all types of activities */}
-                    {((result?.produtividade_alcancada && result?.nivel_atingido) || result?.tarefas_validas !== undefined || (result?.atividades_detalhes && result.atividades_detalhes.length > 0)) ? (
+                    {((result?.produtividadeAlcancada && result?.nivelAtingido) || result?.tarefasValidas !== undefined || (result?.atividadesDetalhes && result.atividadesDetalhes.length > 0)) ? (
                       <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Detalhes da Atividade</h3>
                         
                         {/* Multiple activities details - for Ajudante de Armazém */}
-                        {result?.atividades_detalhes && result.atividades_detalhes.length > 1 ? (
+                        {result?.atividadesDetalhes && result.atividadesDetalhes.length > 1 ? (
                           <div className="space-y-4">
-                            {result.atividades_detalhes.map((atividade: string, index: number) => {
+                            {result.atividadesDetalhes.map((atividade: string, index: number) => {
                               // Parse activity string: "Nome: quantidade unidade em tempo (nível) - Valor bruto: R$ X, Líquido: R$ Y"
                               const match = atividade.match(/^(.+?):\s*(\d+(?:\.\d+)?)\s+(\w+\/h)\s+em\s+(\d+(?:\.\d+)?)h\s*\((.+?)\)\s*-\s*Valor bruto:\s*R\$\s*([\d,\.]+),\s*Líquido:\s*R\$\s*([\d,\.]+)$/);
                               if (!match) return null;
@@ -820,11 +820,11 @@ export default function Home() {
                               <div>
                                 <p className="text-sm text-gray-600">Atividade:</p>
                                 <p className="font-semibold text-gray-800">
-                                  {result?.tarefas_validas !== undefined 
+                                  {result?.tarefasValidas !== undefined 
                                     ? 'Operador de Empilhadeira' 
-                                    : result?.atividades_detalhes && result.atividades_detalhes.length > 0
+                                    : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
                                       ? (() => {
-                                          const firstActivity = result.atividades_detalhes[0];
+                                          const firstActivity = result.atividadesDetalhes[0];
                                           if (firstActivity?.includes('Repack')) return 'Prod Repack';
                                           if (firstActivity?.includes('Picking')) return 'Picking';
                                           if (firstActivity?.includes('Conferência')) return 'Conferência';
@@ -837,27 +837,27 @@ export default function Home() {
                               <div>
                                 <p className="text-sm text-gray-600">Quantidade Lançada:</p>
                                 <p className="font-semibold text-blue-600">
-                                  {result?.tarefas_validas !== undefined 
-                                    ? `${result?.tarefas_validas} tarefas` 
-                                    : result?.atividades_detalhes && result.atividades_detalhes.length > 0
+                                  {result?.tarefasValidas !== undefined 
+                                    ? `${result?.tarefasValidas} tarefas` 
+                                    : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
                                       ? (() => {
-                                          const firstActivity = result.atividades_detalhes[0];
+                                          const firstActivity = result.atividadesDetalhes[0];
                                           // Extract quantity from "Nome: quantidade unidade em tempo (nível)"
                                           const match = firstActivity?.match(/:\s*(\d+(?:\.\d+)?)\s+(\w+)\s+em/);
                                           return match ? `${match[1]} ${match[2]}` : 'N/A';
                                         })()
-                                      : `${formData.quantidade_produzida} ${result?.unidade_medida}`
+                                      : `${formData.quantidade_produzida} ${result?.unidadeMedida}`
                                   }
                                 </p>
                               </div>
                               <div>
                                 <p className="text-sm text-gray-600">Tempo:</p>
                                 <p className="font-semibold text-purple-600">
-                                  {result?.tarefas_validas !== undefined 
+                                  {result?.tarefasValidas !== undefined 
                                     ? '8h' 
-                                    : result?.atividades_detalhes && result.atividades_detalhes.length > 0
+                                    : result?.atividadesDetalhes && result.atividadesDetalhes.length > 0
                                       ? (() => {
-                                          const firstActivity = result.atividades_detalhes[0];
+                                          const firstActivity = result.atividadesDetalhes[0];
                                           // Extract time from "Nome: quantidade unidade em tempo (nível)"
                                           const match = firstActivity?.match(/em\s+(\d+(?:\.\d+)?)h/);
                                           return match ? `${match[1]}h` : 'N/A';
@@ -869,27 +869,27 @@ export default function Home() {
                               <div>
                                 <p className="text-sm text-gray-600">Produtividade Alcançada:</p>
                                 <p className="font-medium text-purple-600">
-                                  {result?.tarefas_validas !== undefined 
-                                    ? `${((result?.tarefas_validas || 0) / 8).toFixed(2)} tarefas/h`
-                                    : `${result?.produtividade_alcancada?.toFixed(2)} ${result?.unidade_medida}/h`
+                                  {result?.tarefasValidas !== undefined 
+                                    ? `${((result?.tarefasValidas || 0) / 8).toFixed(2)} tarefas/h`
+                                    : `${result?.produtividadeAlcancada?.toFixed(2)} ${result?.unidadeMedida}/h`
                                   }
                                 </p>
                               </div>
                               <div>
                                 <p className="text-sm text-gray-600">Nível Atingido:</p>
                                 <p className="font-medium text-blue-600">
-                                  {result?.tarefas_validas !== undefined 
-                                    ? `Nível 2 (${((result?.tarefas_validas || 0) / 8).toFixed(1)} tarefas/h)`
-                                    : result?.nivel_atingido
+                                  {result?.tarefasValidas !== undefined 
+                                    ? `Nível 2 (${((result?.tarefasValidas || 0) / 8).toFixed(1)} tarefas/h)`
+                                    : result?.nivelAtingido
                                   }
                                 </p>
                               </div>
                               <div>
                                 <p className="text-sm text-gray-600">Valor Bruto:</p>
                                 <p className="font-medium text-green-600">
-                                  R$ {result?.tarefas_validas !== undefined 
-                                    ? ((result?.tarefas_validas || 0) * 0.093 * 2).toFixed(2)
-                                    : (result?.valor_bruto_atividades || (result?.subtotalAtividades || 0) * 2).toFixed(2)}
+                                  R$ {result?.tarefasValidas !== undefined 
+                                    ? ((result?.tarefasValidas || 0) * 0.093 * 2).toFixed(2)
+                                    : (result?.valorBrutoAtividades || (result?.subtotalAtividades || 0) * 2).toFixed(2)}
                                 </p>
                               </div>
                             </div>

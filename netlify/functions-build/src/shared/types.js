@@ -83,16 +83,16 @@ exports.CalculatorResultSchema = zod_1.z.object({
     bonusKpis: zod_1.z.number(),
     remuneracaoTotal: zod_1.z.number(),
     kpisAtingidos: zod_1.z.array(zod_1.z.string()),
-    produtividade_alcancada: zod_1.z.number().optional(),
-    nivel_atingido: zod_1.z.string().optional(),
-    unidade_medida: zod_1.z.string().optional(),
+    produtividadeAlcancada: zod_1.z.number().optional(),
+    nivelAtingido: zod_1.z.string().optional(),
+    unidadeMedida: zod_1.z.string().optional(),
     // Multiple activities details - array of strings with format: "Nome: quantidade unidade em tempo (nível)"
-    atividades_detalhes: zod_1.z.array(zod_1.z.string()).optional(),
+    atividadesDetalhes: zod_1.z.array(zod_1.z.string()).optional(),
     // Valid tasks details
-    tarefas_validas: zod_1.z.number().optional(),
-    valor_tarefas: zod_1.z.number().optional(),
+    tarefasValidas: zod_1.z.number().optional(),
+    valorTarefas: zod_1.z.number().optional(),
     // Gross activity value
-    valor_bruto_atividades: zod_1.z.number().optional(),
+    valorBrutoAtividades: zod_1.z.number().optional(),
 });
 // Lançamento schema
 exports.LancamentoSchema = zod_1.z.object({
