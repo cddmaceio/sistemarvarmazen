@@ -1,163 +1,18 @@
-Carregando dados de ganhos mensais...
-ProductivityDashboard.tsx:95 URL da requisição: /.netlify/functions/api/monthly-earnings
+Response status: 200
+ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
+ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso
+ProductivityDashboard.tsx:98 Response status: 200
+ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
+ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso
+ProductivityDashboard.tsx:98 Response status: 200
+ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
+ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso
+ProductivityDashboard.tsx:98 Response status: 200
+ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
+ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso
 ProductivityDashboard.tsx:88 Carregando dados de ganhos mensais...
-ProductivityDashboard.tsx:95 URL da requisição: /.netlify/functions/api/monthly-earnings
-ProductivityDashboard.tsx:88 Carregando dados de ganhos mensais...
-ProductivityDashboard.tsx:95 URL da requisição: /.netlify/functions/api/monthly-earnings
-ProductivityDashboard.tsx:88 Carregando dados de ganhos mensais...
-ProductivityDashboard.tsx:95 URL da requisição: /.netlify/functions/api/monthly-earnings
-ProductivityDashboard.tsx:97  GET http://localhost:8888/.netlify/functions/api/monthly-earnings 404 (Not Found)
-loadMonthlyEarnings @ ProductivityDashboard.tsx:97
-(anonymous) @ ProductivityDashboard.tsx:148
-react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
-commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9182
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
-flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:98 Response status: 404
-ProductivityDashboard.tsx:102 Erro na resposta da API: {status: 404, statusText: 'Not Found', body: '404 Not Found'}
-loadMonthlyEarnings @ ProductivityDashboard.tsx:102
-await in loadMonthlyEarnings
-(anonymous) @ ProductivityDashboard.tsx:148
-react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
-commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9182
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
-flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:139 Erro na requisição de dados de ganhos mensais: Error: API Error: 404 - Not Found
-    at loadMonthlyEarnings (ProductivityDashboard.tsx:107:15)
-loadMonthlyEarnings @ ProductivityDashboard.tsx:139
-await in loadMonthlyEarnings
-(anonymous) @ ProductivityDashboard.tsx:148
-react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
-commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9182
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
-flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:97  GET http://localhost:8888/.netlify/functions/api/monthly-earnings 404 (Not Found)
+ProductivityDashboard.tsx:95 URL da requisição: /api/monthly-earnings?mesAno=2025-08
+ProductivityDashboard.tsx:97  GET http://localhost:8888/api/monthly-earnings?mesAno=2025-08 500 (Internal Server Error)
 loadMonthlyEarnings @ ProductivityDashboard.tsx:97
 (anonymous) @ ProductivityDashboard.tsx:153
 react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
@@ -204,10 +59,20 @@ commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
 recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
 commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
 flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:98 Response status: 404
-ProductivityDashboard.tsx:102 Erro na resposta da API: {status: 404, statusText: 'Not Found', body: '404 Not Found'}
+commitRootImpl @ react-dom_client.js?v=53fd2a99:11070
+commitRoot @ react-dom_client.js?v=53fd2a99:10989
+commitRootWhenReady @ react-dom_client.js?v=53fd2a99:10477
+performWorkOnRoot @ react-dom_client.js?v=53fd2a99:10421
+performSyncWorkOnRoot @ react-dom_client.js?v=53fd2a99:11448
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=53fd2a99:11356
+flushSyncWork$1 @ react-dom_client.js?v=53fd2a99:10533
+batchedUpdates$1 @ react-dom_client.js?v=53fd2a99:2543
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=53fd2a99:11683
+dispatchEvent @ react-dom_client.js?v=53fd2a99:14608
+dispatchDiscreteEvent @ react-dom_client.js?v=53fd2a99:14589
+handleMouseUp_ @ unknownUnderstand this error
+ProductivityDashboard.tsx:98 Response status: 500
+ProductivityDashboard.tsx:102 Erro na resposta da API: {status: 500, statusText: 'Internal Server Error', body: '{"success":false,"error":"column monthly_earnings_view.data does not exist"}'}body: "{\"success\":false,\"error\":\"column monthly_earnings_view.data does not exist\"}"status: 500statusText: "Internal Server Error"[[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()__proto__: (...)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()
 loadMonthlyEarnings @ ProductivityDashboard.tsx:102
 await in loadMonthlyEarnings
 (anonymous) @ ProductivityDashboard.tsx:153
@@ -255,9 +120,19 @@ commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
 recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
 commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
 flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:139 Erro na requisição de dados de ganhos mensais: Error: API Error: 404 - Not Found
+commitRootImpl @ react-dom_client.js?v=53fd2a99:11070
+commitRoot @ react-dom_client.js?v=53fd2a99:10989
+commitRootWhenReady @ react-dom_client.js?v=53fd2a99:10477
+performWorkOnRoot @ react-dom_client.js?v=53fd2a99:10421
+performSyncWorkOnRoot @ react-dom_client.js?v=53fd2a99:11448
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=53fd2a99:11356
+flushSyncWork$1 @ react-dom_client.js?v=53fd2a99:10533
+batchedUpdates$1 @ react-dom_client.js?v=53fd2a99:2543
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=53fd2a99:11683
+dispatchEvent @ react-dom_client.js?v=53fd2a99:14608
+dispatchDiscreteEvent @ react-dom_client.js?v=53fd2a99:14589
+handleMouseUp_ @ unknownUnderstand this error
+ProductivityDashboard.tsx:139 Erro na requisição de dados de ganhos mensais: Error: API Error: 500 - Internal Server Error
     at loadMonthlyEarnings (ProductivityDashboard.tsx:107:15)
 loadMonthlyEarnings @ ProductivityDashboard.tsx:139
 await in loadMonthlyEarnings
@@ -306,268 +181,20 @@ commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
 recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
 commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
 flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:97  GET http://localhost:8888/.netlify/functions/api/monthly-earnings 404 (Not Found)
-loadMonthlyEarnings @ ProductivityDashboard.tsx:97
-(anonymous) @ ProductivityDashboard.tsx:148
-react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
-commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9297
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-doubleInvokeEffectsOnFiber @ react-dom_client.js?v=53fd2a99:11282
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11253
-commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11290
-flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11126
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:98 Response status: 404
-ProductivityDashboard.tsx:102 Erro na resposta da API: {status: 404, statusText: 'Not Found', body: '404 Not Found'}
-loadMonthlyEarnings @ ProductivityDashboard.tsx:102
-await in loadMonthlyEarnings
-(anonymous) @ ProductivityDashboard.tsx:148
-react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
-commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9297
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-doubleInvokeEffectsOnFiber @ react-dom_client.js?v=53fd2a99:11282
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11253
-commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11290
-flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11126
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:139 Erro na requisição de dados de ganhos mensais: Error: API Error: 404 - Not Found
-    at loadMonthlyEarnings (ProductivityDashboard.tsx:107:15)
-loadMonthlyEarnings @ ProductivityDashboard.tsx:139
-await in loadMonthlyEarnings
-(anonymous) @ ProductivityDashboard.tsx:148
-react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
-commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9297
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-doubleInvokeEffectsOnFiber @ react-dom_client.js?v=53fd2a99:11282
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11253
-commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11290
-flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11126
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:97  GET http://localhost:8888/.netlify/functions/api/monthly-earnings 404 (Not Found)
-loadMonthlyEarnings @ ProductivityDashboard.tsx:97
-(anonymous) @ ProductivityDashboard.tsx:153
-react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
-commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9297
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-doubleInvokeEffectsOnFiber @ react-dom_client.js?v=53fd2a99:11282
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11253
-commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11290
-flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11126
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:98 Response status: 404
-ProductivityDashboard.tsx:102 Erro na resposta da API: {status: 404, statusText: 'Not Found', body: '404 Not Found'}
-loadMonthlyEarnings @ ProductivityDashboard.tsx:102
-await in loadMonthlyEarnings
-(anonymous) @ ProductivityDashboard.tsx:153
-react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
-commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9297
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
-recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
-reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
-doubleInvokeEffectsOnFiber @ react-dom_client.js?v=53fd2a99:11282
-runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
-recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11253
-commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11290
-flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11126
-(anonymous) @ react-dom_client.js?v=53fd2a99:11042
-performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
-ProductivityDashboard.tsx:139 Erro na requisição de dados de ganhos mensais: Error: API Error: 404 - Not Found
-    at loadMonthlyEarnings (ProductivityDashboard.tsx:107:15)
+commitRootImpl @ react-dom_client.js?v=53fd2a99:11070
+commitRoot @ react-dom_client.js?v=53fd2a99:10989
+commitRootWhenReady @ react-dom_client.js?v=53fd2a99:10477
+performWorkOnRoot @ react-dom_client.js?v=53fd2a99:10421
+performSyncWorkOnRoot @ react-dom_client.js?v=53fd2a99:11448
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=53fd2a99:11356
+flushSyncWork$1 @ react-dom_client.js?v=53fd2a99:10533
+batchedUpdates$1 @ react-dom_client.js?v=53fd2a99:2543
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=53fd2a99:11683
+dispatchEvent @ react-dom_client.js?v=53fd2a99:14608
+dispatchDiscreteEvent @ react-dom_client.js?v=53fd2a99:14589
+handleMouseUp_ @ unknownUnderstand this error
+ProductivityDashboard.tsx:88 Carregando dados de ganhos mensais...
+ProductivityDashboard.tsx:95 URL da requisição: /api/monthly-earnings
+ProductivityDashboard.tsx:98 Response status: 200
+ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
+ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso

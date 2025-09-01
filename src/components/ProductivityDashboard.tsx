@@ -113,19 +113,16 @@ const ProductivityDashboard: React.FC = () => {
       if (result.success && result.data && Array.isArray(result.data)) {
         // Processar dados para incluir cálculos necessários
         const processedData = result.data.map((item: any) => {
-          const valorKpi = item.bonusKpis || 0;
-          const valorAtividade = item.funcao === 'Ajudante de Armazém' ? (item.valorAtividades || 0) : 0;
-          const valorTarefas = item.funcao === 'Operador de Empilhadeira' ? (item.valorTarefas || 0) : 0;
-          const valorFinal = valorKpi + valorAtividade + valorTarefas;
+          const valorFinal = item.valor_final || 0;
           const percentualMeta = (valorFinal / META_VALOR) * 100;
-          
+
           return {
             ...item,
-            valorKpi,
-            valorAtividade,
-            valorTarefas,
+            valorKpi: item.valor_kpi || 0,
+            valorAtividade: item.valor_atividade || 0,
+            valorTarefas: item.valor_tarefas || 0,
             valorFinal,
-            percentualMeta
+            percentualMeta,
           };
         });
         

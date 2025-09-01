@@ -1,36 +1,23 @@
 import { Hono } from 'hono';
-import { createClient } from '@supabase/supabase-js';
-import { cors } from 'hono/cors';
+import { getSupabase, Env } from '../utils';
 
-const app = new Hono();
+const monthlyEarningsRoutes = new Hono<{ Bindings: Env }>();
 
-app.use('*', cors());
-
-app.get('/api/monthly-earnings', async (c) => {
+monthlyEarningsRoutes.get('/monthly-earnings', async (c) => {
   const { funcao, mesAno } = c.req.query();
-  const supabaseUrl = c.env.SUPABASE_URL;
-  const supabaseAnonKey = c.env.SUPABASE_ANON_KEY;
+  const supabase = getSupabase(c.env);
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return c.json({ success: false, error: 'Supabase credentials not provided' }, 500);
-  }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   try {
-    let query = supabase.from('monthly_earnings_view').select('*');
+    let query = supabase.from('ganhos_mensais_com_usuarios').select('*');
 
     if (funcao) {
       query = query.eq('funcao', funcao);
     }
 
     if (mesAno) {
-      const [year, month] = mesAno.split('-');
-      const startDate = `${year}-${month}-01T00:00:00.000Z`;
-      const endDate = new Date(parseInt(year), parseInt(month), 0);
-      const endOfMonth = `${year}-${month}-${endDate.getDate()}T23:59:59.999Z`;
-      
-      query = query.gte('data', startDate).lte('data', endOfMonth);
+      query = query.eq('mes_ano', mesAno);
     }
 
     const { data, error } = await query;
@@ -46,4 +33,4 @@ app.get('/api/monthly-earnings', async (c) => {
   }
 });
 
-export default app;
+export default monthlyEarningsRoutes;

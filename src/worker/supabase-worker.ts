@@ -25,7 +25,7 @@ app.route('/api', kpiRoutes);
 app.route('/api', calculatorRoutes);
 app.route('/api', lancamentoRoutes);
 app.route('/api/wms-tasks', wmsTaskRoutes);
-app.route('/api/monthly-earnings', monthlyEarningsRoutes);
+app.route('/api', monthlyEarningsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (c) => {

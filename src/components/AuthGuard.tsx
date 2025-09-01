@@ -28,9 +28,22 @@ function LoginForm() {
     return value;
   };
 
+  const formatDate = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 8) {
+      return numbers.replace(/(\d{2})(\d{2})(\d{4})/, '$1/$2/$3');
+    }
+    return value;
+  };
+
   const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCPF(e.target.value);
     setCpf(formatted);
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatDate(e.target.value);
+    setDataNascimento(formatted);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,9 +100,11 @@ function LoginForm() {
                 Data de Nascimento
               </label>
               <Input
-                type="date"
+                type="text"
                 value={dataNascimento}
-                onChange={(e) => setDataNascimento(e.target.value)}
+                onChange={handleDateChange}
+                placeholder="dd/mm/aaaa"
+                maxLength={10}
                 required
               />
             </div>

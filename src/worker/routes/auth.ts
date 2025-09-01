@@ -5,16 +5,36 @@ import { getSupabase, Env } from '../utils';
 
 const authRoutes = new Hono<{ Bindings: Env }>();
 
+// Helper function to format date from DD/MM/YYYY to YYYY-MM-DD
+function formatDateToISO(dateStr: string): string {
+  // If already in ISO format (YYYY-MM-DD), return as is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  // If in DD/MM/YYYY format, convert to YYYY-MM-DD
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    const [day, month, year] = dateStr.split('/');
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  // Return original if format is not recognized
+  return dateStr;
+}
+
 // POST /api/auth/login
 authRoutes.post('/login', zValidator('json', LoginSchema), async (c) => {
   const supabase = getSupabase(c.env);
   const { cpf, data_nascimento } = c.req.valid('json');
 
+  // Format date to ISO format for database query
+  const formattedDate = formatDateToISO(data_nascimento);
+
   const { data: user, error } = await supabase
     .from('usuarios')
     .select('*')
     .eq('cpf', cpf)
-    .eq('data_nascimento', data_nascimento)
+    .eq('data_nascimento', formattedDate)
     .eq('status_usuario', 'ativo')
     .single();
 

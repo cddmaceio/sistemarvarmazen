@@ -2053,14 +2053,14 @@ var Hono = class {
   }
   #notFoundHandler = notFoundHandler;
   errorHandler = errorHandler;
-  route(path, app3) {
+  route(path, app2) {
     const subApp = this.basePath(path);
-    app3.routes.map((r) => {
+    app2.routes.map((r) => {
       let handler;
-      if (app3.errorHandler === errorHandler) {
+      if (app2.errorHandler === errorHandler) {
         handler = r.handler;
       } else {
-        handler = async (c, next) => (await compose([], app3.errorHandler)(c, () => r.handler(c, next))).res;
+        handler = async (c, next) => (await compose([], app2.errorHandler)(c, () => r.handler(c, next))).res;
         handler[COMPOSED_HANDLER] = r.handler;
       }
       subApp.#addRoute(r.method, r.path, handler);
@@ -2178,9 +2178,9 @@ var Hono = class {
   fetch = (request, ...rest) => {
     return this.#dispatch(request, rest[1], rest[0], request.method);
   };
-  request = (input, requestInit, Env8, executionCtx) => {
+  request = (input, requestInit, Env9, executionCtx) => {
     if (input instanceof Request) {
-      return this.fetch(requestInit ? new Request(input, requestInit) : input, Env8, executionCtx);
+      return this.fetch(requestInit ? new Request(input, requestInit) : input, Env9, executionCtx);
     }
     input = input.toString();
     return this.fetch(
@@ -2188,7 +2188,7 @@ var Hono = class {
         /^https?:\/\//.test(input) ? input : `http://localhost${mergePath("/", input)}`,
         requestInit
       ),
-      Env8,
+      Env9,
       executionCtx
     );
   };
@@ -13854,10 +13854,21 @@ var getSupabase = (env) => {
 
 // src/worker/routes/auth.ts
 var authRoutes = new Hono2();
+function formatDateToISO(dateStr) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    const [day, month, year] = dateStr.split("/");
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+  return dateStr;
+}
 authRoutes.post("/login", zValidator("json", LoginSchema), async (c) => {
   const supabase = getSupabase(c.env);
   const { cpf, data_nascimento } = c.req.valid("json");
-  const { data: user, error } = await supabase.from("usuarios").select("*").eq("cpf", cpf).eq("data_nascimento", data_nascimento).eq("status_usuario", "ativo").single();
+  const formattedDate = formatDateToISO(data_nascimento);
+  const { data: user, error } = await supabase.from("usuarios").select("*").eq("cpf", cpf).eq("data_nascimento", formattedDate).eq("status_usuario", "ativo").single();
   if (error || !user) {
     return c.json({ message: "CPF ou data de nascimento incorretos" }, 401);
   }
@@ -14635,27 +14646,17 @@ wmsTaskRoutes.post("/", zValidator("json", WMSTaskSchema), async (c) => {
 var wms_tasks_default = wmsTaskRoutes;
 
 // src/worker/routes/monthly-earnings.ts
-var app = new Hono2();
-app.use("*", cors());
-app.get("/monthly-earnings", async (c) => {
+var monthlyEarningsRoutes = new Hono2();
+monthlyEarningsRoutes.get("/monthly-earnings", async (c) => {
   const { funcao, mesAno } = c.req.query();
-  const supabaseUrl = c.env.SUPABASE_URL;
-  const supabaseAnonKey = c.env.SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return c.json({ success: false, error: "Supabase credentials not provided" }, 500);
-  }
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const supabase = getSupabase(c.env);
   try {
-    let query = supabase.from("monthly_earnings_view").select("*");
+    let query = supabase.from("ganhos_mensais_com_usuarios").select("*");
     if (funcao) {
       query = query.eq("funcao", funcao);
     }
     if (mesAno) {
-      const [year, month] = mesAno.split("-");
-      const startDate = `${year}-${month}-01T00:00:00.000Z`;
-      const endDate = new Date(parseInt(year), parseInt(month), 0);
-      const endOfMonth = `${year}-${month}-${endDate.getDate()}T23:59:59.999Z`;
-      query = query.gte("data", startDate).lte("data", endOfMonth);
+      query = query.eq("mes_ano", mesAno);
     }
     const { data, error } = await query;
     if (error) {
@@ -14667,23 +14668,23 @@ app.get("/monthly-earnings", async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
-var monthly_earnings_default = app;
+var monthly_earnings_default = monthlyEarningsRoutes;
 
 // src/worker/supabase-worker.ts
-var app2 = new Hono2();
-app2.use("*", cors());
-app2.route("/api/auth", auth_default);
-app2.route("/api/usuarios", users_default);
-app2.route("/api", activities_default);
-app2.route("/api", kpis_default);
-app2.route("/api", calculator_default);
-app2.route("/api", lancamentos_default);
-app2.route("/api/wms-tasks", wms_tasks_default);
-app2.route("/api/monthly-earnings", monthly_earnings_default);
-app2.get("/api/health", (c) => {
+var app = new Hono2();
+app.use("*", cors());
+app.route("/api/auth", auth_default);
+app.route("/api/usuarios", users_default);
+app.route("/api", activities_default);
+app.route("/api", kpis_default);
+app.route("/api", calculator_default);
+app.route("/api", lancamentos_default);
+app.route("/api/wms-tasks", wms_tasks_default);
+app.route("/api", monthly_earnings_default);
+app.get("/api/health", (c) => {
   return c.json({ status: "ok", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
 });
-var supabase_worker_default = app2;
+var supabase_worker_default = app;
 export {
   supabase_worker_default as default
 };
