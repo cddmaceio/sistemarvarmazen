@@ -1106,7 +1106,7 @@ export default function DashboardCollaborator() {
                                     📋 Total de Tarefas: {atividade.tarefasValidas} tarefas
                                   </p>
                                   <p className="text-xs sm:text-sm text-red-600">
-                                    💰 Valor Bruto: R$ {(atividade.valorTarefas || 0).toFixed(2)}
+                                    💰 Valor Bruto: R$ {(atividade.valorBrutoAtividades || 0).toFixed(2)}
                                   </p>
                                   <p className="text-xs sm:text-sm text-green-600">
                                     💰 Valor Líquido (÷2): R$ {(atividade.totalGanho || 0).toFixed(2)}
