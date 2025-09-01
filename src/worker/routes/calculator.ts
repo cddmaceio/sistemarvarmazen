@@ -51,6 +51,11 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
     let valor_bruto_atividades = 0;
     if (dbFuncao === 'Ajudante de Armazém' && input.multiple_activities && input.multiple_activities.length > 0) {
       const activities = input.multiple_activities;
+      let total_quantidade = 0;
+      let total_tempo = 0;
+      let unidades_medida_set = new Set<string>();
+      let niveis_atingidos: string[] = [];
+      
       for (const act of activities) {
         if (act.nome_atividade && act.quantidade_produzida && act.tempo_horas) {
           const { data: activityLevels, error: activityError } = await supabase
@@ -80,9 +85,15 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
             const valor_bruto_atividade = act.quantidade_produzida * parseFloat(selectedActivity.valor_atividade);
             valor_bruto_atividades += valor_bruto_atividade;
             
-            // Apply 50% rule: subtotal = valor_bruto / 2
+            // Apply correct formula: quantidade_produzida * valor_atividade / 2
             const valor_final = valor_bruto_atividade / 2;
             subtotal_atividades += valor_final;
+            
+            // Accumulate data for overall metrics
+            total_quantidade += act.quantidade_produzida;
+            total_tempo += act.tempo_horas;
+            unidades_medida_set.add(selectedActivity.unidade_medida);
+            niveis_atingidos.push(selectedActivity.nivel_atividade);
             
             atividades_detalhes.push(
               `${selectedActivity.nome_atividade}: ${act.quantidade_produzida} ${selectedActivity.unidade_medida} em ${act.tempo_horas}h (${selectedActivity.nivel_atividade})`
@@ -90,6 +101,18 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
           }
         }
       }
+      
+      // Set overall metrics for multiple activities
+      if (total_tempo > 0) {
+        produtividade_alcancada = total_quantidade / total_tempo;
+      }
+      
+      // Set unidade_medida (use the first one if multiple, or combine them)
+      const unidades_array = Array.from(unidades_medida_set);
+      unidade_medida = unidades_array.length === 1 ? unidades_array[0] : unidades_array.join(', ');
+      
+      // Set nivel_atingido (combine all levels achieved)
+      nivel_atingido = niveis_atingidos.length > 0 ? niveis_atingidos.join(', ') : undefined;
     }
     // Calculate single activity if multiple are not present
     else if (input.nome_atividade && input.quantidade_produzida && input.tempo_horas) {
@@ -118,13 +141,22 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
         }
         
         nivel_atingido = selectedActivity.nivel_atividade;
-        subtotal_atividades = parseFloat(selectedActivity.valor_atividade);
+        // Apply correct formula: quantidade_produzida * valor_atividade / 2
+        const valor_bruto_atividade = input.quantidade_produzida * parseFloat(selectedActivity.valor_atividade);
+        subtotal_atividades = valor_bruto_atividade / 2;
         atividades_detalhes.push(`${selectedActivity.nome_atividade}: ${input.quantidade_produzida} ${selectedActivity.unidade_medida} em ${input.tempo_horas}h (${selectedActivity.nivel_atividade})`);
       }
     }
 
-    // Handle WMS tasks for Operador de Empilhadeira
-    if (input.funcao === 'Operador de Empilhadeira' && input.nome_operador && input.data_lancamento) {
+    // Handle valid tasks count for Operador de Empilhadeira (from uploaded file)
+    if (input.funcao === 'Operador de Empilhadeira' && input.valid_tasks_count !== undefined && input.valid_tasks_count > 0) {
+      tarefas_validas = input.valid_tasks_count;
+      valor_tarefas = (tarefas_validas * 0.093) / 2; // Nova fórmula: R$ 0,093 por tarefa / 2
+      subtotal_atividades += valor_tarefas;
+      atividades_detalhes.push(`Tarefas Válidas: ${tarefas_validas} tarefas processadas`);
+    }
+    // Handle WMS tasks for Operador de Empilhadeira (from database)
+    else if (input.funcao === 'Operador de Empilhadeira' && input.nome_operador && input.data_lancamento) {
       const { data: tarefas, error: tarefasError } = await supabase
         .from('tarefas_wms')
         .select('*')
@@ -134,32 +166,27 @@ calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), a
 
       if (!tarefasError && tarefas) {
         tarefas_validas = tarefas.length;
-        valor_tarefas = tarefas_validas * 2.5;
-        subtotal_atividades += valor_tarefas; // Fix: changed from = to +=
+        valor_tarefas = (tarefas_validas * 0.093) / 2; // Nova fórmula: R$ 0,093 por tarefa / 2
+        subtotal_atividades += valor_tarefas;
         atividades_detalhes.push(`Tarefas WMS: ${tarefas_validas} tarefas concluídas`);
       }
     }
 
-    // Calculate KPIs
+    // Calculate KPIs bonus: R$ 3,00 per selected KPI (maximum 2)
     if (input.kpis_atingidos && input.kpis_atingidos.length > 0) {
-      const { data: kpis } = await supabase
-        .from('kpis')
-        .select('*')
-        .eq('funcao_kpi', dbFuncao)
-        .in('turno_kpi', [dbTurno, 'Geral'])
-        .in('nome_kpi', input.kpis_atingidos);
-
-      if (kpis) {
-        for (const kpi of kpis) {
-          bonus_kpis += parseFloat(kpi.peso_kpi);
-          kpis_atingidos_resultado.push(kpi.nome_kpi);
-        }
+      // Limit to maximum 2 KPIs
+      const kpisLimitados = input.kpis_atingidos.slice(0, 2);
+      
+      for (const kpiNome of kpisLimitados) {
+        // Each selected KPI is worth R$ 3,00
+        bonus_kpis += 3.00;
+        kpis_atingidos_resultado.push(kpiNome);
       }
     }
     
-    // Final calculation
+    // Final calculation: KPIs + atividades (já calculadas com 50%) + extras
     const atividades_extras = input.input_adicional || 0;
-    const remuneracao_total = subtotal_atividades + bonus_kpis + atividades_extras;
+    const remuneracao_total = bonus_kpis + subtotal_atividades + atividades_extras;
     
     const result: any = {
       subtotalAtividades: subtotal_atividades,

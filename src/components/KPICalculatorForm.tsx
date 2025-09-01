@@ -69,7 +69,7 @@ export default function KPICalculatorForm({ onCalculate, disabled }: KPICalculat
       console.log('Fetching KPIs for:', formData.funcao, formData.turno);
       fetchAvailableKPIs(formData.funcao, formData.turno);
     }
-  }, [formData.funcao, formData.turno, userFunction, user?.funcao, fetchAvailableKPIs]);
+  }, [formData.funcao, formData.turno, userFunction, user?.funcao]);
 
   // Check KPI limit when user or date changes
   useEffect(() => {

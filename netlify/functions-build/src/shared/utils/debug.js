@@ -1,15 +1,19 @@
+"use strict";
 /**
  * Utilitário de debug compartilhado para backend e frontend
  * Permite logs condicionais baseados em variáveis de ambiente
  */
-export var LogLevel;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createComponentLogger = exports.createDbLogger = exports.createApiLogger = exports.debugLogger = exports.LogLevel = void 0;
+exports.debugMethod = debugMethod;
+var LogLevel;
 (function (LogLevel) {
     LogLevel[LogLevel["ERROR"] = 0] = "ERROR";
     LogLevel[LogLevel["WARN"] = 1] = "WARN";
     LogLevel[LogLevel["INFO"] = 2] = "INFO";
     LogLevel[LogLevel["DEBUG"] = 3] = "DEBUG";
     LogLevel[LogLevel["TRACE"] = 4] = "TRACE";
-})(LogLevel || (LogLevel = {}));
+})(LogLevel || (exports.LogLevel = LogLevel = {}));
 class DebugLogger {
     config;
     constructor(config = {}) {
@@ -123,16 +127,19 @@ class DebugLogger {
     }
 }
 // Instância global padrão
-export const debugLogger = new DebugLogger();
+exports.debugLogger = new DebugLogger();
 // Factory functions para contextos específicos
-export const createApiLogger = () => debugLogger.createContext('API');
-export const createDbLogger = () => debugLogger.createContext('DB');
-export const createComponentLogger = (componentName) => debugLogger.createContext(`COMPONENT:${componentName}`);
+const createApiLogger = () => exports.debugLogger.createContext('API');
+exports.createApiLogger = createApiLogger;
+const createDbLogger = () => exports.debugLogger.createContext('DB');
+exports.createDbLogger = createDbLogger;
+const createComponentLogger = (componentName) => exports.debugLogger.createContext(`COMPONENT:${componentName}`);
+exports.createComponentLogger = createComponentLogger;
 // Decorador para métodos (opcional)
-export function debugMethod(target, propertyName, descriptor) {
+function debugMethod(target, propertyName, descriptor) {
     const method = descriptor.value;
     descriptor.value = function (...args) {
-        const logger = debugLogger.createContext(`${target.constructor.name}.${propertyName}`);
+        const logger = exports.debugLogger.createContext(`${target.constructor.name}.${propertyName}`);
         logger.trace('Method called', { args });
         const startTime = Date.now();
         try {
@@ -162,4 +169,4 @@ export function debugMethod(target, propertyName, descriptor) {
     };
     return descriptor;
 }
-export default debugLogger;
+exports.default = exports.debugLogger;

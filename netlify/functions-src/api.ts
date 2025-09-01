@@ -100,4 +100,4 @@ const handler = async (event: any, context: any) => {
   }
 };
 
-export { handler };
+module.exports = { handler };

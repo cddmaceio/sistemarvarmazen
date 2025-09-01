@@ -6,7 +6,7 @@ import { Input } from '@/components/Input';
 import { Select } from '@/components/Select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/Card';
 import { LancamentoType, CalculatorInputType, CalculatorResultType } from '@/shared/types';
-import { useKPIs, useActivityNames, useFunctions, useCalculator } from '@/hooks/useApi';
+import { useAvailableKPIs, useActivityNames, useFunctions, useCalculator } from '@/hooks/useApi';
 import { useAuth } from '@/hooks/useAuth';
 import { TURNO_UI_TO_DB } from '@/shared/utils/encoding';
 
@@ -20,7 +20,7 @@ interface EditLancamentoModalProps {
 export default function EditLancamentoModal({ open, onClose, lancamento, onSave }: EditLancamentoModalProps) {
   const { functions } = useFunctions();
   const { activityNames } = useActivityNames();
-  const { kpis } = useKPIs();
+  const { kpis: availableKPIs, fetchAvailableKPIs } = useAvailableKPIs();
   const { calculate, result, loading: calculating } = useCalculator();
   const { userFunction, userTurno } = useAuth();
   
@@ -74,13 +74,14 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
       setMultipleActivities(activitiesForEditing);
       setEditObservacoes('');
       setHasCalculated(false);
+      
+      // Buscar KPIs disponíveis para a função e turno do usuário original do lançamento
+      fetchAvailableKPIs(lancamento.funcao, lancamento.turno);
     }
-  }, [lancamento, open, userFunction, userTurno]);
+  }, [lancamento, open]);
 
-  const availableKPIs = kpis.filter(kpi => 
-    kpi.funcao_kpi === formData.funcao && 
-    (kpi.turno_kpi === formData.turno || kpi.turno_kpi === 'Geral')
-  );
+  // Os KPIs já estão filtrados pela API baseados na função e turno do usuário original
+  const kpisForDisplay = availableKPIs || [];
 
   const handleKPIToggle = (kpiName: string) => {
     setFormData(prev => ({
@@ -163,6 +164,7 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
     const validActivities = multipleActivities.filter(act => act.nome_atividade && act.nome_atividade.trim() !== '');
     const calculatorInput = {
       ...formData,
+      turno: (TURNO_UI_TO_DB[formData.turno] || formData.turno) as "Manhã" | "Tarde" | "Noite" | "Manha",
       multiple_activities: hasMultipleActivities && formData.funcao !== 'Operador de Empilhadeira' ? validActivities : undefined,
     };
 
@@ -440,16 +442,16 @@ export default function EditLancamentoModal({ open, onClose, lancamento, onSave 
           )}
 
           {/* KPIs Section */}
-          {kpis.length > 0 && formData.funcao && (
+          {kpisForDisplay.length > 0 && formData.funcao && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">KPIs Atingidos (Editável)</CardTitle>
                 <p className="text-xs text-gray-600 mt-1">Selecione ou desselecione os KPIs que foram atingidos</p>
               </CardHeader>
               <CardContent>
-                {availableKPIs.length > 0 ? (
+                {kpisForDisplay.length > 0 ? (
                   <div className="space-y-3">
-                    {availableKPIs.map((kpi) => (
+                    {kpisForDisplay.map((kpi) => (
                       <label key={kpi.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                         <input
                           type="checkbox"

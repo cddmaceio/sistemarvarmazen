@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { CreateLancamentoSchema } from '../../shared/types';
+import { z } from 'zod';
+import { CreateLancamentoSchema, AdminValidationSchema, CalculatorInputSchema, CalculatorResultSchema } from '../../shared/types';
 import { getSupabase, Env } from '../utils';
 
 const lancamentoRoutes = new Hono<{ Bindings: Env }>();
@@ -9,10 +10,85 @@ const lancamentoRoutes = new Hono<{ Bindings: Env }>();
 lancamentoRoutes.get('/lancamentos', async (c) => {
   const supabase = getSupabase(c.env);
   
+  // Get query parameters
+  const user_id = c.req.query('user_id');
+  const status = c.req.query('status');
+  
+  // Build query with filters
+  let query = supabase
+    .from('lancamentos_produtividade')
+    .select('*');
+  
+  // Apply filters if provided
+  if (user_id) {
+    query = query.eq('user_id', parseInt(user_id));
+  }
+  
+  if (status) {
+    query = query.eq('status', status);
+  }
+  
+  // Order by creation date
+  query = query.order('created_at', { ascending: false });
+  
+  const { data: lancamentos, error } = await query;
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(lancamentos || []);
+});
+
+// GET /api/lancamentos/pendentes
+lancamentoRoutes.get('/lancamentos/pendentes', async (c) => {
+  const supabase = getSupabase(c.env);
+  
   const { data: lancamentos, error } = await supabase
     .from('lancamentos_produtividade')
     .select('*')
+    .eq('status', 'pendente')
     .order('created_at', { ascending: false });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(lancamentos || []);
+});
+
+// GET /api/lancamentos/todos
+lancamentoRoutes.get('/lancamentos/todos', async (c) => {
+  const supabase = getSupabase(c.env);
+  
+  // Get query parameters
+  const user_id = c.req.query('user_id');
+  const status_filter = c.req.query('status_filter'); // Novo parâmetro para filtrar status
+  
+  // Build query with filters
+  let query = supabase
+    .from('lancamentos_produtividade')
+    .select('*');
+  
+  // Apply user filter if provided
+  if (user_id) {
+    query = query.eq('user_id', parseInt(user_id));
+    
+    // Se user_id for fornecido, retornar TODOS os lançamentos por padrão
+    // A menos que status_filter seja especificado
+    if (status_filter === 'pending_rejected') {
+      query = query.in('status', ['pendente', 'rejeitado']);
+    }
+    // Se não especificar status_filter, retorna todos os status
+  } else {
+    // Se não tiver user_id, manter comportamento original (apenas pendentes e rejeitados)
+    query = query.in('status', ['pendente', 'rejeitado']);
+  }
+  
+  // Order by creation date
+  query = query.order('created_at', { ascending: false });
+  
+  const { data: lancamentos, error } = await query;
 
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -87,6 +163,39 @@ lancamentoRoutes.post('/lancamentos', zValidator('json', CreateLancamentoSchema)
     }
   }
 
+
+  // Validação específica para Operador de Empilhadeira
+  if (userData.funcao === 'Operador de Empilhadeira') {
+    // Verificar se há tarefas válidas ou se é apenas KPI
+    const hasValidTasks = calculator_data.valid_tasks_count && calculator_data.valid_tasks_count > 0;
+    const hasKpisOnly = calculator_data.kpis_atingidos && calculator_data.kpis_atingidos.length > 0;
+    
+    // Se não tem tarefas válidas mas tem KPIs, bloquear o lançamento
+    if (!hasValidTasks && hasKpisOnly) {
+      return c.json({
+        error: 'Lançamento não permitido',
+        message: 'Operadores de empilhadeira não podem fazer lançamentos apenas com KPIs. É necessário ter pelo menos uma tarefa válida.',
+        details: {
+          valid_tasks_count: calculator_data.valid_tasks_count || 0,
+          kpis_count: calculator_data.kpis_atingidos?.length || 0,
+          funcao: userData.funcao
+        }
+      }, 400);
+    }
+    
+    // Se não tem tarefas válidas e não tem KPIs, também bloquear
+    if (!hasValidTasks && !hasKpisOnly) {
+      return c.json({
+        error: 'Lançamento inválido',
+        message: 'Operadores de empilhadeira devem ter pelo menos uma tarefa válida para fazer lançamentos.',
+        details: {
+          valid_tasks_count: calculator_data.valid_tasks_count || 0,
+          funcao: userData.funcao
+        }
+      }, 400);
+    }
+  }
+
   // 3. Prepare the data for insertion
   const extractedTurno = calculator_data.turno || userData.turno;
   
@@ -123,13 +232,17 @@ lancamentoRoutes.post('/lancamentos', zValidator('json', CreateLancamentoSchema)
     subtotal_atividades: calculator_result.subtotalAtividades,
     bonus_kpis: calculator_result.bonusKpis,
     remuneracao_total: calculator_result.remuneracaoTotal,
-    produtividade_alcancada: calculator_result.produtividade_alcancada,
-    nivel_atingido: calculator_result.nivel_atingido,
-    unidade_medida: calculator_result.unidade_medida,
-    atividades_detalhes: calculator_result.atividades_detalhes ? JSON.stringify(calculator_result.atividades_detalhes) : undefined,
-    tarefas_validas: calculator_result.tarefas_validas,
-    valor_tarefas: calculator_result.valor_tarefas,
-    valor_bruto_atividades: calculator_result.valor_bruto_atividades,
+    produtividade_alcancada: calculator_result.produtividadeAlcancada,
+    nivel_atingido: calculator_result.nivelAtingido,
+    unidade_medida: calculator_result.unidadeMedida,
+    atividades_detalhes: calculator_result.atividadesDetalhes ? JSON.stringify(calculator_result.atividadesDetalhes) : undefined,
+    tarefas_validas: calculator_result.tarefasValidas,
+    valor_tarefas: calculator_result.valorTarefas,
+    valor_bruto_atividades: calculator_result.valorBrutoAtividades,
+    
+    // Store original data for editing purposes
+    calculator_data: JSON.stringify(calculator_data),
+    calculator_result: JSON.stringify(calculator_result),
     
     // Default status
     status: 'pendente',
@@ -187,19 +300,142 @@ lancamentoRoutes.post('/lancamentos', zValidator('json', CreateLancamentoSchema)
   return c.json(lancamento, 201);
 });
 
-// PUT /api/lancamentos/:id
-lancamentoRoutes.put('/lancamentos/:id', async (c) => {
+// POST /api/lancamentos/:id/validar
+lancamentoRoutes.post('/lancamentos/:id/validar', zValidator('json', AdminValidationSchema), async (c) => {
   const supabase = getSupabase(c.env);
   const id = parseInt(c.req.param('id'));
-  const { status, observacoes } = await c.req.json();
+  const { acao, observacoes, admin_user_id } = c.req.valid('json');
+
+  // Determine the new status based on action
+  let newStatus: string;
+  switch (acao) {
+    case 'aprovar':
+      newStatus = 'aprovado';
+      break;
+    case 'reprovar':
+      newStatus = 'reprovado';
+      break;
+    case 'editar':
+      newStatus = 'pendente'; // Keep as pending for editing
+      break;
+    default:
+      return c.json({ error: 'Ação inválida' }, 400);
+  }
+
+  // Update the lancamento
+  const updateData: any = {
+    status: newStatus,
+    observacoes,
+    updated_at: new Date().toISOString()
+  };
+
+  // Add admin tracking if provided
+  if (admin_user_id) {
+    updateData.editado_por_admin = admin_user_id.toString();
+    updateData.data_edicao = new Date().toISOString();
+  }
 
   const { data: lancamento, error } = await supabase
     .from('lancamentos_produtividade')
-    .update({
-      status,
-      observacoes,
-      updated_at: new Date().toISOString()
-    })
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error validating lancamento:', error);
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(lancamento);
+});
+
+// PUT /api/lancamentos/:id/edit - Edit lancamento data and recalculate
+lancamentoRoutes.put('/lancamentos/:id/edit', zValidator('json', z.object({
+  calculator_data: CalculatorInputSchema,
+  calculator_result: CalculatorResultSchema,
+  editado_por_admin: z.string(),
+  observacoes: z.string().optional()
+})), async (c) => {
+  const supabase = getSupabase(c.env);
+  const id = parseInt(c.req.param('id'));
+  const { calculator_data, calculator_result, editado_por_admin, observacoes } = c.req.valid('json');
+
+  // Get current lancamento to preserve original data
+  const { data: currentLancamento, error: fetchError } = await supabase
+    .from('lancamentos_produtividade')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (fetchError || !currentLancamento) {
+    return c.json({ error: 'Lançamento não encontrado' }, 404);
+  }
+
+  // Prepare update data with audit fields
+  const updateData = {
+    // Update calculator data and results
+    calculator_data: JSON.stringify(calculator_data),
+    calculator_result: JSON.stringify(calculator_result),
+    
+    // Update derived fields from calculator_data
+    nome_atividade: calculator_data.nome_atividade || null,
+    quantidade_produzida: calculator_data.quantidade_produzida || 0,
+    tempo_horas: calculator_data.tempo_horas || 0,
+    input_adicional: calculator_data.input_adicional || 0,
+    kpis_atingidos: JSON.stringify(calculator_data.kpis_atingidos || []),
+    multiple_activities: JSON.stringify(calculator_data.multiple_activities || []),
+    valid_tasks_count: calculator_data.valid_tasks_count || 0,
+    
+    // Update derived fields from calculator_result
+    subtotal_atividades: calculator_result.subtotalAtividades || 0,
+    bonus_kpis: calculator_result.bonusKpis || 0,
+    remuneracao_total: calculator_result.remuneracaoTotal || 0,
+    produtividade_alcancada: calculator_result.produtividadeAlcancada || null,
+    nivel_atingido: calculator_result.nivelAtingido || null,
+    unidade_medida: calculator_result.unidadeMedida || null,
+    atividades_detalhes: calculator_result.atividadesDetalhes ? JSON.stringify(calculator_result.atividadesDetalhes) : null,
+    tarefas_validas: calculator_result.tarefasValidas || null,
+    valor_tarefas: calculator_result.valorTarefas || null,
+    valor_bruto_atividades: calculator_result.valorBrutoAtividades || null,
+    
+    // Audit fields
+    editado_por_admin: editado_por_admin,
+    data_edicao: new Date().toISOString(),
+    observacoes: observacoes || currentLancamento.observacoes,
+    
+    // Keep status as pending for re-validation
+    status: 'pendente',
+    updated_at: new Date().toISOString()
+  };
+
+  const { data: lancamento, error } = await supabase
+    .from('lancamentos_produtividade')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating lancamento:', error);
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(lancamento);
+});
+
+// PUT /api/lancamentos/:id - Update lancamento with any fields
+lancamentoRoutes.put('/lancamentos/:id', async (c) => {
+  const supabase = getSupabase(c.env);
+  const id = parseInt(c.req.param('id'));
+  const updateData = await c.req.json();
+
+  // Always update the timestamp
+  updateData.updated_at = new Date().toISOString();
+
+  const { data: lancamento, error } = await supabase
+    .from('lancamentos_produtividade')
+    .update(updateData)
     .eq('id', id)
     .select()
     .single();

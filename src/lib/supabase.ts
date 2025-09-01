@@ -300,29 +300,25 @@ export const supabaseQueries = {
       unidade_medida = selectedActivity.unidade_medida
     }
     
-    // Get applicable KPIs and calculate bonus
+    // Calculate KPIs bonus: R$ 3,00 per selected KPI (maximum 2)
     let bonus_kpis = 0
     const kpis_atingidos_resultado: string[] = []
     
     if (input.kpis_atingidos && input.kpis_atingidos.length > 0) {
-      const { data: kpis } = await supabase
-        .from('kpis')
-        .select('*')
-        .eq('funcao_kpi', input.funcao)
-        .in('turno_kpi', [input.turno, 'Geral'])
-        .in('nome_kpi', input.kpis_atingidos)
+      // Limit to maximum 2 KPIs
+      const kpisLimitados = input.kpis_atingidos.slice(0, 2)
       
-      if (kpis) {
-        for (const kpi of kpis) {
-          bonus_kpis += parseFloat(kpi.peso_kpi)
-          kpis_atingidos_resultado.push(kpi.nome_kpi)
-        }
+      for (const kpiNome of kpisLimitados) {
+        // Each selected KPI is worth R$ 3,00
+        bonus_kpis += 3.00
+        kpis_atingidos_resultado.push(kpiNome)
       }
     }
     
-    // Final calculation: atividades/2 + kpi1 + kpi2 + extras
+    // Final calculation: KPIs + 50% das atividades + extras
+    const valor_atividades_50_porcento = subtotal_atividades * 0.5
     const atividades_extras = input.input_adicional || 0
-    const remuneracao_total = subtotal_atividades + bonus_kpis + atividades_extras
+    const remuneracao_total = bonus_kpis + valor_atividades_50_porcento + atividades_extras
     
     const result: any = {
       subtotalAtividades: subtotal_atividades,

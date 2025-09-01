@@ -18,8 +18,9 @@ kpiRoutes.get('/kpis', async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const kpiNames = kpis?.map(kpi => kpi.nome_kpi) || [];
-  return c.json({ kpisAtingidos: kpiNames });
+  // Return complete KPI objects instead of just names
+  const kpiObjects = kpis || [];
+  return c.json({ kpisAtingidos: kpiObjects });
 });
 
 // GET /api/functions
@@ -64,8 +65,41 @@ kpiRoutes.get('/kpis/available', async (c) => {
     return c.json({ error: 'Erro ao buscar KPIs disponíveis' }, 500);
   }
 
-  const kpiNames = kpis?.map(kpi => kpi.nome_kpi) || [];
-  return c.json({ kpisAtingidos: kpiNames });
+  const kpiObjects = kpis || [];
+  return c.json({ kpisAtingidos: kpiObjects });
+});
+
+// POST /api/kpis/check-limit - Check if user can launch KPIs for a specific date
+kpiRoutes.post('/kpis/check-limit', async (c) => {
+  const supabase = getSupabase(c.env);
+  const body = await c.req.json();
+  const { user_id, data_lancamento } = body;
+
+  if (!user_id || !data_lancamento) {
+    return c.json({ error: 'user_id e data_lancamento são obrigatórios' }, 400);
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('lancamentos_produtividade')
+      .select('id')
+      .eq('user_id', user_id)
+      .eq('data_lancamento', data_lancamento)
+      .neq('status', 'reprovado') // Exclude reproved launches to allow relaunch
+      .limit(1);
+
+    if (error) {
+      console.error('Erro ao verificar limite de KPI:', error);
+      return c.json({ error: 'Erro ao verificar limite de KPI' }, 500);
+    }
+
+    // Return true if there's already a launch (limit reached)
+    const limitReached = data && data.length > 0;
+    return c.json({ limitReached });
+  } catch (error) {
+    console.error('Erro ao verificar limite de KPI:', error);
+    return c.json({ error: 'Erro interno do servidor' }, 500);
+  }
 });
 
 // POST /api/kpis

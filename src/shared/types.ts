@@ -102,16 +102,16 @@ export const CalculatorResultSchema = z.object({
   bonusKpis: z.number(),
   remuneracaoTotal: z.number(),
   kpisAtingidos: z.array(z.string()),
-  produtividade_alcancada: z.number().optional(),
-  nivel_atingido: z.string().optional(),
-  unidade_medida: z.string().optional(),
+  produtividadeAlcancada: z.number().optional(),
+  nivelAtingido: z.string().optional(),
+  unidadeMedida: z.string().optional(),
   // Multiple activities details - array of strings with format: "Nome: quantidade unidade em tempo (nível)"
-  atividades_detalhes: z.array(z.string()).optional(),
+  atividadesDetalhes: z.array(z.string()).optional(),
   // Valid tasks details
-  tarefas_validas: z.number().optional(),
-  valor_tarefas: z.number().optional(),
+  tarefasValidas: z.number().optional(),
+  valorTarefas: z.number().optional(),
   // Gross activity value
-  valor_bruto_atividades: z.number().optional(),
+  valorBrutoAtividades: z.number().optional(),
 });
 
 export type CalculatorResultType = z.infer<typeof CalculatorResultSchema>;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ActivityType, KPIType, CalculatorInputType, CalculatorResultType } from '@/shared/types';
 
 const API_BASE = '/api';
@@ -546,7 +546,7 @@ export function useAvailableKPIs() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAvailableKPIs = async (funcao: string, turno: string) => {
+  const fetchAvailableKPIs = useCallback(async (funcao: string, turno: string) => {
     console.log('🔍 DEBUG - fetchAvailableKPIs called with:', {
       funcao,
       turno,
@@ -591,7 +591,7 @@ export function useAvailableKPIs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   return { kpis, loading, error, fetchAvailableKPIs };
 }

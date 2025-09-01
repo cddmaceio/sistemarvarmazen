@@ -15,7 +15,7 @@ authRoutes.post('/login', zValidator('json', LoginSchema), async (c) => {
     .select('*')
     .eq('cpf', cpf)
     .eq('data_nascimento', data_nascimento)
-    .eq('is_active', true)
+    .eq('status_usuario', 'ativo')
     .single();
 
   if (error || !user) {

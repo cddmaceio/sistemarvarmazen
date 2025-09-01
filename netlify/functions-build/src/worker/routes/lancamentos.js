@@ -1,11 +1,13 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { CreateLancamentoSchema } from '../../shared/types';
-import { getSupabase } from '../utils';
-const lancamentoRoutes = new Hono();
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const hono_1 = require("hono");
+const zod_validator_1 = require("@hono/zod-validator");
+const types_1 = require("../../shared/types");
+const utils_1 = require("../utils");
+const lancamentoRoutes = new hono_1.Hono();
 // GET /api/lancamentos
 lancamentoRoutes.get('/lancamentos', async (c) => {
-    const supabase = getSupabase(c.env);
+    const supabase = (0, utils_1.getSupabase)(c.env);
     const { data: lancamentos, error } = await supabase
         .from('lancamentos_produtividade')
         .select('*')
@@ -15,10 +17,23 @@ lancamentoRoutes.get('/lancamentos', async (c) => {
     }
     return c.json(lancamentos || []);
 });
+// GET /api/lancamentos/pendentes
+lancamentoRoutes.get('/lancamentos/pendentes', async (c) => {
+    const supabase = (0, utils_1.getSupabase)(c.env);
+    const { data: lancamentos, error } = await supabase
+        .from('lancamentos_produtividade')
+        .select('*')
+        .eq('status', 'pendente')
+        .order('created_at', { ascending: false });
+    if (error) {
+        return c.json({ error: error.message }, 500);
+    }
+    return c.json(lancamentos || []);
+});
 // POST /api/lancamentos
-lancamentoRoutes.post('/lancamentos', zValidator('json', CreateLancamentoSchema), async (c) => {
+lancamentoRoutes.post('/lancamentos', (0, zod_validator_1.zValidator)('json', types_1.CreateLancamentoSchema), async (c) => {
     console.log('SUPABASE_URL from env:', c.env.SUPABASE_URL);
-    const supabase = getSupabase(c.env);
+    const supabase = (0, utils_1.getSupabase)(c.env);
     const data = c.req.valid('json');
     const { user_id, data_lancamento, calculator_data, calculator_result } = data;
     // DEBUG: Log received data
@@ -161,7 +176,7 @@ lancamentoRoutes.post('/lancamentos', zValidator('json', CreateLancamentoSchema)
 });
 // PUT /api/lancamentos/:id
 lancamentoRoutes.put('/lancamentos/:id', async (c) => {
-    const supabase = getSupabase(c.env);
+    const supabase = (0, utils_1.getSupabase)(c.env);
     const id = parseInt(c.req.param('id'));
     const { status, observacoes } = await c.req.json();
     const { data: lancamento, error } = await supabase
@@ -181,7 +196,7 @@ lancamentoRoutes.put('/lancamentos/:id', async (c) => {
 });
 // DELETE /api/lancamentos/:id
 lancamentoRoutes.delete('/lancamentos/:id', async (c) => {
-    const supabase = getSupabase(c.env);
+    const supabase = (0, utils_1.getSupabase)(c.env);
     const id = parseInt(c.req.param('id'));
     const { error } = await supabase
         .from('lancamentos_produtividade')
@@ -194,7 +209,7 @@ lancamentoRoutes.delete('/lancamentos/:id', async (c) => {
 });
 // GET /api/export-preview
 lancamentoRoutes.get('/export-preview', async (c) => {
-    const supabase = getSupabase(c.env);
+    const supabase = (0, utils_1.getSupabase)(c.env);
     const { data: lancamentos, error } = await supabase
         .from('lancamentos_produtividade')
         .select('*')
@@ -205,4 +220,4 @@ lancamentoRoutes.get('/export-preview', async (c) => {
     }
     return c.json(lancamentos || []);
 });
-export default lancamentoRoutes;
+exports.default = lancamentoRoutes;

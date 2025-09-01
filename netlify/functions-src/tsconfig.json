@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
+    "module": "CommonJS",
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -9,10 +9,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "../functions-build",
-    "rootDir": "../..",
+    "rootDir": ".",
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["**/*", "../../src/worker/**/*", "../../src/shared/**/*"],
-  "exclude": ["node_modules", "../functions-build", "../../src/react-app/**/*", "../../vite.config.ts", "../../*.config.ts"]
+  "include": ["*.ts"],
+  "exclude": ["node_modules", "../functions-build", "../../src/**/*", "../../src/worker/**/*"]
 }

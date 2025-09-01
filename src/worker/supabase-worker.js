@@ -7199,16 +7199,16 @@ var CalculatorResultSchema = external_exports.object({
   bonusKpis: external_exports.number(),
   remuneracaoTotal: external_exports.number(),
   kpisAtingidos: external_exports.array(external_exports.string()),
-  produtividade_alcancada: external_exports.number().optional(),
-  nivel_atingido: external_exports.string().optional(),
-  unidade_medida: external_exports.string().optional(),
+  produtividadeAlcancada: external_exports.number().optional(),
+  nivelAtingido: external_exports.string().optional(),
+  unidadeMedida: external_exports.string().optional(),
   // Multiple activities details - array of strings with format: "Nome: quantidade unidade em tempo (nível)"
-  atividades_detalhes: external_exports.array(external_exports.string()).optional(),
+  atividadesDetalhes: external_exports.array(external_exports.string()).optional(),
   // Valid tasks details
-  tarefas_validas: external_exports.number().optional(),
-  valor_tarefas: external_exports.number().optional(),
+  tarefasValidas: external_exports.number().optional(),
+  valorTarefas: external_exports.number().optional(),
   // Gross activity value
-  valor_bruto_atividades: external_exports.number().optional()
+  valorBrutoAtividades: external_exports.number().optional()
 });
 var LancamentoSchema = external_exports.object({
   id: external_exports.number().optional(),
@@ -13857,7 +13857,7 @@ var authRoutes = new Hono2();
 authRoutes.post("/login", zValidator("json", LoginSchema), async (c) => {
   const supabase = getSupabase(c.env);
   const { cpf, data_nascimento } = c.req.valid("json");
-  const { data: user, error } = await supabase.from("usuarios").select("*").eq("cpf", cpf).eq("data_nascimento", data_nascimento).eq("is_active", true).single();
+  const { data: user, error } = await supabase.from("usuarios").select("*").eq("cpf", cpf).eq("data_nascimento", data_nascimento).eq("status_usuario", "ativo").single();
   if (error || !user) {
     return c.json({ message: "CPF ou data de nascimento incorretos" }, 401);
   }
@@ -13983,7 +13983,8 @@ kpiRoutes.get("/kpis", async (c) => {
   if (error) {
     return c.json({ error: error.message }, 500);
   }
-  return c.json(kpis || []);
+  const kpiObjects = kpis || [];
+  return c.json({ kpisAtingidos: kpiObjects });
 });
 kpiRoutes.get("/functions", async (c) => {
   const supabase = getSupabase(c.env);
@@ -14003,13 +14004,33 @@ kpiRoutes.get("/kpis/available", async (c) => {
   }
   const dbFuncao = funcao;
   const dbTurno = turno === "Manha" ? "Manh\xE3" : turno;
-  const { data: kpis, error } = await supabase.from("kpis").select("nome_kpi").eq("funcao_kpi", dbFuncao).in("turno_kpi", [dbTurno, "Geral"]);
+  const { data: kpis, error } = await supabase.from("kpis").select("*").eq("funcao_kpi", dbFuncao).in("turno_kpi", [dbTurno, "Geral"]);
   if (error) {
     console.error("Error fetching available KPIs:", error);
     return c.json({ error: "Erro ao buscar KPIs dispon\xEDveis" }, 500);
   }
-  const kpiNames = kpis?.map((kpi) => kpi.nome_kpi) || [];
-  return c.json({ kpisAtingidos: kpiNames });
+  const kpiObjects = kpis || [];
+  return c.json({ kpisAtingidos: kpiObjects });
+});
+kpiRoutes.post("/kpis/check-limit", async (c) => {
+  const supabase = getSupabase(c.env);
+  const body = await c.req.json();
+  const { user_id, data_lancamento } = body;
+  if (!user_id || !data_lancamento) {
+    return c.json({ error: "user_id e data_lancamento s\xE3o obrigat\xF3rios" }, 400);
+  }
+  try {
+    const { data, error } = await supabase.from("lancamentos_produtividade").select("id").eq("user_id", user_id).eq("data_lancamento", data_lancamento).neq("status", "reprovado").limit(1);
+    if (error) {
+      console.error("Erro ao verificar limite de KPI:", error);
+      return c.json({ error: "Erro ao verificar limite de KPI" }, 500);
+    }
+    const limitReached = data && data.length > 0;
+    return c.json({ limitReached });
+  } catch (error) {
+    console.error("Erro ao verificar limite de KPI:", error);
+    return c.json({ error: "Erro interno do servidor" }, 500);
+  }
 });
 kpiRoutes.post("/kpis", zValidator("json", KPISchema), async (c) => {
   const supabase = getSupabase(c.env);
@@ -14075,6 +14096,10 @@ calculatorRoutes.post("/calculate", zValidator("json", CalculatorInputSchema), a
     let valor_bruto_atividades = 0;
     if (dbFuncao === "Ajudante de Armaz\xE9m" && input.multiple_activities && input.multiple_activities.length > 0) {
       const activities = input.multiple_activities;
+      let total_quantidade = 0;
+      let total_tempo = 0;
+      let unidades_medida_set = /* @__PURE__ */ new Set();
+      let niveis_atingidos = [];
       for (const act of activities) {
         if (act.nome_atividade && act.quantidade_produzida && act.tempo_horas) {
           const { data: activityLevels, error: activityError } = await supabase.from("activities").select("*").eq("nome_atividade", act.nome_atividade).order("produtividade_minima", { ascending: false });
@@ -14095,12 +14120,22 @@ calculatorRoutes.post("/calculate", zValidator("json", CalculatorInputSchema), a
             valor_bruto_atividades += valor_bruto_atividade;
             const valor_final = valor_bruto_atividade / 2;
             subtotal_atividades += valor_final;
+            total_quantidade += act.quantidade_produzida;
+            total_tempo += act.tempo_horas;
+            unidades_medida_set.add(selectedActivity.unidade_medida);
+            niveis_atingidos.push(selectedActivity.nivel_atividade);
             atividades_detalhes.push(
               `${selectedActivity.nome_atividade}: ${act.quantidade_produzida} ${selectedActivity.unidade_medida} em ${act.tempo_horas}h (${selectedActivity.nivel_atividade})`
             );
           }
         }
       }
+      if (total_tempo > 0) {
+        produtividade_alcancada = total_quantidade / total_tempo;
+      }
+      const unidades_array = Array.from(unidades_medida_set);
+      unidade_medida = unidades_array.length === 1 ? unidades_array[0] : unidades_array.join(", ");
+      nivel_atingido = niveis_atingidos.length > 0 ? niveis_atingidos.join(", ") : void 0;
     } else if (input.nome_atividade && input.quantidade_produzida && input.tempo_horas) {
       const { data: activities, error: activityError } = await supabase.from("activities").select("*").eq("nome_atividade", input.nome_atividade).order("produtividade_minima", { ascending: false });
       if (activityError || !activities || activities.length === 0) {
@@ -14118,30 +14153,34 @@ calculatorRoutes.post("/calculate", zValidator("json", CalculatorInputSchema), a
           }
         }
         nivel_atingido = selectedActivity.nivel_atividade;
-        subtotal_atividades = parseFloat(selectedActivity.valor_atividade);
+        const valor_bruto_atividade = input.quantidade_produzida * parseFloat(selectedActivity.valor_atividade);
+        subtotal_atividades = valor_bruto_atividade / 2;
         atividades_detalhes.push(`${selectedActivity.nome_atividade}: ${input.quantidade_produzida} ${selectedActivity.unidade_medida} em ${input.tempo_horas}h (${selectedActivity.nivel_atividade})`);
       }
     }
-    if (input.funcao === "Operador de Empilhadeira" && input.nome_operador && input.data_lancamento) {
+    if (input.funcao === "Operador de Empilhadeira" && input.valid_tasks_count !== void 0 && input.valid_tasks_count > 0) {
+      tarefas_validas = input.valid_tasks_count;
+      valor_tarefas = tarefas_validas * 0.093 / 2;
+      subtotal_atividades += valor_tarefas;
+      atividades_detalhes.push(`Tarefas V\xE1lidas: ${tarefas_validas} tarefas processadas`);
+    } else if (input.funcao === "Operador de Empilhadeira" && input.nome_operador && input.data_lancamento) {
       const { data: tarefas, error: tarefasError } = await supabase.from("tarefas_wms").select("*").eq("usuario", input.nome_operador).eq("data_alteracao", input.data_lancamento).eq("status", "Conclu\xEDdo");
       if (!tarefasError && tarefas) {
         tarefas_validas = tarefas.length;
-        valor_tarefas = tarefas_validas * 2.5;
+        valor_tarefas = tarefas_validas * 0.093 / 2;
         subtotal_atividades += valor_tarefas;
         atividades_detalhes.push(`Tarefas WMS: ${tarefas_validas} tarefas conclu\xEDdas`);
       }
     }
     if (input.kpis_atingidos && input.kpis_atingidos.length > 0) {
-      const { data: kpis } = await supabase.from("kpis").select("*").eq("funcao_kpi", dbFuncao).in("turno_kpi", [dbTurno, "Geral"]).in("nome_kpi", input.kpis_atingidos);
-      if (kpis) {
-        for (const kpi of kpis) {
-          bonus_kpis += parseFloat(kpi.peso_kpi);
-          kpis_atingidos_resultado.push(kpi.nome_kpi);
-        }
+      const kpisLimitados = input.kpis_atingidos.slice(0, 2);
+      for (const kpiNome of kpisLimitados) {
+        bonus_kpis += 3;
+        kpis_atingidos_resultado.push(kpiNome);
       }
     }
     const atividades_extras = input.input_adicional || 0;
-    const remuneracao_total = subtotal_atividades + bonus_kpis + atividades_extras;
+    const remuneracao_total = bonus_kpis + subtotal_atividades + atividades_extras;
     const result = {
       subtotalAtividades: subtotal_atividades,
       bonusKpis: bonus_kpis,
@@ -14167,7 +14206,45 @@ var calculator_default = calculatorRoutes;
 var lancamentoRoutes = new Hono2();
 lancamentoRoutes.get("/lancamentos", async (c) => {
   const supabase = getSupabase(c.env);
-  const { data: lancamentos, error } = await supabase.from("lancamentos_produtividade").select("*").order("created_at", { ascending: false });
+  const user_id = c.req.query("user_id");
+  const status = c.req.query("status");
+  let query = supabase.from("lancamentos_produtividade").select("*");
+  if (user_id) {
+    query = query.eq("user_id", parseInt(user_id));
+  }
+  if (status) {
+    query = query.eq("status", status);
+  }
+  query = query.order("created_at", { ascending: false });
+  const { data: lancamentos, error } = await query;
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+  return c.json(lancamentos || []);
+});
+lancamentoRoutes.get("/lancamentos/pendentes", async (c) => {
+  const supabase = getSupabase(c.env);
+  const { data: lancamentos, error } = await supabase.from("lancamentos_produtividade").select("*").eq("status", "pendente").order("created_at", { ascending: false });
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+  return c.json(lancamentos || []);
+});
+lancamentoRoutes.get("/lancamentos/todos", async (c) => {
+  const supabase = getSupabase(c.env);
+  const user_id = c.req.query("user_id");
+  const status_filter = c.req.query("status_filter");
+  let query = supabase.from("lancamentos_produtividade").select("*");
+  if (user_id) {
+    query = query.eq("user_id", parseInt(user_id));
+    if (status_filter === "pending_rejected") {
+      query = query.in("status", ["pendente", "rejeitado"]);
+    }
+  } else {
+    query = query.in("status", ["pendente", "rejeitado"]);
+  }
+  query = query.order("created_at", { ascending: false });
+  const { data: lancamentos, error } = await query;
   if (error) {
     return c.json({ error: error.message }, 500);
   }
@@ -14214,6 +14291,31 @@ lancamentoRoutes.post("/lancamentos", zValidator("json", CreateLancamentoSchema)
       }, 400);
     }
   }
+  if (userData.funcao === "Operador de Empilhadeira") {
+    const hasValidTasks = calculator_data.valid_tasks_count && calculator_data.valid_tasks_count > 0;
+    const hasKpisOnly = calculator_data.kpis_atingidos && calculator_data.kpis_atingidos.length > 0;
+    if (!hasValidTasks && hasKpisOnly) {
+      return c.json({
+        error: "Lan\xE7amento n\xE3o permitido",
+        message: "Operadores de empilhadeira n\xE3o podem fazer lan\xE7amentos apenas com KPIs. \xC9 necess\xE1rio ter pelo menos uma tarefa v\xE1lida.",
+        details: {
+          valid_tasks_count: calculator_data.valid_tasks_count || 0,
+          kpis_count: calculator_data.kpis_atingidos?.length || 0,
+          funcao: userData.funcao
+        }
+      }, 400);
+    }
+    if (!hasValidTasks && !hasKpisOnly) {
+      return c.json({
+        error: "Lan\xE7amento inv\xE1lido",
+        message: "Operadores de empilhadeira devem ter pelo menos uma tarefa v\xE1lida para fazer lan\xE7amentos.",
+        details: {
+          valid_tasks_count: calculator_data.valid_tasks_count || 0,
+          funcao: userData.funcao
+        }
+      }, 400);
+    }
+  }
   const extractedTurno = calculator_data.turno || userData.turno;
   console.log("\u{1F50D} LANCAMENTOS DEBUG - Turno extraction:", {
     calculator_data_turno: calculator_data.turno,
@@ -14245,13 +14347,16 @@ lancamentoRoutes.post("/lancamentos", zValidator("json", CreateLancamentoSchema)
     subtotal_atividades: calculator_result.subtotalAtividades,
     bonus_kpis: calculator_result.bonusKpis,
     remuneracao_total: calculator_result.remuneracaoTotal,
-    produtividade_alcancada: calculator_result.produtividade_alcancada,
-    nivel_atingido: calculator_result.nivel_atingido,
-    unidade_medida: calculator_result.unidade_medida,
-    atividades_detalhes: calculator_result.atividades_detalhes ? JSON.stringify(calculator_result.atividades_detalhes) : void 0,
-    tarefas_validas: calculator_result.tarefas_validas,
-    valor_tarefas: calculator_result.valor_tarefas,
-    valor_bruto_atividades: calculator_result.valor_bruto_atividades,
+    produtividade_alcancada: calculator_result.produtividadeAlcancada,
+    nivel_atingido: calculator_result.nivelAtingido,
+    unidade_medida: calculator_result.unidadeMedida,
+    atividades_detalhes: calculator_result.atividadesDetalhes ? JSON.stringify(calculator_result.atividadesDetalhes) : void 0,
+    tarefas_validas: calculator_result.tarefasValidas,
+    valor_tarefas: calculator_result.valorTarefas,
+    valor_bruto_atividades: calculator_result.valorBrutoAtividades,
+    // Store original data for editing purposes
+    calculator_data: JSON.stringify(calculator_data),
+    calculator_result: JSON.stringify(calculator_result),
     // Default status
     status: "pendente",
     status_edicao: "original",
@@ -14295,15 +14400,97 @@ lancamentoRoutes.post("/lancamentos", zValidator("json", CreateLancamentoSchema)
   }
   return c.json(lancamento, 201);
 });
+lancamentoRoutes.post("/lancamentos/:id/validar", zValidator("json", AdminValidationSchema), async (c) => {
+  const supabase = getSupabase(c.env);
+  const id = parseInt(c.req.param("id"));
+  const { acao, observacoes, admin_user_id } = c.req.valid("json");
+  let newStatus;
+  switch (acao) {
+    case "aprovar":
+      newStatus = "aprovado";
+      break;
+    case "reprovar":
+      newStatus = "reprovado";
+      break;
+    case "editar":
+      newStatus = "pendente";
+      break;
+    default:
+      return c.json({ error: "A\xE7\xE3o inv\xE1lida" }, 400);
+  }
+  const updateData = {
+    status: newStatus,
+    observacoes,
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  if (admin_user_id) {
+    updateData.editado_por_admin = admin_user_id.toString();
+    updateData.data_edicao = (/* @__PURE__ */ new Date()).toISOString();
+  }
+  const { data: lancamento, error } = await supabase.from("lancamentos_produtividade").update(updateData).eq("id", id).select().single();
+  if (error) {
+    console.error("Error validating lancamento:", error);
+    return c.json({ error: error.message }, 500);
+  }
+  return c.json(lancamento);
+});
+lancamentoRoutes.put("/lancamentos/:id/edit", zValidator("json", external_exports.object({
+  calculator_data: CalculatorInputSchema,
+  calculator_result: CalculatorResultSchema,
+  editado_por_admin: external_exports.string(),
+  observacoes: external_exports.string().optional()
+})), async (c) => {
+  const supabase = getSupabase(c.env);
+  const id = parseInt(c.req.param("id"));
+  const { calculator_data, calculator_result, editado_por_admin, observacoes } = c.req.valid("json");
+  const { data: currentLancamento, error: fetchError } = await supabase.from("lancamentos_produtividade").select("*").eq("id", id).single();
+  if (fetchError || !currentLancamento) {
+    return c.json({ error: "Lan\xE7amento n\xE3o encontrado" }, 404);
+  }
+  const updateData = {
+    // Update calculator data and results
+    calculator_data: JSON.stringify(calculator_data),
+    calculator_result: JSON.stringify(calculator_result),
+    // Update derived fields from calculator_data
+    nome_atividade: calculator_data.nome_atividade || null,
+    quantidade_produzida: calculator_data.quantidade_produzida || 0,
+    tempo_horas: calculator_data.tempo_horas || 0,
+    input_adicional: calculator_data.input_adicional || 0,
+    kpis_atingidos: JSON.stringify(calculator_data.kpis_atingidos || []),
+    multiple_activities: JSON.stringify(calculator_data.multiple_activities || []),
+    valid_tasks_count: calculator_data.valid_tasks_count || 0,
+    // Update derived fields from calculator_result
+    subtotal_atividades: calculator_result.subtotalAtividades || 0,
+    bonus_kpis: calculator_result.bonusKpis || 0,
+    remuneracao_total: calculator_result.remuneracaoTotal || 0,
+    produtividade_alcancada: calculator_result.produtividadeAlcancada || null,
+    nivel_atingido: calculator_result.nivelAtingido || null,
+    unidade_medida: calculator_result.unidadeMedida || null,
+    atividades_detalhes: calculator_result.atividadesDetalhes ? JSON.stringify(calculator_result.atividadesDetalhes) : null,
+    tarefas_validas: calculator_result.tarefasValidas || null,
+    valor_tarefas: calculator_result.valorTarefas || null,
+    valor_bruto_atividades: calculator_result.valorBrutoAtividades || null,
+    // Audit fields
+    editado_por_admin,
+    data_edicao: (/* @__PURE__ */ new Date()).toISOString(),
+    observacoes: observacoes || currentLancamento.observacoes,
+    // Keep status as pending for re-validation
+    status: "pendente",
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const { data: lancamento, error } = await supabase.from("lancamentos_produtividade").update(updateData).eq("id", id).select().single();
+  if (error) {
+    console.error("Error updating lancamento:", error);
+    return c.json({ error: error.message }, 500);
+  }
+  return c.json(lancamento);
+});
 lancamentoRoutes.put("/lancamentos/:id", async (c) => {
   const supabase = getSupabase(c.env);
   const id = parseInt(c.req.param("id"));
-  const { status, observacoes } = await c.req.json();
-  const { data: lancamento, error } = await supabase.from("lancamentos_produtividade").update({
-    status,
-    observacoes,
-    updated_at: (/* @__PURE__ */ new Date()).toISOString()
-  }).eq("id", id).select().single();
+  const updateData = await c.req.json();
+  updateData.updated_at = (/* @__PURE__ */ new Date()).toISOString();
+  const { data: lancamento, error } = await supabase.from("lancamentos_produtividade").update(updateData).eq("id", id).select().single();
   if (error) {
     return c.json({ error: error.message }, 500);
   }

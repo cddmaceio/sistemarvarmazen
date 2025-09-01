@@ -78,7 +78,70 @@ interface HistoricoAtividade {
   status_edicao?: string;
   editado_por_admin?: string;
   data_edicao?: string;
+  id_original?: number;
+  created_at?: string;
 }
+
+// Função para processar histórico e remover duplicações por data
+const processarHistoricoSemDuplicacao = (historico: HistoricoAtividade[]): HistoricoAtividade[] => {
+  console.log('🔍 Processando histórico sem duplicação:', historico.length, 'itens');
+  
+  // Agrupar por data
+  const historicoAgrupado = historico.reduce((grupos: { [key: string]: HistoricoAtividade[] }, item) => {
+    const data = item.data;
+    console.log(`🔍 Agrupando item: data=${data}, id_original=${item.id_original}, valor=${item.valor}, atividade=${item.atividade}`);
+    if (!grupos[data]) {
+      grupos[data] = [];
+    }
+    grupos[data].push(item);
+    return grupos;
+  }, {});
+
+  console.log('📅 Histórico agrupado por data:', historicoAgrupado);
+
+  // Para cada data, manter apenas um lançamento (priorizar editado por admin ou mais recente)
+  const historicoFinal: HistoricoAtividade[] = [];
+  
+  Object.keys(historicoAgrupado).forEach(data => {
+    const lancamentosDaData = historicoAgrupado[data];
+    console.log(`📋 Processando data ${data}:`, lancamentosDaData.length, 'lançamentos');
+    
+    if (lancamentosDaData.length === 1) {
+      console.log(`✅ Data ${data}: apenas 1 lançamento, mantendo`);
+      historicoFinal.push(lancamentosDaData[0]);
+    } else {
+      console.log(`🔄 Data ${data}: ${lancamentosDaData.length} lançamentos, verificando duplicações`);
+      
+      // Priorizar lançamento editado por admin
+      const editadoPorAdmin = lancamentosDaData.find(item => item.editado_por_admin);
+      
+      if (editadoPorAdmin) {
+        console.log(`👑 Data ${data}: encontrado lançamento editado por admin, priorizando`);
+        historicoFinal.push(editadoPorAdmin);
+      } else {
+        console.log(`🕐 Data ${data}: nenhum editado por admin, pegando o mais recente`);
+        // Se nenhum foi editado por admin, pegar o mais recente (assumindo que tem id_original)
+        const maisRecente = lancamentosDaData.sort((a: any, b: any) => {
+          // Se tiver created_at, usar para ordenar
+          if (a.created_at && b.created_at) {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          }
+          // Caso contrário, usar id_original se disponível
+          if (a.id_original && b.id_original) {
+            return b.id_original - a.id_original;
+          }
+          return 0;
+        })[0];
+        
+        console.log(`📌 Data ${data}: selecionado lançamento mais recente:`, maisRecente);
+        historicoFinal.push(maisRecente);
+      }
+    }
+  });
+  
+  console.log('✨ Histórico final processado:', historicoFinal.length, 'itens');
+  return historicoFinal;
+};
 
 export default function DashboardCollaborator() {
   const { user, userFunction } = useAuth();
@@ -180,6 +243,18 @@ export default function DashboardCollaborator() {
         setLancamentosPendentesReprovados(pendentesReprovados);
       }
       
+      // DEBUG: Log dos dados recebidos da API
+      console.log('🔍 DEBUG FRONTEND - Dados recebidos da API:', {
+        total: historico.length,
+        mesAtual: mesAtual.toLocaleDateString('pt-BR'),
+        dados: historico.map((item: any) => ({
+          id: item.id,
+          data: item.data_lancamento,
+          status: item.status,
+          valor: (item.subtotal_atividades || item.valor_tarefas || 0) + (item.bonus_kpis || 0)
+        }))
+      });
+      
       // Filtrar por mês atual (já filtrado por usuário na API)
       const dadosUsuario = historico.filter((item: any) => {
         // Usar a mesma lógica da formatDateSafe para evitar problemas de timezone
@@ -190,9 +265,30 @@ export default function DashboardCollaborator() {
         const mesLancamento = dataLancamento.getMonth();
         const anoLancamento = dataLancamento.getFullYear();
         
-
+        const pertenceAoMes = mesLancamento === mesAtual.getMonth() && anoLancamento === mesAtual.getFullYear();
         
-        return mesLancamento === mesAtual.getMonth() && anoLancamento === mesAtual.getFullYear();
+        // DEBUG: Log da filtragem por mês
+        console.log(`🔍 DEBUG FILTRO - Item ID ${item.id}:`, {
+          data_original: item.data_lancamento,
+          data_formatada: dataLancamento.toLocaleDateString('pt-BR'),
+          mes_item: mesLancamento,
+          ano_item: anoLancamento,
+          mes_atual: mesAtual.getMonth(),
+          ano_atual: mesAtual.getFullYear(),
+          pertence_ao_mes: pertenceAoMes
+        });
+        
+        return pertenceAoMes;
+      });
+      
+      // DEBUG: Log dos dados filtrados
+      console.log('🔍 DEBUG FILTRADO - Dados após filtro por mês:', {
+        total: dadosUsuario.length,
+        dados: dadosUsuario.map((item: any) => ({
+          id: item.id,
+          data: item.data_lancamento,
+          status: item.status
+        }))
       });
 
       if (dadosUsuario.length === 0) {
@@ -203,8 +299,9 @@ export default function DashboardCollaborator() {
       // Processar dados reais
       let ganhoTotal = 0;
       
-      console.log('Dados do usuário filtrados:', dadosUsuario);
-      console.log('Função do usuário:', userFunction);
+      console.log('🔍 DEBUG PROCESSAMENTO - Dados do usuário filtrados:', dadosUsuario);
+      console.log('🔍 DEBUG PROCESSAMENTO - Função do usuário:', userFunction);
+      console.log('🔍 DEBUG PROCESSAMENTO - Total de dados para processar:', dadosUsuario.length);
       
       if (userFunction === 'Operador de Empilhadeira') {
         // Para operador de empilhadeira: subtotal_atividades (já dividido por 2) + valor KPIs atingidos
@@ -293,7 +390,8 @@ export default function DashboardCollaborator() {
             
             // Usar o valor das tarefas (subtotal_atividades) em vez da remuneração total
             const valorTarefas = dados.subtotal_atividades || dados.valor_tarefas || 0;
-            const valorBrutoAtividade = item.valor_bruto_atividades || 0;
+            // Calcular valor bruto corretamente: tarefas_validas * 0.093 (o líquido já é esse valor / 2)
+            const valorBrutoAtividade = dados.tarefas_validas * 0.093;
             acc[nomeAtividade].totalGanho += valorTarefas;
             acc[nomeAtividade].valores.push(valorTarefas);
             acc[nomeAtividade].tarefasValidas = (acc[nomeAtividade].tarefasValidas || 0) + dados.tarefas_validas;
@@ -311,7 +409,7 @@ export default function DashboardCollaborator() {
           
           // KPIs são incluídos no valor total das tarefas válidas, não precisam de seção separada
           
-          // Adicionar ao histórico completo - UMA ÚNICA ENTRADA POR LANÇAMENTO APROVADO
+          // Adicionar ao histórico completo temporário para posterior agrupamento por data
           if (item.status === 'aprovado') {
             // Determinar o nome da atividade principal
             let nomeAtividadePrincipal = 'Lançamento RV';
@@ -322,7 +420,7 @@ export default function DashboardCollaborator() {
             // Calcular o valor final corretamente (subtotal_atividades + bonus_kpis)
             const valorFinalLancamento = (dados.subtotal_atividades || dados.valor_tarefas || 0) + (dados.bonus_kpis || 0);
             
-            // Usar o valor calculado corretamente
+            // Adicionar ao histórico temporário (será processado depois para evitar duplicações)
             historicoCompleto.push({
               data: dataFormatada,
               valor: valorFinalLancamento, // Valor correto calculado
@@ -337,12 +435,14 @@ export default function DashboardCollaborator() {
               valor_bruto_atividades: item.valor_bruto_atividades,
               status_edicao: item.status_edicao,
               editado_por_admin: item.editado_por_admin,
-              data_edicao: item.data_edicao
+              data_edicao: item.data_edicao,
+              id_original: item.id,
+              created_at: item.created_at
             });
           }
         } else if (userFunction === 'Ajudante de Armazém') {
           // Para múltiplas atividades
-          if (dados.multiple_activities && Array.isArray(dados.multiple_activities)) {
+          if (dados.multiple_activities && Array.isArray(dados.multiple_activities) && dados.multiple_activities.length > 0) {
             dados.multiple_activities.forEach((activity: any) => {
               const subAtividade = activity.nome_atividade;
               if (!acc[subAtividade]) {
@@ -358,9 +458,11 @@ export default function DashboardCollaborator() {
                   tempoTotalHoras: 0
                 };
               }
-              // Usar subtotal_atividades ao invés de remuneracao_total para mostrar apenas o valor das atividades
-              const valorAtividade = (item.subtotal_atividades || 0) / dados.multiple_activities.length;
-              const valorBrutoAtividade = (item.valor_bruto_atividades || 0) / dados.multiple_activities.length;
+              // Calcular valor proporcional baseado no subtotal dividido pelo número de atividades
+              const subtotalAtividades = parseFloat(item.subtotal_atividades || '0');
+              const numAtividades = dados.multiple_activities.length;
+              const valorAtividade = numAtividades > 0 ? subtotalAtividades / numAtividades : 0;
+              const valorBrutoAtividade = valorAtividade;
               const quantidade = parseFloat(activity.quantidade_produzida || '0');
               const tempo = parseFloat(activity.tempo_horas || '0');
               
@@ -497,7 +599,31 @@ export default function DashboardCollaborator() {
           eficiencia: 87,
           pontualidade: 100
         },
-        historicoCompleto: historicoCompleto.sort((a, b) => new Date(b.data.split('/').reverse().join('-')).getTime() - new Date(a.data.split('/').reverse().join('-')).getTime())
+        historicoCompleto: (() => {
+          console.log('🔍 DEBUG HISTÓRICO - Antes do processamento:', {
+            total_itens: historicoCompleto.length,
+            itens: historicoCompleto.map(item => ({
+              data: item.data,
+              id_original: item.id_original,
+              valor: item.valor,
+              editado_por_admin: item.editado_por_admin
+            }))
+          });
+          
+          const historicoProcessado = processarHistoricoSemDuplicacao(historicoCompleto);
+          
+          console.log('🔍 DEBUG HISTÓRICO - Após processamento:', {
+            total_itens: historicoProcessado.length,
+            itens: historicoProcessado.map(item => ({
+              data: item.data,
+              id_original: item.id_original,
+              valor: item.valor,
+              editado_por_admin: item.editado_por_admin
+            }))
+          });
+          
+          return historicoProcessado.sort((a, b) => new Date(b.data.split('/').reverse().join('-')).getTime() - new Date(a.data.split('/').reverse().join('-')).getTime());
+        })()
       });
 
     } catch (error) {
@@ -1572,9 +1698,16 @@ export default function DashboardCollaborator() {
                               </p>
                               <p className="text-xs text-purple-600">
                                 Bruto: R$ {dashboardData.historicoCompleto ? 
-                                  dashboardData.historicoCompleto.reduce((total, item) => total + (item.valor_bruto_atividades || item.valor_tarefas || 0), 0).toFixed(2) : '0.00'
+                                  dashboardData.historicoCompleto.reduce((total, item) => {
+                                    const valorBruto = (item.tarefas_validas || 0) * 0.093;
+                                    return total + valorBruto;
+                                  }, 0).toFixed(2) : '0.00'
                                 } | Líquido: R$ {dashboardData.historicoCompleto ? 
-                                  dashboardData.historicoCompleto.reduce((total, item) => total + (item.subtotal_atividades || 0), 0).toFixed(2) : '0.00'
+                                  dashboardData.historicoCompleto.reduce((total, item) => {
+                                    const valorBruto = (item.tarefas_validas || 0) * 0.093;
+                                    const valorLiquido = valorBruto / 2;
+                                    return total + valorLiquido;
+                                  }, 0).toFixed(2) : '0.00'
                                 }
                               </p>
                             </div>

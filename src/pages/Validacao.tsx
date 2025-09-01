@@ -82,25 +82,39 @@ export default function Validacao() {
     setEditModalOpen(true);
   };
 
-  const handleSaveEdit = async (editedData: CalculatorInputType, _result: CalculatorResultType) => {
-    if (!editingLancamento) return;
+  const handleSaveEdit = async (editedData: CalculatorInputType, result: CalculatorResultType) => {
+    if (!editingLancamento || !user?.id) return;
 
     setProcessando(String(editingLancamento.id));
     try {
-      const response = await fetch(`/api/lancamentos/${editingLancamento.id}/validar`, {
-        method: 'POST',
+      // Filter out null values from calculator_result to avoid Zod validation errors
+      const cleanResult = Object.fromEntries(
+        Object.entries(result).filter(([_, value]) => value !== null && value !== undefined)
+      ) as CalculatorResultType;
+
+      const response = await fetch(`/api/lancamentos/${editingLancamento.id}/edit`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          acao: 'editar',
+          calculator_data: editedData,
+          calculator_result: cleanResult,
+          editado_por_admin: String(user.id), // Corrigido para String
           observacoes: observacoes || undefined,
-          dados_editados: editedData,
-          admin_user_id: user?.id,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha na edição');
+        let errorMessage = 'Falha na edição';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || `Erro ${response.status}: ${response.statusText}`;
+          console.error('Detalhes do erro:', errorData);
+        } catch (e) {
+          const errorText = await response.text();
+          errorMessage = `Erro ${response.status}: ${errorText || response.statusText}`;
+          console.error('Erro não-JSON:', errorText);
+        }
+        throw new Error(errorMessage);
       }
 
       // Refresh the list
