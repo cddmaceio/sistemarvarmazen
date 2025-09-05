@@ -18,9 +18,8 @@ kpiRoutes.get('/kpis', async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  // Return complete KPI objects instead of just names
-  const kpiObjects = kpis || [];
-  return c.json({ kpisAtingidos: kpiObjects });
+  // Return array directly for useKPIs hook
+  return c.json(kpis || []);
 });
 
 // GET /api/functions

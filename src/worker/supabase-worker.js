@@ -2053,14 +2053,14 @@ var Hono = class {
   }
   #notFoundHandler = notFoundHandler;
   errorHandler = errorHandler;
-  route(path, app2) {
+  route(path, app3) {
     const subApp = this.basePath(path);
-    app2.routes.map((r) => {
+    app3.routes.map((r) => {
       let handler;
-      if (app2.errorHandler === errorHandler) {
+      if (app3.errorHandler === errorHandler) {
         handler = r.handler;
       } else {
-        handler = async (c, next) => (await compose([], app2.errorHandler)(c, () => r.handler(c, next))).res;
+        handler = async (c, next) => (await compose([], app3.errorHandler)(c, () => r.handler(c, next))).res;
         handler[COMPOSED_HANDLER] = r.handler;
       }
       subApp.#addRoute(r.method, r.path, handler);
@@ -2178,9 +2178,9 @@ var Hono = class {
   fetch = (request, ...rest) => {
     return this.#dispatch(request, rest[1], rest[0], request.method);
   };
-  request = (input, requestInit, Env9, executionCtx) => {
+  request = (input, requestInit, Env10, executionCtx) => {
     if (input instanceof Request) {
-      return this.fetch(requestInit ? new Request(input, requestInit) : input, Env9, executionCtx);
+      return this.fetch(requestInit ? new Request(input, requestInit) : input, Env10, executionCtx);
     }
     input = input.toString();
     return this.fetch(
@@ -2188,7 +2188,7 @@ var Hono = class {
         /^https?:\/\//.test(input) ? input : `http://localhost${mergePath("/", input)}`,
         requestInit
       ),
-      Env9,
+      Env10,
       executionCtx
     );
   };
@@ -13994,8 +13994,7 @@ kpiRoutes.get("/kpis", async (c) => {
   if (error) {
     return c.json({ error: error.message }, 500);
   }
-  const kpiObjects = kpis || [];
-  return c.json({ kpisAtingidos: kpiObjects });
+  return c.json(kpis || []);
 });
 kpiRoutes.get("/functions", async (c) => {
   const supabase = getSupabase(c.env);
@@ -14670,21 +14669,300 @@ monthlyEarningsRoutes.get("/monthly-earnings", async (c) => {
 });
 var monthly_earnings_default = monthlyEarningsRoutes;
 
-// src/worker/supabase-worker.ts
+// src/worker/routes/historico-aprovacoes.ts
 var app = new Hono2();
-app.use("*", cors());
-app.route("/api/auth", auth_default);
-app.route("/api/usuarios", users_default);
-app.route("/api", activities_default);
-app.route("/api", kpis_default);
-app.route("/api", calculator_default);
-app.route("/api", lancamentos_default);
-app.route("/api/wms-tasks", wms_tasks_default);
-app.route("/api", monthly_earnings_default);
-app.get("/api/health", (c) => {
+app.get("/historico-aprovacoes", async (c) => {
+  try {
+    const supabase = createClient(
+      c.env.SUPABASE_URL,
+      c.env.SUPABASE_ANON_KEY
+    );
+    const colaborador = c.req.query("colaborador");
+    const colaborador_cpf = c.req.query("colaborador_cpf");
+    const admin = c.req.query("admin");
+    const editado = c.req.query("editado");
+    let query = supabase.from("lancamentos_produtividade").select(`
+        id,
+        user_id,
+        user_nome,
+        user_cpf,
+        data_lancamento,
+        data_aprovacao,
+        aprovado_por,
+        aprovado_por_nome,
+        editado_por_admin,
+        data_edicao,
+        status_edicao,
+        observacoes,
+        observacoes_edicao,
+        remuneracao_total,
+        funcao,
+        turno,
+        nome_atividade,
+        subtotal_atividades,
+        bonus_kpis,
+        created_at,
+        updated_at
+      `).eq("status", "aprovado").order("created_at", { ascending: false });
+    if (colaborador_cpf) {
+      query = query.eq("user_cpf", colaborador_cpf);
+    } else if (colaborador) {
+      query = query.ilike("user_nome", `%${colaborador}%`);
+    }
+    if (admin) {
+      query = query.ilike("aprovado_por_nome", `%${admin}%`);
+    }
+    if (editado) {
+      if (editado === "sim") {
+        query = query.eq("status_edicao", "editado_admin");
+      } else if (editado === "nao") {
+        query = query.eq("status_edicao", "original");
+      }
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.error("Erro ao buscar hist\xF3rico de aprova\xE7\xF5es:", error);
+      return c.json({ error: "Erro interno do servidor" }, 500);
+    }
+    const historicoFormatado = data.map((item) => ({
+      id: item.id,
+      lancamento_id: item.id,
+      colaborador_id: item.user_id,
+      colaborador_nome: item.user_nome,
+      colaborador_cpf: item.user_cpf,
+      data_lancamento: item.data_lancamento,
+      data_aprovacao: item.data_aprovacao,
+      aprovado_por: item.aprovado_por_nome || item.aprovado_por || "Sistema",
+      editado: item.status_edicao === "editado_admin",
+      editado_por: item.editado_por_admin || null,
+      dados_finais: JSON.stringify({
+        funcao: item.funcao,
+        turno: item.turno,
+        nome_atividade: item.nome_atividade,
+        subtotal_atividades: item.subtotal_atividades,
+        bonus_kpis: item.bonus_kpis,
+        remuneracao_total: item.remuneracao_total
+      }),
+      observacoes: item.observacoes_edicao || item.observacoes || null,
+      remuneracao_total: item.remuneracao_total,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    }));
+    return c.json(historicoFormatado);
+  } catch (error) {
+    console.error("Erro ao processar hist\xF3rico de aprova\xE7\xF5es:", error);
+    return c.json({ error: "Erro interno do servidor" }, 500);
+  }
+});
+var historico_aprovacoes_default = app;
+
+// src/worker/routes/colaboradores.ts
+var colaboradoresRoutes = new Hono2();
+colaboradoresRoutes.get("/", async (c) => {
+  const supabase = getSupabase(c.env);
+  const { data: colaboradores, error } = await supabase.from("usuarios").select("id, nome, cpf, funcao, tipo_usuario").eq("status_usuario", "ativo").eq("tipo_usuario", "colaborador").order("nome", { ascending: true });
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+  return c.json({ success: true, data: colaboradores || [] });
+});
+colaboradoresRoutes.get("/individual-report", async (c) => {
+  const supabase = getSupabase(c.env);
+  const colaboradorId = c.req.query("colaboradorId");
+  const mesAno = c.req.query("mesAno");
+  if (!colaboradorId) {
+    return c.json({ error: "colaboradorId \xE9 obrigat\xF3rio" }, 400);
+  }
+  try {
+    const { data: colaborador, error: colaboradorError } = await supabase.from("usuarios").select("id, nome, cpf, funcao, tipo_usuario").eq("id", colaboradorId).eq("status_usuario", "ativo").single();
+    if (colaboradorError || !colaborador) {
+      return c.json({ error: "Colaborador n\xE3o encontrado" }, 404);
+    }
+    let startDate;
+    let endDate;
+    if (mesAno) {
+      const [year, month] = mesAno.split("-");
+      startDate = `${year}-${month}-01`;
+      const nextMonth = parseInt(month) === 12 ? 1 : parseInt(month) + 1;
+      const nextYear = parseInt(month) === 12 ? parseInt(year) + 1 : parseInt(year);
+      endDate = `${nextYear}-${nextMonth.toString().padStart(2, "0")}-01`;
+    } else {
+      const now = /* @__PURE__ */ new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      startDate = `${year}-${month.toString().padStart(2, "0")}-01`;
+      const nextMonth = month === 12 ? 1 : month + 1;
+      const nextYear = month === 12 ? year + 1 : year;
+      endDate = `${nextYear}-${nextMonth.toString().padStart(2, "0")}-01`;
+    }
+    const { data: lancamentos, error: lancamentosError } = await supabase.from("lancamentos_produtividade").select(`
+        id,
+        data_lancamento,
+        turno,
+        nome_atividade,
+        quantidade_produzida,
+        tempo_horas,
+        multiple_activities,
+        atividades_detalhes,
+        kpis_atingidos,
+        remuneracao_total,
+        subtotal_atividades,
+        bonus_kpis,
+        status,
+        observacoes,
+        created_at
+      `).eq("user_id", colaboradorId).gte("data_lancamento", startDate).lt("data_lancamento", endDate).order("data_lancamento", { ascending: true });
+    if (lancamentosError) {
+      return c.json({ error: lancamentosError.message }, 500);
+    }
+    const lancamentosAprovados = lancamentos?.filter((l) => l.status === "aprovado") || [];
+    const valorFinalMes = lancamentosAprovados.reduce((sum, l) => sum + (l.remuneracao_total || 0), 0);
+    const diasTrabalhados = new Set(lancamentosAprovados.map((l) => l.data_lancamento)).size;
+    const totalLancamentos = lancamentosAprovados.length;
+    const valorKPIs = lancamentosAprovados.reduce((sum, l) => sum + (parseFloat(l.bonus_kpis) || 0), 0);
+    const valorAtividades = lancamentosAprovados.reduce((sum, l) => sum + (l.subtotal_atividades || 0), 0);
+    const metaMensal = 5e3;
+    const percentualMeta = metaMensal > 0 ? valorFinalMes / metaMensal * 100 : 0;
+    const lancamentosDetalhados = lancamentosAprovados.map((lancamento) => {
+      let atividadesProcessadas = [];
+      let kpisProcessados = [];
+      if (lancamento.nome_atividade) {
+        atividadesProcessadas.push({
+          nome: lancamento.nome_atividade,
+          quantidade: lancamento.quantidade_produzida || 0,
+          tempo: lancamento.tempo_horas || 0,
+          valor: lancamento.subtotal_atividades || 0
+        });
+      }
+      if (lancamento.multiple_activities) {
+        try {
+          const atividades = typeof lancamento.multiple_activities === "string" ? JSON.parse(lancamento.multiple_activities) : lancamento.multiple_activities;
+          if (Array.isArray(atividades)) {
+            atividades.forEach((ativ) => {
+              atividadesProcessadas.push({
+                nome: ativ.nome_atividade || "Atividade",
+                quantidade: ativ.quantidade || 0,
+                tempo: ativ.tempo || 0,
+                valor: ativ.valor || 0
+              });
+            });
+          }
+        } catch (e) {
+          console.error("Erro ao processar atividades m\xFAltiplas:", e);
+        }
+      }
+      if (lancamento.kpis_atingidos) {
+        try {
+          const kpis = typeof lancamento.kpis_atingidos === "string" ? JSON.parse(lancamento.kpis_atingidos) : lancamento.kpis_atingidos;
+          if (Array.isArray(kpis)) {
+            if (kpis.length > 0 && typeof kpis[0] === "string") {
+              kpisProcessados = kpis.map((nomeKpi) => ({
+                nome: nomeKpi,
+                valor: 0,
+                // Valor não disponível no formato antigo
+                atingido: true
+                // Se está no array, foi atingido
+              }));
+            } else {
+              kpisProcessados = kpis.map((kpi) => ({
+                nome: kpi.nome || kpi.nome_kpi || "KPI",
+                valor: kpi.valor || 0,
+                atingido: kpi.atingido !== void 0 ? kpi.atingido : true
+              }));
+            }
+          }
+        } catch (e) {
+          console.error("Erro ao processar KPIs do lan\xE7amento:", e);
+        }
+      }
+      return {
+        id: lancamento.id,
+        data: lancamento.data_lancamento,
+        turno: lancamento.turno,
+        atividades: atividadesProcessadas,
+        kpis: kpisProcessados,
+        valorFinal: lancamento.remuneracao_total || 0,
+        valorAtividades: lancamento.subtotal_atividades || 0,
+        valorKPIs: lancamento.bonus_kpis || 0,
+        observacoes: lancamento.observacoes
+      };
+    });
+    const lancamentosFormatados = lancamentosDetalhados.map((lancamento) => {
+      const dataFormatada = new Date(lancamento.data).toISOString().split("T")[0];
+      const diaSemana = new Date(lancamento.data).toLocaleDateString("pt-BR", { weekday: "long" });
+      return {
+        data: dataFormatada,
+        diaSemana,
+        bonus_kpis: parseFloat(lancamento.valorKPIs) || 0,
+        // Adicionar campo bonus_kpis
+        atividades: lancamento.atividades.map((ativ) => ({
+          nome: ativ.nome,
+          quantidade: ativ.quantidade,
+          tempoGasto: ativ.tempo * 60,
+          // converter horas para minutos
+          valorUnitario: ativ.quantidade > 0 ? ativ.valor / ativ.quantidade : 0,
+          valorTotal: ativ.valor,
+          turno: lancamento.turno
+        })),
+        kpis: lancamento.kpis.map((kpi) => ({
+          nome: kpi.nome,
+          valor: kpi.valor,
+          atingido: kpi.atingido,
+          bonus: kpi.atingido ? parseFloat(lancamento.valorKPIs) / lancamento.kpis.filter((k) => k.atingido).length : 0
+        })),
+        valorDia: lancamento.valorFinal
+      };
+    });
+    const relatorioData = {
+      colaborador: {
+        id: colaborador.id,
+        nome: colaborador.nome,
+        cpf: colaborador.cpf,
+        funcao: colaborador.funcao
+      },
+      periodo: {
+        inicio: startDate,
+        fim: endDate,
+        mesAno: mesAno || `${(/* @__PURE__ */ new Date()).getFullYear()}-${((/* @__PURE__ */ new Date()).getMonth() + 1).toString().padStart(2, "0")}`
+      },
+      resumo: {
+        valorTotalKpi: valorKPIs,
+        valorTotalAtividade: valorAtividades,
+        valorTotalTarefas: 0,
+        // Adicionar lógica para tarefas se necessário
+        valorFinalMes,
+        percentualMeta: Math.round(percentualMeta * 100) / 100,
+        diasTrabalhados,
+        totalLancamentos
+      },
+      lancamentos: lancamentosFormatados
+    };
+    return c.json({ success: true, data: relatorioData });
+  } catch (error) {
+    console.error("Erro ao gerar relat\xF3rio individual:", error);
+    return c.json({ error: "Erro interno do servidor" }, 500);
+  }
+});
+var colaboradores_default = colaboradoresRoutes;
+
+// src/worker/supabase-worker.ts
+var app2 = new Hono2();
+app2.use("*", cors());
+app2.route("/api/auth", auth_default);
+app2.route("/api/usuarios", users_default);
+app2.route("/api", activities_default);
+app2.route("/api", kpis_default);
+app2.route("/api", calculator_default);
+app2.route("/api", lancamentos_default);
+app2.route("/api/wms-tasks", wms_tasks_default);
+app2.route("/api", monthly_earnings_default);
+app2.route("/api", historico_aprovacoes_default);
+app2.route("/api/colaboradores", colaboradores_default);
+app2.route("/api", colaboradores_default);
+app2.get("/api/health", (c) => {
   return c.json({ status: "ok", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
 });
-var supabase_worker_default = app;
+var supabase_worker_default = app2;
 export {
   supabase_worker_default as default
 };

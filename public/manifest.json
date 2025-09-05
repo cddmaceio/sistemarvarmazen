@@ -62,5 +62,18 @@
   "edge_side_includes": true,
   "launch_handler": {
     "client_mode": "navigate-existing"
-  }
+  },
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/csv": [".csv"],
+        "application/vnd.ms-excel": [".xls"],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"]
+      }
+    }
+  ],
+  "permissions": [
+    "storage"
+  ]
 }

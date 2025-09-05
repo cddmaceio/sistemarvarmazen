@@ -7,11 +7,31 @@ export default defineConfig({
     jsxImportSource: 'react'
   },
   server: {
+    port: 5173,
+    hmr: {
+      port: 5173,
+      host: 'localhost'
+    },
     proxy: {
       '/api': {
-        target: 'http://localhost:8888/.netlify/functions',
+        target: 'http://localhost:8888',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        secure: false,
+        ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            console.log('Proxy error para Netlify Dev:', err);
+          });
+          proxy.on('proxyReq', (proxyReq) => {
+            console.log('Proxy request para:', proxyReq.path);
+          });
+        }
+      },
+      '/.netlify': {
+        target: 'http://localhost:8888',
+        changeOrigin: true,
+        secure: false,
+        ws: true
       }
     }
   },

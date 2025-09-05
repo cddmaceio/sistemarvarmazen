@@ -1,10 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const hono_1 = require("hono");
-const zod_validator_1 = require("@hono/zod-validator");
-const types_1 = require("../../shared/types");
-const utils_1 = require("../utils");
-const calculatorRoutes = new hono_1.Hono();
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { CalculatorInputSchema } from '../../shared/types';
+import { getSupabase } from '../utils';
+const calculatorRoutes = new Hono();
 // Helper function to normalize strings (remove accents)
 const normalizeString = (str) => {
     return str
@@ -14,8 +12,8 @@ const normalizeString = (str) => {
         .replace(/Ç/g, 'C');
 };
 // POST /api/calculate
-calculatorRoutes.post('/calculate', (0, zod_validator_1.zValidator)('json', types_1.CalculatorInputSchema), async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+calculatorRoutes.post('/calculate', zValidator('json', CalculatorInputSchema), async (c) => {
+    const supabase = getSupabase(c.env);
     const input = c.req.valid('json');
     try {
         console.log('Calculator endpoint called');
@@ -185,4 +183,4 @@ calculatorRoutes.post('/calculate', (0, zod_validator_1.zValidator)('json', type
         return c.json({ error: 'Erro no cálculo' }, 500);
     }
 });
-exports.default = calculatorRoutes;
+export default calculatorRoutes;

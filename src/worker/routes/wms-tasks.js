@@ -1,36 +1,34 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const hono_1 = require("hono");
-const zod_validator_1 = require("@hono/zod-validator");
-const zod_1 = require("zod");
-const utils_1 = require("../utils");
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { getSupabase } from '../utils';
 // Schema para validação de tarefas WMS
-const WMSTaskSchema = zod_1.z.object({
-    armazem_mapa: zod_1.z.string().optional(),
-    tarefa: zod_1.z.string().min(1, 'Tarefa é obrigatória'),
-    placa_cavalo: zod_1.z.string().optional(),
-    placa_carreta: zod_1.z.string().optional(),
-    origem: zod_1.z.string().optional(),
-    destino: zod_1.z.string().optional(),
-    palete: zod_1.z.string().optional(),
-    prioridade: zod_1.z.string().optional(),
-    status: zod_1.z.string().optional(),
-    tipo: zod_1.z.string().min(1, 'Tipo é obrigatório'),
-    usuario: zod_1.z.string().min(1, 'Usuário é obrigatório'),
-    user_id: zod_1.z.string().optional(),
-    data_criacao: zod_1.z.string().optional(),
-    data_ultima_associacao: zod_1.z.string().optional(),
-    data_alteracao: zod_1.z.string().optional(),
-    data_liberacao: zod_1.z.string().optional(),
-    concluida_task: zod_1.z.boolean().default(false),
-    tempo_execucao: zod_1.z.number().min(0).default(0)
+const WMSTaskSchema = z.object({
+    armazem_mapa: z.string().optional(),
+    tarefa: z.string().min(1, 'Tarefa é obrigatória'),
+    placa_cavalo: z.string().optional(),
+    placa_carreta: z.string().optional(),
+    origem: z.string().optional(),
+    destino: z.string().optional(),
+    palete: z.string().optional(),
+    prioridade: z.string().optional(),
+    status: z.string().optional(),
+    tipo: z.string().min(1, 'Tipo é obrigatório'),
+    usuario: z.string().min(1, 'Usuário é obrigatório'),
+    user_id: z.string().optional(),
+    data_criacao: z.string().optional(),
+    data_ultima_associacao: z.string().optional(),
+    data_alteracao: z.string().optional(),
+    data_liberacao: z.string().optional(),
+    concluida_task: z.boolean().default(false),
+    tempo_execucao: z.number().min(0).default(0)
 });
-const wmsTaskRoutes = new hono_1.Hono();
+const wmsTaskRoutes = new Hono();
 // ===== CRUD ENDPOINTS =====
 // GET /api/wms-tasks - Listar todas as tarefas com filtros
 wmsTaskRoutes.get('/', async (c) => {
     try {
-        const supabase = (0, utils_1.getSupabase)(c.env);
+        const supabase = getSupabase(c.env);
         // Parâmetros de query
         const page = parseInt(c.req.query('page') || '1');
         const limit = parseInt(c.req.query('limit') || '50');
@@ -85,7 +83,7 @@ wmsTaskRoutes.get('/', async (c) => {
 // GET /api/wms-tasks/:id - Buscar tarefa específica
 wmsTaskRoutes.get('/:id', async (c) => {
     try {
-        const supabase = (0, utils_1.getSupabase)(c.env);
+        const supabase = getSupabase(c.env);
         const id = parseInt(c.req.param('id'));
         if (isNaN(id)) {
             return c.json({ success: false, error: 'ID inválido' }, 400);
@@ -107,9 +105,9 @@ wmsTaskRoutes.get('/:id', async (c) => {
     }
 });
 // POST /api/wms-tasks - Criar nova tarefa
-wmsTaskRoutes.post('/', (0, zod_validator_1.zValidator)('json', WMSTaskSchema), async (c) => {
+wmsTaskRoutes.post('/', zValidator('json', WMSTaskSchema), async (c) => {
     try {
-        const supabase = (0, utils_1.getSupabase)(c.env);
+        const supabase = getSupabase(c.env);
         const data = c.req.valid('json');
         // Buscar user_id do operador
         const { data: userData, error: userError } = await supabase
@@ -148,4 +146,4 @@ wmsTaskRoutes.post('/', (0, zod_validator_1.zValidator)('json', WMSTaskSchema), 
         return c.json({ success: false, error: 'Erro interno do servidor' }, 500);
     }
 });
-exports.default = wmsTaskRoutes;
+export default wmsTaskRoutes;

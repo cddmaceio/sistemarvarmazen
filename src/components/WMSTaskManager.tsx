@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { FileUpload } from '@/components/FileUpload';
 
 interface TaskData {
   [key: string]: string;
@@ -192,12 +193,12 @@ const WMSTaskManager: React.FC<WMSTaskManagerProps> = ({
       <div className="bg-white p-6 rounded-lg shadow">
         <h3 className="text-lg font-semibold mb-4">1. Selecionar Arquivo CSV</h3>
         <div className="space-y-4">
-          <input
-            type="file"
-            accept=".csv"
-            onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
-            disabled={isProcessing}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          <FileUpload
+            onFileSelect={handleFileSelect}
+            accept=".csv,text/csv,application/vnd.ms-excel"
+            maxSize={5 * 1024 * 1024} // 5MB
+            className={isProcessing ? 'opacity-50 pointer-events-none' : ''}
+            capture={false}
           />
           {isProcessing && (
             <div className="text-blue-600">

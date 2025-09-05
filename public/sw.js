@@ -77,23 +77,26 @@ self.addEventListener('fetch', (event) => {
 
 // Estratégia Network First para APIs (prioriza online)
 async function networkFirstStrategy(request) {
+  // Para APIs em desenvolvimento local, não interceptar - deixar passar direto
+  if (request.url.includes('localhost') || request.url.includes('127.0.0.1')) {
+    console.log('Service Worker: Passando direto para API local:', request.url);
+    return fetch(request);
+  }
+  
   try {
     console.log('Service Worker: Buscando online:', request.url);
     
-    // Tentar buscar online com timeout
-    const networkResponse = await Promise.race([
-      fetch(request),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 5000)
-      )
-    ]);
+    // Tentar buscar online sem timeout agressivo
+    const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
       console.log('Service Worker: Resposta online obtida:', request.url);
       return networkResponse;
     }
     
-    throw new Error('Resposta não OK');
+    // Se resposta não é OK, mas ainda é uma resposta válida, retornar
+    console.warn('Service Worker: Resposta não OK:', networkResponse.status, request.url);
+    return networkResponse;
     
   } catch (error) {
     console.warn('Service Worker: Falha na conexão online:', error.message);

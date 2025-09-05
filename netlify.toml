@@ -3,12 +3,17 @@
   command = "npm run build:netlify"
 
 [dev]
-  command = "npm run dev:vite"
-  targetPort = 5173
   port = 8888
-  publish = "dist"
-  framework = "#custom"
   autoLaunch = false
+  framework = "#static"
+  publish = "dist"
+  functionsPort = 8888
+  # Priorizar carregamento das funções
+  functions = "netlify/functions-build"
+  # Configurações para otimizar o carregamento das funções
+  [dev.env]
+    NETLIFY_DEV = "true"
+    NODE_ENV = "development"
 
 
 
@@ -16,52 +21,67 @@
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
+  force = true
 
-# Exclude static assets from SPA redirect
-[[redirects]]
-  from = "/*.js"
-  to = "/:splat.js"
-  status = 200
-
-[[redirects]]
-  from = "/*.css"
-  to = "/:splat.css"
-  status = 200
-
-[[redirects]]
-  from = "/*.json"
-  to = "/:splat.json"
-  status = 200
-
-# Exclude source files from SPA redirect
-[[redirects]]
-  from = "/src/*"
-  to = "/:splat"
-  status = 200
-
-# Exclude Vite virtual modules from SPA redirect
-[[redirects]]
-  from = "/@*"
-  to = "/:splat"
-  status = 200
-
-# Exclude node_modules from SPA redirect
-[[redirects]]
-  from = "/node_modules/*"
-  to = "/:splat"
-  status = 200
-
-# Exclude Vite client and HMR from SPA redirect
-[[redirects]]
-  from = "/client"
-  to = "/client"
-  status = 200
-
-# SPA fallback for all other routes (must be last)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
+  
+  # Excluir arquivos estáticos e de desenvolvimento do redirecionamento
+  [[redirects.exceptions]]
+    from = "/*.js"
+  [[redirects.exceptions]]
+    from = "/*.css"
+  [[redirects.exceptions]]
+    from = "/*.png"
+  [[redirects.exceptions]]
+    from = "/*.jpg"
+  [[redirects.exceptions]]
+    from = "/*.jpeg"
+  [[redirects.exceptions]]
+    from = "/*.gif"
+  [[redirects.exceptions]]
+    from = "/*.svg"
+  [[redirects.exceptions]]
+    from = "/*.ico"
+  [[redirects.exceptions]]
+    from = "/*.woff"
+  [[redirects.exceptions]]
+    from = "/*.woff2"
+  [[redirects.exceptions]]
+    from = "/*.ttf"
+  [[redirects.exceptions]]
+    from = "/*.eot"
+  [[redirects.exceptions]]
+    from = "/*.json"
+  [[redirects.exceptions]]
+    from = "/*.xml"
+  [[redirects.exceptions]]
+    from = "/*.txt"
+  [[redirects.exceptions]]
+    from = "/*.md"
+  [[redirects.exceptions]]
+    from = "/*.pdf"
+  [[redirects.exceptions]]
+    from = "/*.zip"
+  [[redirects.exceptions]]
+    from = "/*.tar.gz"
+  [[redirects.exceptions]]
+    from = "/*.map"
+  [[redirects.exceptions]]
+    from = "/src/*"
+  [[redirects.exceptions]]
+    from = "/@vite/*"
+  [[redirects.exceptions]]
+    from = "/@fs/*"
+  [[redirects.exceptions]]
+    from = "/node_modules/*"
+  [[redirects.exceptions]]
+    from = "/__vite_ping"
+  [[redirects.exceptions]]
+    from = "/vite.svg"
 
 [functions]
   directory = "netlify/functions-build"

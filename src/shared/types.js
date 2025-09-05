@@ -1,195 +1,192 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ExportLogSchema = exports.ExportFilterSchema = exports.HistoricoAprovacaoSchema = exports.AdminValidationSchema = exports.CreateLancamentoSchema = exports.KPILimitCheckSchema = exports.LancamentoSchema = exports.CalculatorResultSchema = exports.CalculatorInputSchema = exports.ValidTaskSchema = exports.MultipleActivitySchema = exports.LoginSchema = exports.UserSchema = exports.KPISchema = exports.ActivitySchema = void 0;
-const zod_1 = require("zod");
+import { z } from "zod";
 // Activity schema
-exports.ActivitySchema = zod_1.z.object({
-    id: zod_1.z.number().optional(),
-    nome_atividade: zod_1.z.string().min(1, "Nome da atividade é obrigatório"),
-    nivel_atividade: zod_1.z.string().min(1, "Nível da atividade é obrigatório"),
-    valor_atividade: zod_1.z.number().min(0, "Valor deve ser maior que zero"),
-    produtividade_minima: zod_1.z.number().min(0).optional(),
-    unidade_medida: zod_1.z.string().optional(),
-    created_at: zod_1.z.string().optional(),
-    updated_at: zod_1.z.string().optional(),
+export const ActivitySchema = z.object({
+    id: z.number().optional(),
+    nome_atividade: z.string().min(1, "Nome da atividade é obrigatório"),
+    nivel_atividade: z.string().min(1, "Nível da atividade é obrigatório"),
+    valor_atividade: z.number().min(0, "Valor deve ser maior que zero"),
+    produtividade_minima: z.number().min(0).optional(),
+    unidade_medida: z.string().optional(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
 });
 // KPI schema
-exports.KPISchema = zod_1.z.object({
-    id: zod_1.z.number().optional(),
-    nome_kpi: zod_1.z.string().min(1, "Nome do KPI é obrigatório"),
-    descricao: zod_1.z.string().optional(),
-    valor_meta_kpi: zod_1.z.number().min(0, "Meta deve ser maior que zero"),
-    peso_kpi: zod_1.z.number().min(0, "Peso deve ser maior que zero"),
-    turno_kpi: zod_1.z.enum(["Manhã", "Tarde", "Noite", "Geral"]),
-    funcao_kpi: zod_1.z.string().min(1, "Função é obrigatória"),
-    status_ativo: zod_1.z.boolean().default(true),
-    created_at: zod_1.z.string().optional(),
-    updated_at: zod_1.z.string().optional(),
+export const KPISchema = z.object({
+    id: z.number().optional(),
+    nome_kpi: z.string().min(1, "Nome do KPI é obrigatório"),
+    descricao: z.string().optional(),
+    valor_meta_kpi: z.number().min(0, "Meta deve ser maior que zero"),
+    peso_kpi: z.number().min(0, "Peso deve ser maior que zero"),
+    turno_kpi: z.enum(["Manhã", "Tarde", "Noite", "Geral"]),
+    funcao_kpi: z.string().min(1, "Função é obrigatória"),
+    status_ativo: z.boolean().default(true),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
 });
 // User schema for simple authentication
-exports.UserSchema = zod_1.z.object({
-    id: zod_1.z.number().optional(),
-    cpf: zod_1.z.string().min(1, "CPF é obrigatório"),
-    data_nascimento: zod_1.z.string().min(1, "Data de nascimento é obrigatória"),
-    nome: zod_1.z.string().min(1, "Nome é obrigatório"),
-    tipo_usuario: zod_1.z.string().default("colaborador"),
-    status_usuario: zod_1.z.string().default("ativo"),
-    funcao: zod_1.z.string().optional(),
-    turno: zod_1.z.enum(["Manhã", "Tarde", "Noite", "Geral"]).optional(), // Opcional para administradores
-    email: zod_1.z.string().optional(),
-    telefone: zod_1.z.string().optional(),
-    data_admissao: zod_1.z.string().optional(),
-    observacoes: zod_1.z.string().optional(),
-    created_at: zod_1.z.string().optional(),
-    updated_at: zod_1.z.string().optional(),
+export const UserSchema = z.object({
+    id: z.number().optional(),
+    cpf: z.string().min(1, "CPF é obrigatório"),
+    data_nascimento: z.string().min(1, "Data de nascimento é obrigatória"),
+    nome: z.string().min(1, "Nome é obrigatório"),
+    tipo_usuario: z.string().default("colaborador"),
+    status_usuario: z.string().default("ativo"),
+    funcao: z.string().optional(),
+    turno: z.enum(["Manhã", "Tarde", "Noite", "Geral"]).optional(), // Opcional para administradores
+    email: z.string().optional(),
+    telefone: z.string().optional(),
+    data_admissao: z.string().optional(),
+    observacoes: z.string().optional(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
 });
 // Login schema
-exports.LoginSchema = zod_1.z.object({
-    cpf: zod_1.z.string().min(1, "CPF é obrigatório"),
-    data_nascimento: zod_1.z.string().min(1, "Data de nascimento é obrigatória"),
+export const LoginSchema = z.object({
+    cpf: z.string().min(1, "CPF é obrigatório"),
+    data_nascimento: z.string().min(1, "Data de nascimento é obrigatória"),
 });
 // Multiple activities schema for Ajudantes de Armazém
-exports.MultipleActivitySchema = zod_1.z.object({
-    nome_atividade: zod_1.z.string().min(1, "Nome da atividade é obrigatório"),
-    quantidade_produzida: zod_1.z.number().min(0, "Quantidade deve ser maior que zero"),
-    tempo_horas: zod_1.z.number().min(0.1, "Tempo deve ser maior que 0.1 horas"),
+export const MultipleActivitySchema = z.object({
+    nome_atividade: z.string().min(1, "Nome da atividade é obrigatório"),
+    quantidade_produzida: z.number().min(0, "Quantidade deve ser maior que zero"),
+    tempo_horas: z.number().min(0.1, "Tempo deve ser maior que 0.1 horas"),
 });
 // Valid tasks schema for Operador de Empilhadeira
-exports.ValidTaskSchema = zod_1.z.object({
-    tipo: zod_1.z.string(),
-    meta_segundos: zod_1.z.number(),
-    tempo_execucao_segundos: zod_1.z.number(),
-    valida: zod_1.z.boolean(),
+export const ValidTaskSchema = z.object({
+    tipo: z.string(),
+    meta_segundos: z.number(),
+    tempo_execucao_segundos: z.number(),
+    valida: z.boolean(),
 });
 // Calculator input schema
-exports.CalculatorInputSchema = zod_1.z.object({
-    nome_atividade: zod_1.z.string().optional(),
-    funcao: zod_1.z.string().min(1, "Função é obrigatória"),
-    turno: zod_1.z.enum(["Manhã", "Tarde", "Noite", "Manha"]),
-    quantidade_produzida: zod_1.z.number().optional(),
-    tempo_horas: zod_1.z.number().optional(),
-    input_adicional: zod_1.z.number().optional(),
-    kpis_atingidos: zod_1.z.array(zod_1.z.string()).optional(),
+export const CalculatorInputSchema = z.object({
+    nome_atividade: z.string().optional(),
+    funcao: z.string().min(1, "Função é obrigatória"),
+    turno: z.enum(["Manhã", "Tarde", "Noite", "Manha"]),
+    quantidade_produzida: z.number().optional(),
+    tempo_horas: z.number().optional(),
+    input_adicional: z.number().optional(),
+    kpis_atingidos: z.array(z.string()).optional(),
     // Multiple activities for Ajudantes de Armazém
-    multiple_activities: zod_1.z.array(exports.MultipleActivitySchema).optional(),
+    multiple_activities: z.array(MultipleActivitySchema).optional(),
     // Valid tasks for Operador de Empilhadeira
-    nome_operador: zod_1.z.string().optional(),
-    valid_tasks_count: zod_1.z.number().optional(),
-    data_lancamento: zod_1.z.string().optional(),
+    nome_operador: z.string().optional(),
+    valid_tasks_count: z.number().optional(),
+    data_lancamento: z.string().optional(),
 });
 // Calculator result schema
-exports.CalculatorResultSchema = zod_1.z.object({
-    subtotalAtividades: zod_1.z.number(),
-    bonusKpis: zod_1.z.number(),
-    remuneracaoTotal: zod_1.z.number(),
-    kpisAtingidos: zod_1.z.array(zod_1.z.string()),
-    produtividadeAlcancada: zod_1.z.number().optional(),
-    nivelAtingido: zod_1.z.string().optional(),
-    unidadeMedida: zod_1.z.string().optional(),
+export const CalculatorResultSchema = z.object({
+    subtotalAtividades: z.number(),
+    bonusKpis: z.number(),
+    remuneracaoTotal: z.number(),
+    kpisAtingidos: z.array(z.string()),
+    produtividadeAlcancada: z.number().optional(),
+    nivelAtingido: z.string().optional(),
+    unidadeMedida: z.string().optional(),
     // Multiple activities details - array of strings with format: "Nome: quantidade unidade em tempo (nível)"
-    atividadesDetalhes: zod_1.z.array(zod_1.z.string()).optional(),
+    atividadesDetalhes: z.array(z.string()).optional(),
     // Valid tasks details
-    tarefasValidas: zod_1.z.number().optional(),
-    valorTarefas: zod_1.z.number().optional(),
+    tarefasValidas: z.number().optional(),
+    valorTarefas: z.number().optional(),
     // Gross activity value
-    valorBrutoAtividades: zod_1.z.number().optional(),
+    valorBrutoAtividades: z.number().optional(),
 });
 // Lançamento schema
-exports.LancamentoSchema = zod_1.z.object({
-    id: zod_1.z.number().optional(),
-    user_id: zod_1.z.number(),
-    user_nome: zod_1.z.string(),
-    user_cpf: zod_1.z.string(),
-    data_lancamento: zod_1.z.string(),
-    funcao: zod_1.z.string(),
-    turno: zod_1.z.enum(["Manhã", "Tarde", "Noite", "Manha"]),
+export const LancamentoSchema = z.object({
+    id: z.number().optional(),
+    user_id: z.number(),
+    user_nome: z.string(),
+    user_cpf: z.string(),
+    data_lancamento: z.string(),
+    funcao: z.string(),
+    turno: z.enum(["Manhã", "Tarde", "Noite", "Manha"]),
     // Calculator input data
-    nome_atividade: zod_1.z.string().optional(),
-    quantidade_produzida: zod_1.z.number().optional(),
-    tempo_horas: zod_1.z.number().optional(),
-    input_adicional: zod_1.z.number().default(0),
-    multiple_activities: zod_1.z.string().optional(), // JSON
-    nome_operador: zod_1.z.string().optional(),
-    valid_tasks_count: zod_1.z.number().optional(),
-    kpis_atingidos: zod_1.z.string().optional(), // JSON
+    nome_atividade: z.string().optional(),
+    quantidade_produzida: z.number().optional(),
+    tempo_horas: z.number().optional(),
+    input_adicional: z.number().default(0),
+    multiple_activities: z.string().optional(), // JSON
+    nome_operador: z.string().optional(),
+    valid_tasks_count: z.number().optional(),
+    kpis_atingidos: z.string().optional(), // JSON
     // Calculator results
-    subtotal_atividades: zod_1.z.number(),
-    bonus_kpis: zod_1.z.number(),
-    remuneracao_total: zod_1.z.number(),
-    produtividade_alcancada: zod_1.z.number().optional(),
-    nivel_atingido: zod_1.z.string().optional(),
-    unidade_medida: zod_1.z.string().optional(),
-    atividades_detalhes: zod_1.z.string().optional(), // JSON
-    tarefas_validas: zod_1.z.number().optional(),
-    valor_tarefas: zod_1.z.number().optional(),
-    valor_bruto_atividades: zod_1.z.number().optional(), // Para Ajudante de Armazém
+    subtotal_atividades: z.number(),
+    bonus_kpis: z.number(),
+    remuneracao_total: z.number(),
+    produtividade_alcancada: z.number().optional(),
+    nivel_atingido: z.string().optional(),
+    unidade_medida: z.string().optional(),
+    atividades_detalhes: z.string().optional(), // JSON
+    tarefas_validas: z.number().optional(),
+    valor_tarefas: z.number().optional(),
+    valor_bruto_atividades: z.number().optional(), // Para Ajudante de Armazém
     // Status
-    status: zod_1.z.enum(["pendente", "aprovado", "reprovado"]).default("pendente"),
-    observacoes: zod_1.z.string().optional(),
+    status: z.enum(["pendente", "aprovado", "reprovado"]).default("pendente"),
+    observacoes: z.string().optional(),
     // Edit tracking fields
-    editado_por_admin: zod_1.z.string().optional(),
-    data_edicao: zod_1.z.string().optional(),
-    valores_originais: zod_1.z.string().optional(), // JSON backup
-    status_edicao: zod_1.z.enum(["original", "editado_admin"]).default("original"),
-    observacoes_edicao: zod_1.z.string().optional(),
-    created_at: zod_1.z.string().optional(),
-    updated_at: zod_1.z.string().optional(),
+    editado_por_admin: z.string().optional(),
+    data_edicao: z.string().optional(),
+    valores_originais: z.string().optional(), // JSON backup
+    status_edicao: z.enum(["original", "editado_admin"]).default("original"),
+    observacoes_edicao: z.string().optional(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
 });
 // KPI limit check schema
-exports.KPILimitCheckSchema = zod_1.z.object({
-    user_id: zod_1.z.number(),
-    data_lancamento: zod_1.z.string(),
+export const KPILimitCheckSchema = z.object({
+    user_id: z.number(),
+    data_lancamento: z.string(),
 });
 // Lançamento creation input
-exports.CreateLancamentoSchema = zod_1.z.object({
-    data_lancamento: zod_1.z.string().min(1, "Data é obrigatória"),
-    user_id: zod_1.z.number(),
-    calculator_data: exports.CalculatorInputSchema,
-    calculator_result: exports.CalculatorResultSchema,
+export const CreateLancamentoSchema = z.object({
+    data_lancamento: z.string().min(1, "Data é obrigatória"),
+    user_id: z.number(),
+    calculator_data: CalculatorInputSchema,
+    calculator_result: CalculatorResultSchema,
 });
 // Admin validation schema
-exports.AdminValidationSchema = zod_1.z.object({
-    acao: zod_1.z.enum(["aprovar", "reprovar", "editar"]),
-    observacoes: zod_1.z.string().optional(),
-    dados_editados: exports.CalculatorInputSchema.optional(),
-    admin_user_id: zod_1.z.number().optional(),
+export const AdminValidationSchema = z.object({
+    acao: z.enum(["aprovar", "reprovar", "editar"]),
+    observacoes: z.string().optional(),
+    dados_editados: CalculatorInputSchema.optional(),
+    admin_user_id: z.number().optional(),
 });
 // History schema for approved entries
-exports.HistoricoAprovacaoSchema = zod_1.z.object({
-    id: zod_1.z.number().optional(),
-    lancamento_id: zod_1.z.number(),
-    colaborador_id: zod_1.z.number(),
-    colaborador_nome: zod_1.z.string(),
-    colaborador_cpf: zod_1.z.string(),
-    data_lancamento: zod_1.z.string(),
-    data_aprovacao: zod_1.z.string(),
-    aprovado_por: zod_1.z.string(),
-    editado: zod_1.z.boolean(),
-    editado_por: zod_1.z.string().optional(),
-    dados_finais: zod_1.z.string(), // JSON
-    observacoes: zod_1.z.string().optional(),
-    remuneracao_total: zod_1.z.number(),
-    created_at: zod_1.z.string().optional(),
-    updated_at: zod_1.z.string().optional(),
+export const HistoricoAprovacaoSchema = z.object({
+    id: z.number().optional(),
+    lancamento_id: z.number(),
+    colaborador_id: z.number(),
+    colaborador_nome: z.string(),
+    colaborador_cpf: z.string(),
+    data_lancamento: z.string(),
+    data_aprovacao: z.string(),
+    aprovado_por: z.string(),
+    editado: z.boolean(),
+    editado_por: z.string().optional(),
+    dados_finais: z.string(), // JSON
+    observacoes: z.string().optional(),
+    remuneracao_total: z.number(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
 });
 // Exportação schemas
-exports.ExportFilterSchema = zod_1.z.object({
-    periodo_inicio: zod_1.z.string().optional(),
-    periodo_fim: zod_1.z.string().optional(),
-    funcao: zod_1.z.string().optional(),
-    colaborador_id: zod_1.z.number().optional(),
-    status: zod_1.z.enum(["pendente", "aprovado", "reprovado", "todos"]).default("aprovado"),
+export const ExportFilterSchema = z.object({
+    periodo_inicio: z.string().optional(),
+    periodo_fim: z.string().optional(),
+    funcao: z.string().optional(),
+    colaborador_id: z.number().optional(),
+    status: z.enum(["pendente", "aprovado", "reprovado", "todos"]).default("aprovado"),
 });
-exports.ExportLogSchema = zod_1.z.object({
-    id: zod_1.z.number().optional(),
-    admin_id: zod_1.z.number(),
-    admin_nome: zod_1.z.string(),
-    filtros_aplicados: zod_1.z.string().optional(), // JSON
-    formato_exportacao: zod_1.z.enum(["csv", "xlsx", "pdf"]),
-    total_registros: zod_1.z.number(),
-    nome_arquivo: zod_1.z.string().optional(),
-    data_exportacao: zod_1.z.string().optional(),
-    ip_origem: zod_1.z.string().optional(),
-    created_at: zod_1.z.string().optional(),
-    updated_at: zod_1.z.string().optional(),
+export const ExportLogSchema = z.object({
+    id: z.number().optional(),
+    admin_id: z.number(),
+    admin_nome: z.string(),
+    filtros_aplicados: z.string().optional(), // JSON
+    formato_exportacao: z.enum(["csv", "xlsx", "pdf"]),
+    total_registros: z.number(),
+    nome_arquivo: z.string().optional(),
+    data_exportacao: z.string().optional(),
+    ip_origem: z.string().optional(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
 });

@@ -1,13 +1,11 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const hono_1 = require("hono");
-const zod_validator_1 = require("@hono/zod-validator");
-const types_1 = require("../../shared/types");
-const utils_1 = require("../utils");
-const userRoutes = new hono_1.Hono();
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { UserSchema } from '../../shared/types';
+import { getSupabase } from '../utils';
+const userRoutes = new Hono();
 // GET /api/usuarios
 userRoutes.get('/', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const { data: users, error } = await supabase
         .from('usuarios')
         .select('*')
@@ -18,8 +16,8 @@ userRoutes.get('/', async (c) => {
     return c.json(users || []);
 });
 // POST /api/usuarios
-userRoutes.post('/', (0, zod_validator_1.zValidator)('json', types_1.UserSchema), async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+userRoutes.post('/', zValidator('json', UserSchema), async (c) => {
+    const supabase = getSupabase(c.env);
     const data = c.req.valid('json');
     const { data: user, error } = await supabase
         .from('usuarios')
@@ -36,8 +34,8 @@ userRoutes.post('/', (0, zod_validator_1.zValidator)('json', types_1.UserSchema)
     return c.json(user);
 });
 // PUT /api/usuarios/:id
-userRoutes.put('/:id', (0, zod_validator_1.zValidator)('json', types_1.UserSchema.partial()), async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+userRoutes.put('/:id', zValidator('json', UserSchema.partial()), async (c) => {
+    const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const data = c.req.valid('json');
     const { data: user, error } = await supabase
@@ -56,7 +54,7 @@ userRoutes.put('/:id', (0, zod_validator_1.zValidator)('json', types_1.UserSchem
 });
 // DELETE /api/usuarios/:id
 userRoutes.delete('/:id', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const { error } = await supabase
         .from('usuarios')
@@ -67,4 +65,4 @@ userRoutes.delete('/:id', async (c) => {
     }
     return c.json({ success: true });
 });
-exports.default = userRoutes;
+export default userRoutes;

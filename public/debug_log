@@ -1,20 +1,166 @@
-Response status: 200
-ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
-ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso
-ProductivityDashboard.tsx:98 Response status: 200
-ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
-ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso
-ProductivityDashboard.tsx:98 Response status: 200
-ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
-ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso
-ProductivityDashboard.tsx:98 Response status: 200
-ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
-ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso
-ProductivityDashboard.tsx:88 Carregando dados de ganhos mensais...
-ProductivityDashboard.tsx:95 URL da requisição: /api/monthly-earnings?mesAno=2025-08
-ProductivityDashboard.tsx:97  GET http://localhost:8888/api/monthly-earnings?mesAno=2025-08 500 (Internal Server Error)
-loadMonthlyEarnings @ ProductivityDashboard.tsx:97
-(anonymous) @ ProductivityDashboard.tsx:153
+SW registrado com sucesso: http://localhost:8888/
+sw.js:133 Service Worker: Servindo do cache: http://localhost:8888/manifest.json
+4sw.js:133 Service Worker: Servindo do cache: http://localhost:8888/icon-192x192.png
+sw.js:81 Service Worker: Buscando online: http://localhost:8888/api/functions
+sw.js:81 Service Worker: Buscando online: http://localhost:8888/api/activity-names
+sw.js:81 Service Worker: Buscando online: http://localhost:8888/api/lancamentos/pendentes
+sw.js:81 Service Worker: Buscando online: http://localhost:8888/api/functions
+sw.js:81 Service Worker: Buscando online: http://localhost:8888/api/activity-names
+sw.js:81 Service Worker: Buscando online: http://localhost:8888/api/lancamentos/pendentes
+:8888/admin/validacao:1 Error while trying to use the following icon from the Manifest: http://localhost:8888/icon-192x192.png (Download error or resource isn't a valid image)Understand this error
+sw.js:133 Service Worker: Servindo do cache: http://localhost:8888/icon-192x192.png
+sw.js:133 Service Worker: Servindo do cache: http://localhost:8888/icon-512x512.png
+2sw.js:99 Service Worker: Falha na conexão online: Failed to fetch
+networkFirstStrategy @ sw.js:99
+await in networkFirstStrategy
+(anonymous) @ sw.js:71Understand this warning
+requests.js:1  GET http://localhost:8888/api/functions 503 (Service Unavailable)
+(anonymous) @ requests.js:1
+(anonymous) @ traffic.js:1
+fetch @ traffic.js:1
+fetchFunctions @ useApi.ts:179
+(anonymous) @ useApi.ts:196
+react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
+runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
+commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
+commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9182
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
+flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
+(anonymous) @ react-dom_client.js?v=53fd2a99:11042
+performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
+requests.js:1  GET http://localhost:8888/api/activity-names 503 (Service Unavailable)
+(anonymous) @ requests.js:1
+(anonymous) @ traffic.js:1
+fetch @ traffic.js:1
+fetchActivityNames @ useApi.ts:211
+(anonymous) @ useApi.ts:228
+react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
+runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
+commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
+commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9182
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
+commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
+flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
+(anonymous) @ react-dom_client.js?v=53fd2a99:11042
+performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
+client:802 WebSocket connection to 'ws://localhost:8888/?token=aFUKOfaK-wpF' failed: 
+createConnection @ client:802
+connect @ client:437
+connect @ client:811
+connect @ client:290
+connect @ client:383
+(anonymous) @ client:908Understand this error
+client:815 WebSocket connection to 'ws://localhost:5173/?token=aFUKOfaK-wpF' failed: 
+createConnection @ client:815
+connect @ client:437
+connect @ client:822Understand this error
+client:830 [vite] failed to connect to websocket.
+your current setup:
+  (browser) localhost:8888/ <--[HTTP]--> localhost:5173/ (server)
+  (browser) localhost:8888/ <--[WebSocket (failing)]--> localhost:5173/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr .
+connect @ client:830
+await in connect
+connect @ client:290
+connect @ client:383
+(anonymous) @ client:908Understand this error
+2sw.js:99 Service Worker: Falha na conexão online: Failed to fetch
+networkFirstStrategy @ sw.js:99
+await in networkFirstStrategy
+(anonymous) @ sw.js:71Understand this warning
+requests.js:1  GET http://localhost:8888/api/lancamentos/pendentes 503 (Service Unavailable)
+(anonymous) @ requests.js:1
+(anonymous) @ traffic.js:1
+fetch @ traffic.js:1
+fetchLancamentosPendentes @ Validacao.tsx:35
+(anonymous) @ Validacao.tsx:29
 react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
 runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
 commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
@@ -59,23 +205,13 @@ commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
 recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
 commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
 flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
-commitRootImpl @ react-dom_client.js?v=53fd2a99:11070
-commitRoot @ react-dom_client.js?v=53fd2a99:10989
-commitRootWhenReady @ react-dom_client.js?v=53fd2a99:10477
-performWorkOnRoot @ react-dom_client.js?v=53fd2a99:10421
-performSyncWorkOnRoot @ react-dom_client.js?v=53fd2a99:11448
-flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=53fd2a99:11356
-flushSyncWork$1 @ react-dom_client.js?v=53fd2a99:10533
-batchedUpdates$1 @ react-dom_client.js?v=53fd2a99:2543
-dispatchEventForPluginEventSystem @ react-dom_client.js?v=53fd2a99:11683
-dispatchEvent @ react-dom_client.js?v=53fd2a99:14608
-dispatchDiscreteEvent @ react-dom_client.js?v=53fd2a99:14589
-handleMouseUp_ @ unknownUnderstand this error
-ProductivityDashboard.tsx:98 Response status: 500
-ProductivityDashboard.tsx:102 Erro na resposta da API: {status: 500, statusText: 'Internal Server Error', body: '{"success":false,"error":"column monthly_earnings_view.data does not exist"}'}body: "{\"success\":false,\"error\":\"column monthly_earnings_view.data does not exist\"}"status: 500statusText: "Internal Server Error"[[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()__proto__: (...)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()
-loadMonthlyEarnings @ ProductivityDashboard.tsx:102
-await in loadMonthlyEarnings
-(anonymous) @ ProductivityDashboard.tsx:153
+(anonymous) @ react-dom_client.js?v=53fd2a99:11042
+performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
+Validacao.tsx:42 Erro ao carregar lançamentos: Error: Erro ao buscar lançamentos pendentes
+    at fetchLancamentosPendentes (Validacao.tsx:37:15)
+fetchLancamentosPendentes @ Validacao.tsx:42
+await in fetchLancamentosPendentes
+(anonymous) @ Validacao.tsx:29
 react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
 runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
 commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
@@ -120,81 +256,168 @@ commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
 recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
 commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
 flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
-commitRootImpl @ react-dom_client.js?v=53fd2a99:11070
-commitRoot @ react-dom_client.js?v=53fd2a99:10989
-commitRootWhenReady @ react-dom_client.js?v=53fd2a99:10477
-performWorkOnRoot @ react-dom_client.js?v=53fd2a99:10421
-performSyncWorkOnRoot @ react-dom_client.js?v=53fd2a99:11448
-flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=53fd2a99:11356
-flushSyncWork$1 @ react-dom_client.js?v=53fd2a99:10533
-batchedUpdates$1 @ react-dom_client.js?v=53fd2a99:2543
-dispatchEventForPluginEventSystem @ react-dom_client.js?v=53fd2a99:11683
-dispatchEvent @ react-dom_client.js?v=53fd2a99:14608
-dispatchDiscreteEvent @ react-dom_client.js?v=53fd2a99:14589
-handleMouseUp_ @ unknownUnderstand this error
-ProductivityDashboard.tsx:139 Erro na requisição de dados de ganhos mensais: Error: API Error: 500 - Internal Server Error
-    at loadMonthlyEarnings (ProductivityDashboard.tsx:107:15)
-loadMonthlyEarnings @ ProductivityDashboard.tsx:139
-await in loadMonthlyEarnings
-(anonymous) @ ProductivityDashboard.tsx:153
+(anonymous) @ react-dom_client.js?v=53fd2a99:11042
+performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
+requests.js:1  GET http://localhost:8888/api/functions 503 (Service Unavailable)
+(anonymous) @ requests.js:1
+(anonymous) @ traffic.js:1
+fetch @ traffic.js:1
+fetchFunctions @ useApi.ts:179
+(anonymous) @ useApi.ts:196
 react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
 runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
 commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
 commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9182
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9176
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9265
-recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=53fd2a99:9163
-commitPassiveMountOnFiber @ react-dom_client.js?v=53fd2a99:9186
-flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11119
-commitRootImpl @ react-dom_client.js?v=53fd2a99:11070
-commitRoot @ react-dom_client.js?v=53fd2a99:10989
-commitRootWhenReady @ react-dom_client.js?v=53fd2a99:10477
-performWorkOnRoot @ react-dom_client.js?v=53fd2a99:10421
-performSyncWorkOnRoot @ react-dom_client.js?v=53fd2a99:11448
-flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=53fd2a99:11356
-flushSyncWork$1 @ react-dom_client.js?v=53fd2a99:10533
-batchedUpdates$1 @ react-dom_client.js?v=53fd2a99:2543
-dispatchEventForPluginEventSystem @ react-dom_client.js?v=53fd2a99:11683
-dispatchEvent @ react-dom_client.js?v=53fd2a99:14608
-dispatchDiscreteEvent @ react-dom_client.js?v=53fd2a99:14589
-handleMouseUp_ @ unknownUnderstand this error
-ProductivityDashboard.tsx:88 Carregando dados de ganhos mensais...
-ProductivityDashboard.tsx:95 URL da requisição: /api/monthly-earnings
-ProductivityDashboard.tsx:98 Response status: 200
-ProductivityDashboard.tsx:111 Dados de ganhos recebidos: {success: true, data: Array(7)}
-ProductivityDashboard.tsx:133 Dados de ganhos mensais carregados com sucesso
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9297
+recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
+recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
+recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
+doubleInvokeEffectsOnFiber @ react-dom_client.js?v=53fd2a99:11282
+runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11253
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11290
+flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11126
+(anonymous) @ react-dom_client.js?v=53fd2a99:11042
+performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
+sw.js:99 Service Worker: Falha na conexão online: Failed to fetch
+networkFirstStrategy @ sw.js:99
+await in networkFirstStrategy
+(anonymous) @ sw.js:71Understand this warning
+requests.js:1  GET http://localhost:8888/api/activity-names 503 (Service Unavailable)
+(anonymous) @ requests.js:1
+(anonymous) @ traffic.js:1
+fetch @ traffic.js:1
+fetchActivityNames @ useApi.ts:211
+(anonymous) @ useApi.ts:228
+react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
+runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
+commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
+commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9297
+recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9335
+recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
+recursivelyTraverseReconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9276
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9290
+doubleInvokeEffectsOnFiber @ react-dom_client.js?v=53fd2a99:11282
+runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11253
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11290
+flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11126
+(anonymous) @ react-dom_client.js?v=53fd2a99:11042
+performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
+sw.js:99 Service Worker: Falha na conexão online: Failed to fetch
+networkFirstStrategy @ sw.js:99
+await in networkFirstStrategy
+(anonymous) @ sw.js:71Understand this warning
+requests.js:1  GET http://localhost:8888/api/lancamentos/pendentes 503 (Service Unavailable)
+(anonymous) @ requests.js:1
+(anonymous) @ traffic.js:1
+fetch @ traffic.js:1
+fetchLancamentosPendentes @ Validacao.tsx:35
+(anonymous) @ Validacao.tsx:29
+react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
+runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
+commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
+commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9297
+doubleInvokeEffectsOnFiber @ react-dom_client.js?v=53fd2a99:11282
+runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11253
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11290
+flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11126
+(anonymous) @ react-dom_client.js?v=53fd2a99:11042
+performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error
+Validacao.tsx:42 Erro ao carregar lançamentos: Error: Erro ao buscar lançamentos pendentes
+    at fetchLancamentosPendentes (Validacao.tsx:37:15)
+fetchLancamentosPendentes @ Validacao.tsx:42
+await in fetchLancamentosPendentes
+(anonymous) @ Validacao.tsx:29
+react-stack-bottom-frame @ react-dom_client.js?v=53fd2a99:16242
+runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
+commitHookEffectListMount @ react-dom_client.js?v=53fd2a99:7767
+commitHookPassiveMountEffects @ react-dom_client.js?v=53fd2a99:7825
+reconnectPassiveEffects @ react-dom_client.js?v=53fd2a99:9297
+doubleInvokeEffectsOnFiber @ react-dom_client.js?v=53fd2a99:11282
+runWithFiberInDEV @ react-dom_client.js?v=53fd2a99:726
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11253
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11259
+commitDoubleInvokeEffectsInDEV @ react-dom_client.js?v=53fd2a99:11290
+flushPassiveEffects @ react-dom_client.js?v=53fd2a99:11126
+(anonymous) @ react-dom_client.js?v=53fd2a99:11042
+performWorkUntilDeadline @ react-dom_client.js?v=53fd2a99:35Understand this error

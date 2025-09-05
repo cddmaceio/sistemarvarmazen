@@ -1,13 +1,11 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const hono_1 = require("hono");
-const zod_validator_1 = require("@hono/zod-validator");
-const types_1 = require("../../shared/types");
-const utils_1 = require("../utils");
-const kpiRoutes = new hono_1.Hono();
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { KPISchema } from '../../shared/types';
+import { getSupabase } from '../utils';
+const kpiRoutes = new Hono();
 // GET /api/kpis
 kpiRoutes.get('/kpis', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const { data: kpis, error } = await supabase
         .from('kpis')
         .select('*')
@@ -15,13 +13,12 @@ kpiRoutes.get('/kpis', async (c) => {
     if (error) {
         return c.json({ error: error.message }, 500);
     }
-    // Return complete KPI objects instead of just names
-    const kpiObjects = kpis || [];
-    return c.json({ kpisAtingidos: kpiObjects });
+    // Return array directly for useKPIs hook
+    return c.json(kpis || []);
 });
 // GET /api/functions
 kpiRoutes.get('/functions', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const { data: kpis, error } = await supabase
         .from('kpis')
         .select('funcao_kpi')
@@ -34,7 +31,7 @@ kpiRoutes.get('/functions', async (c) => {
 });
 // GET /api/kpis/available - Get available KPIs for function and shift
 kpiRoutes.get('/kpis/available', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const funcao = c.req.query('funcao');
     const turno = c.req.query('turno');
     if (!funcao || !turno) {
@@ -57,7 +54,7 @@ kpiRoutes.get('/kpis/available', async (c) => {
 });
 // POST /api/kpis/check-limit - Check if user can launch KPIs for a specific date
 kpiRoutes.post('/kpis/check-limit', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const body = await c.req.json();
     const { user_id, data_lancamento } = body;
     if (!user_id || !data_lancamento) {
@@ -85,8 +82,8 @@ kpiRoutes.post('/kpis/check-limit', async (c) => {
     }
 });
 // POST /api/kpis
-kpiRoutes.post('/kpis', (0, zod_validator_1.zValidator)('json', types_1.KPISchema), async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+kpiRoutes.post('/kpis', zValidator('json', KPISchema), async (c) => {
+    const supabase = getSupabase(c.env);
     const data = c.req.valid('json');
     const { data: kpi, error } = await supabase
         .from('kpis')
@@ -99,8 +96,8 @@ kpiRoutes.post('/kpis', (0, zod_validator_1.zValidator)('json', types_1.KPISchem
     return c.json(kpi);
 });
 // PUT /api/kpis/:id
-kpiRoutes.put('/kpis/:id', (0, zod_validator_1.zValidator)('json', types_1.KPISchema.partial()), async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+kpiRoutes.put('/kpis/:id', zValidator('json', KPISchema.partial()), async (c) => {
+    const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const data = c.req.valid('json');
     const { data: kpi, error } = await supabase
@@ -119,7 +116,7 @@ kpiRoutes.put('/kpis/:id', (0, zod_validator_1.zValidator)('json', types_1.KPISc
 });
 // DELETE /api/kpis/:id
 kpiRoutes.delete('/kpis/:id', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const { error } = await supabase
         .from('kpis')
@@ -130,4 +127,4 @@ kpiRoutes.delete('/kpis/:id', async (c) => {
     }
     return c.json({ success: true });
 });
-exports.default = kpiRoutes;
+export default kpiRoutes;

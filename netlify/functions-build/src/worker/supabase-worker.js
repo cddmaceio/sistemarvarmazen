@@ -14,6 +14,8 @@ const calculator_1 = __importDefault(require("./routes/calculator"));
 const lancamentos_1 = __importDefault(require("./routes/lancamentos"));
 const wms_tasks_1 = __importDefault(require("./routes/wms-tasks"));
 const monthly_earnings_1 = __importDefault(require("./routes/monthly-earnings"));
+const historico_aprovacoes_1 = __importDefault(require("./routes/historico-aprovacoes"));
+const colaboradores_1 = __importDefault(require("./routes/colaboradores"));
 const app = new hono_1.Hono();
 // CORS middleware
 app.use('*', (0, cors_1.cors)());
@@ -26,6 +28,9 @@ app.route('/api', calculator_1.default);
 app.route('/api', lancamentos_1.default);
 app.route('/api/wms-tasks', wms_tasks_1.default);
 app.route('/api', monthly_earnings_1.default);
+app.route('/api', historico_aprovacoes_1.default);
+app.route('/api/colaboradores', colaboradores_1.default);
+app.route('/api', colaboradores_1.default);
 // Health check endpoint
 app.get('/api/health', (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });

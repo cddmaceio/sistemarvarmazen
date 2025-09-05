@@ -1,13 +1,11 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const hono_1 = require("hono");
-const zod_validator_1 = require("@hono/zod-validator");
-const types_1 = require("../../shared/types");
-const utils_1 = require("../utils");
-const activityRoutes = new hono_1.Hono();
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { ActivitySchema } from '../../shared/types';
+import { getSupabase } from '../utils';
+const activityRoutes = new Hono();
 // GET /api/activities
 activityRoutes.get('/activities', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const { data: activities, error } = await supabase
         .from('activities')
         .select('*')
@@ -19,7 +17,7 @@ activityRoutes.get('/activities', async (c) => {
 });
 // GET /api/activity-names
 activityRoutes.get('/activity-names', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const { data: activities, error } = await supabase
         .from('activities')
         .select('nome_atividade')
@@ -39,8 +37,8 @@ activityRoutes.get('/activity-names', async (c) => {
     return response;
 });
 // POST /api/activities
-activityRoutes.post('/activities', (0, zod_validator_1.zValidator)('json', types_1.ActivitySchema), async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+activityRoutes.post('/activities', zValidator('json', ActivitySchema), async (c) => {
+    const supabase = getSupabase(c.env);
     const data = c.req.valid('json');
     const { data: activity, error } = await supabase
         .from('activities')
@@ -57,8 +55,8 @@ activityRoutes.post('/activities', (0, zod_validator_1.zValidator)('json', types
     return c.json(activity);
 });
 // PUT /api/activities/:id
-activityRoutes.put('/activities/:id', (0, zod_validator_1.zValidator)('json', types_1.ActivitySchema.partial()), async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+activityRoutes.put('/activities/:id', zValidator('json', ActivitySchema.partial()), async (c) => {
+    const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const data = c.req.valid('json');
     const { data: activity, error } = await supabase
@@ -77,7 +75,7 @@ activityRoutes.put('/activities/:id', (0, zod_validator_1.zValidator)('json', ty
 });
 // DELETE /api/activities/:id
 activityRoutes.delete('/activities/:id', async (c) => {
-    const supabase = (0, utils_1.getSupabase)(c.env);
+    const supabase = getSupabase(c.env);
     const id = parseInt(c.req.param('id'));
     const { error } = await supabase
         .from('activities')
@@ -88,4 +86,4 @@ activityRoutes.delete('/activities/:id', async (c) => {
     }
     return c.json({ success: true });
 });
-exports.default = activityRoutes;
+export default activityRoutes;

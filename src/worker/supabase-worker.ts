@@ -11,6 +11,8 @@ import calculatorRoutes from './routes/calculator';
 import lancamentoRoutes from './routes/lancamentos';
 import wmsTaskRoutes from './routes/wms-tasks';
 import monthlyEarningsRoutes from './routes/monthly-earnings';
+import historicoAprovacoesRoutes from './routes/historico-aprovacoes';
+import colaboradoresRoutes from './routes/colaboradores';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -26,6 +28,9 @@ app.route('/api', calculatorRoutes);
 app.route('/api', lancamentoRoutes);
 app.route('/api/wms-tasks', wmsTaskRoutes);
 app.route('/api', monthlyEarningsRoutes);
+app.route('/api', historicoAprovacoesRoutes);
+app.route('/api/colaboradores', colaboradoresRoutes);
+app.route('/api', colaboradoresRoutes);
 
 // Health check endpoint
 app.get('/api/health', (c) => {
